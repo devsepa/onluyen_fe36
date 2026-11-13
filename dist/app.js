@@ -28,7 +28,7 @@ import {
   readyForPractice,
   verifyOrSolveWithDirectGemini,
   blobToBase64,
-} from "./ai.mjs?v=20261113-background-publish-1";
+} from "./ai.mjs?v=study-speed-1";
 import { createSlideImageStore } from "./slide-images.mjs?v=20261113-background-publish-1";
 import { setupSlidePreview } from "./slide-preview.mjs?v=20261113-background-publish-1";
 import {
@@ -36,11 +36,12 @@ import {
   deckRequest,
   sharedImagePath,
 } from "./shared-decks.mjs?v=multi-bank-1";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=answer-row-next-1";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=study-speed-1";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
 
 const $ = (id) => document.getElementById(id);
+const quizAccountControl=document.querySelector('.account-control'),accountHome=document.querySelector('.top-actions');
 const quizSound = createQuizSound();
 setupSidebar();
 const esc = (s) =>
@@ -270,6 +271,7 @@ function switchView(next, mode) {
   if (mode) preferredMode = mode;
   if (next === "result" && !lastResult) next = "history";
   view = next;
+  if(next!=='practice')accountHome.append(quizAccountControl);
   renderNotice();
   if (view !== "practice") {preloadingSession = null;explanationQueue.cancel();}
   document.body.classList.toggle(
@@ -309,7 +311,7 @@ document.addEventListener("click", (event) => {
 });
 const account = setupAccount({
   onConnect: (options) => {
-    if (session && !session.done)
+    if (session && !session.done && (session.mode!=='study'||options.switchAccount))
       return message("Hoàn thành bài đang làm trước khi đổi tài khoản Google.");
     resources.connect(options);
   },
@@ -1213,6 +1215,7 @@ function scheduleStudyAdvance(){
  },5000);
 }
 function renderQuiz() {
+  accountHome.append(quizAccountControl);
   readingExplanation=null;
   const study = session.mode === "study",
     qs = session.questions;
@@ -1255,6 +1258,7 @@ function renderQuiz() {
   drawStudyFeedback();
   primeStudyExplanations();
   versionUpdates.mount($('practice').querySelector('.quiz-head-actions'),{compact:true});
+  if(study)$('practice').querySelector('.quiz-head-actions').append(quizAccountControl);
   $("flagCurrent").onchange = (e) => {
     session.flags = e.target.checked
       ? [...new Set([...session.flags, q.id])]
@@ -1582,7 +1586,7 @@ for (const [key, value] of [
   ["sot-session", session],
 ])
   if (originalStorage.get(key) !== JSON.stringify(value)) write(key, value);
-const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
+const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
 document.addEventListener("visibilitychange", updateTimer);

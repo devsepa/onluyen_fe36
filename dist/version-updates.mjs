@@ -13,7 +13,7 @@ export function setupVersionUpdates({beforeUpdate=async()=>true,fetcher=fetch,re
  function mount(container,{compact=false}={}){if(!container)return;const existing=container.querySelector('.app-update-control');if(existing)return;const button=document.createElement('button');button.type='button';button.className='secondary app-update-control';button.setAttribute('aria-label','Kiểm tra và cập nhật phiên bản web');button.onclick=()=>latest?update():check(true);container.append(button);controls.add({button,compact});refresh()}
  async function check(force=false){
   if(checking)return checking;if(!force&&(document.hidden||now()-lastChecked<60000))return;
-  lastChecked=now();checking=(async()=>{try{const release=await fetchRelease(new URL('version.json',document.baseURI),{fetcher,signal:AbortSignal.timeout(8000)});if(release.version!==current)latest=release;refresh()}catch{/* Offline checks never interrupt study. */}finally{checking=null}})();return checking;
+  lastChecked=now();checking=(async()=>{try{const url=new URL('version.json',document.baseURI);url.searchParams.set('check',String(now()));const release=await fetchRelease(url,{fetcher,signal:AbortSignal.timeout(8000)});if(release.version!==current)latest=release;refresh()}catch{/* Offline checks never interrupt study. */}finally{checking=null}})();return checking;
  }
  mount(document.querySelector('footer'));mount(notice,{compact:true});mount(document.querySelector('.top-actions'),{compact:true});
  const onVisible=()=>{if(!document.hidden)check()};document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);

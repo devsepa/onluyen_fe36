@@ -1,6 +1,11 @@
 name: Deploy AI backend
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/ai-backend.yml'
 permissions:
   contents: read
 concurrency:

@@ -15,17 +15,17 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
   const job=queue.shift();if(!job)return;running=job;job.controller=new AbortController();emit(job,{status:'loading'});
   try{
    const details=await load(job.q,{signal:job.controller.signal});
-   if(job.controller.signal.aborted||disposed){states.delete(job.key);job.resolve(null);return}
+   if(job.controller.signal.aborted||disposed){if(jobs.get(job.key)===job)states.delete(job.key);job.resolve(null);return}
    cache.delete(job.key);cache.set(job.key,details);persist();emit(job,{status:'ready',details});job.resolve(details);
   }catch(error){
-   if(job.controller.signal.aborted){states.delete(job.key);job.resolve(null)}
+   if(job.controller.signal.aborted){if(jobs.get(job.key)===job)states.delete(job.key);job.resolve(null)}
    else{const failure={error:error.message||'Chưa tải được giải thích AI.',statusCode:error.status||0,code:error.code};if([401,403,429].includes(error.status))blocked=failure;emit(job,{status:'error',...failure});job.resolve(null)}
-  }finally{jobs.delete(job.key);if(!states.has(job.key))job.resolve(null);running=null;pump()}
+  }finally{if(jobs.get(job.key)===job)jobs.delete(job.key);if(!states.has(job.key))job.resolve(null);running=null;pump()}
  }
  function request(q,{retry=false,priority=false}={}){
   const key=explanationKey(q);if(cache.has(key))return Promise.resolve(cache.get(key));
   if(retry){blocked=null;states.delete(key)}
-  if(jobs.has(key)){const job=jobs.get(key),index=queue.indexOf(job);if(priority&&index>0){queue.splice(index,1);queue.unshift(job)}return job.promise}
+  if(jobs.has(key)){const job=jobs.get(key);if(job.controller?.signal.aborted){jobs.delete(key);states.delete(key)}else{const index=queue.indexOf(job);if(priority&&index>0){queue.splice(index,1);queue.unshift(job)}return job.promise}}
   if(states.get(key)?.status==='error'&&!retry)return Promise.resolve(null);
   if(blocked){states.set(key,{status:'error',...blocked});return Promise.resolve(null)}
   const job={key,q:structuredClone(q),created:now()};job.promise=new Promise(resolve=>job.resolve=resolve);jobs.set(key,job);emit(job,{status:'queued'});priority?queue.unshift(job):queue.push(job);pump();return job.promise;

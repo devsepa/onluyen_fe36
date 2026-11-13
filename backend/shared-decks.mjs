@@ -1,3 +1,4 @@
+// Shared decks Durable Object backend - daily limit: 50 decks/day
 const UUID=/^[a-f0-9-]{36}$/;
 const json=(value,status=200)=>Response.json(value,{status});
 const newUploadToken=()=>crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');

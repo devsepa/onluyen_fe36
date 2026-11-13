@@ -36,7 +36,7 @@ test('shared upload rejects executable images, invalid answer sets and duplicate
 });
 test('draft expiry removes unpublished images; creation rate is bounded; anonymous clients cannot publish',async()=>{
  const state={storage:new Memory()},deck=new SharedDecks(state);await deck.fetch(request('/init','POST',{id,title:'Draft',count:1,rights:true}));await deck.fetch(request('/questions/0','PUT',input()));await deck.alarm();assert.equal(state.storage.data.size,0);
- const catalog=new SharedDecks({storage:new Memory()});for(let i=0;i<3;i++)assert.equal((await catalog.fetch(request('/reserve','POST',{}))).status,200);assert.equal((await catalog.fetch(request('/reserve','POST',{}))).status,429);
+ const catalog=new SharedDecks({storage:new Memory()});for(let i=0;i<50;i++)assert.equal((await catalog.fetch(request('/reserve','POST',{}))).status,200);assert.equal((await catalog.fetch(request('/reserve','POST',{}))).status,429);
  const response=await sharedDeckRoute(new Request('https://worker/v1/decks',{method:'POST',body:'{}'}),{SHARED_DECKS:{}},{});assert.equal(response.status,401);
 });
 test('randomization copies only question order, never answer positions',()=>{

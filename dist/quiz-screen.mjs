@@ -56,6 +56,7 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   dialog.querySelector('.close-map-btn').onclick=()=>dialog.close();
   paginateMap(dialog.querySelector('.quiz-map-card'),()=>dialog.close());
   if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=prefetchEnabled;input.onchange=()=>onPrefetchChange(input.checked);label.append(input,'Chuẩn bị trước giải thích AI');dialog.append(label)}
+  if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=head.querySelector('.study-auto-toggle input')?.checked;input.onchange=()=>{const original=head.querySelector('.study-auto-toggle input');original.checked=input.checked;onAutoAdvance(input.checked)};label.append(input,'Tự chuyển sau 5 giây');dialog.append(label)}
   root.append(dialog);
   dialog.showModal();
  }

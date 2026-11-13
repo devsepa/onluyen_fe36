@@ -1,0 +1,52 @@
+.practice-prefetch-setting{white-space:normal;align-items:flex-start;font-size:12px;line-height:1.6;margin:12px 0 18px}
+.practice-prefetch-setting input{flex:none;margin-top:4px}
+.study-prefetch-toggle{display:flex!important;white-space:normal!important;align-items:flex-start!important;line-height:1.5;margin-top:12px!important;font-size:11px!important}
+.study-prefetch-toggle input{flex:none;margin-top:3px}
+.explanation-answer,.explanation-chosen{margin:6px 0;white-space:pre-wrap}
+.explanation-heading{margin-top:8px!important}
+.explanation-choice-reason{margin:5px 0;white-space:pre-wrap}
+.study-explanation-status{display:flex;align-items:center;flex-wrap:wrap;gap:5px}
+.study-explanation-status .explanation-retry{flex:none;min-height:36px;padding:5px 12px;font-size:12px}
+.app-update-notice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;margin:12px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font-size:12px;line-height:1.5}
+.app-update-control{font-size:11px;padding:6px 10px;min-height:36px}
+body.quiz-active .app-update-notice{display:none}
+body.quiz-active{height:100dvh;min-height:0;overflow:hidden}
+body.quiz-active main,body.quiz-active .page-content{height:100dvh;min-height:0}
+body.quiz-active #practice,body.quiz-active .quiz-layout,body.quiz-active .quiz-layout>div{min-height:0}
+body.quiz-active .quiz-head{flex:none}
+body.quiz-active .quiz-layout{flex:1;align-items:stretch}
+body.quiz-active .quiz-layout>div{height:100%}
+body.quiz-active .quiz-question{flex:1;min-height:0;overflow:hidden;animation:none}
+body.quiz-active .slide-media-container{flex:1;min-height:0;height:auto;max-height:none;margin:0}
+body.quiz-active .question-title:not(.collapsed-text){flex:1;min-height:0;overflow:auto}
+body.quiz-active .quiz-map-card{position:static;max-height:100%;overflow:auto}
+body.quiz-active .feedback{flex:none}
+body.quiz-active .quiz-head .account-control{position:relative;flex:none}
+body.quiz-active .quiz-head .avatar{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-radius:50%}
+body.quiz-active .quiz-head .account-menu{z-index:100;right:0;max-width:min(300px,calc(100vw - 24px))}
+body.quiz-active .feedback-inline-exp{max-height:min(250px,30dvh);overflow-y:auto;white-space:pre-wrap;overscroll-behavior:contain}
+body.quiz-active .study-explanation-status{max-height:min(110px,18dvh);overflow:auto;flex:none}
+@media(max-width:540px){
+ body.quiz-active .quiz-head:has(.study-auto-toggle) .quiz-clock{display:none}
+ body.quiz-active .quiz-head{gap:5px}
+ body.quiz-active .quiz-head-actions{gap:4px}
+ body.quiz-active #toggleMapBtn{font-size:0;padding:5px 8px}
+ body.quiz-active #toggleMapBtn:before{content:'▤';font-size:17px}
+ body.quiz-active .study-auto-toggle{font-size:9px;gap:3px}
+ body.quiz-active .quiz-head>.study-auto-toggle{display:none}
+ body.quiz-active .study-auto-toggle input{width:13px;height:13px}
+ body.quiz-active .feedback-inline-exp{max-height:min(180px,27dvh);font-size:11px}
+ body.quiz-active .quiz-head .app-update-control{font-size:0;padding:5px 8px}
+ body.quiz-active .quiz-head .app-update-control:before{content:'↑';font-size:17px}
+ .app-update-notice{flex-wrap:wrap}
+}
+@media(max-height:540px){
+ body.quiz-active .page-content{padding-top:5px!important;padding-bottom:5px!important}
+ body.quiz-active #practice{gap:5px}
+ body.quiz-active .quiz-question{gap:4px;padding:8px 10px}
+ body.quiz-active .quiz-head{padding-bottom:4px;min-height:36px}
+ body.quiz-active .feedback-inline-exp{max-height:20dvh}
+ body.quiz-active .quiz-shortcuts-hint,body.quiz-active .multi-hint{display:none}
+ body.quiz-active .feedback{padding:6px 10px;margin-top:2px;gap:4px}
+ body.quiz-active .quiz-question .choice-pill,body.quiz-active .quiz-answer-next{height:38px;min-height:38px}
+}

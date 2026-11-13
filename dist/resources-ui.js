@@ -100,7 +100,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
   finally{if(run===epoch)setBusy(false)}
  }
  function connect({switchAccount=false}={}){
-  if(hasActiveSession())return onAccountError('Hãy hoàn thành bài đang làm trước khi đổi kết nối Google.');
+  if(hasActiveSession()&&(active()||switchAccount))return onAccountError('Hãy hoàn thành bài đang làm trước khi đổi kết nối Google.');
   if(busy)return;
   const clientId=resolveGoogleClientId();if(!clientId)return onAccountError('Kết nối Google hiện chưa sẵn sàng. Vui lòng thử lại sau.');
   if(!window.google?.accounts?.oauth2)return onAccountError('Chưa tải được cửa sổ đăng nhập Google. Kiểm tra mạng rồi thử lại.');
