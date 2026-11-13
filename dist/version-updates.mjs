@@ -15,7 +15,7 @@ export function setupVersionUpdates({beforeUpdate=async()=>true,fetcher=fetch,re
   if(checking)return checking;if(!force&&(document.hidden||now()-lastChecked<60000))return;
   lastChecked=now();checking=(async()=>{try{const url=new URL('version.json',document.baseURI);url.searchParams.set('check',String(now()));const release=await fetchRelease(url,{fetcher,signal:AbortSignal.timeout(8000)});if(release.version!==current)latest=release;refresh()}catch{/* Offline checks never interrupt study. */}finally{checking=null}})();return checking;
  }
- mount(document.querySelector('footer'));mount(notice,{compact:true});mount(document.querySelector('.top-actions'),{compact:true});
+ mount(document.querySelector('.footer-col-right')||document.querySelector('footer'));mount(notice,{compact:true});mount(document.querySelector('.top-actions'),{compact:true});
  const onVisible=()=>{if(!document.hidden)check()};document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);
  const timer=setInterval(()=>check(),300000);setTimeout(()=>check(true),0);
  return {mount,check,dispose(){clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)}};

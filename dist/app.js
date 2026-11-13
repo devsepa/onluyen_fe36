@@ -1,3 +1,7 @@
+import {setupLibraryManager} from './library-manager.mjs';
+import {createLibraryMedia} from './library-media.mjs';
+import {createBankTracker} from './library-data.mjs';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
 import {createExplanationQueue} from './explanation-queue.mjs';
 import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=20261114-cache-exp';
 import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-cache-exp';
@@ -63,6 +67,9 @@ let bank = read("sot-bank", []),
   history = read("sot-history", []),
   session = read("sot-session", null),
   sourceSummary = read("sot-source", "");
+let libraryManager=null,libraryProfile=null,libraryGeneration=0;
+const libraryMedia=createLibraryMedia();
+let libraryTracker;
 let pendingImportBank = null,
   importedQuestionKeys = new Map();
 const originalStorage = new Map([
@@ -94,6 +101,7 @@ let view = bank.length ? "library" : "shared",
   page = 1,
   editing = null,
   resultFilter = "all";
+libraryTracker=createBankTracker(bank);bank=libraryTracker.stamp(bank);
 const pageSize = 10;
 const pageInfo = {
   shared: [
@@ -139,7 +147,9 @@ function message(text, scope = view) {
 }
 function write(key, value) {
   try {
+    if(key==='sot-bank')libraryTracker?.stamp(value);
     localStorage.setItem(key, JSON.stringify(value));
+    if(key==='sot-bank'){libraryGeneration++;libraryManager?.changed()}
     return true;
   } catch {
     message(
@@ -188,6 +198,8 @@ function hasAiText(q) {
   );
 }
 async function questionBlob(q, options = {}) {
+  try{const local=await libraryMedia.forQuestion(q);if(local)return local}catch{}
+
   return q.sharedDeck
     ? (
         await deckRequest(AI_API_BASE, sharedImagePath(q), {
@@ -318,6 +330,7 @@ const account = setupAccount({
   onDisconnect: () => {
     aiController?.abort();
     shared.pause();
+    libraryManager?.pause();
     explanationQueue.cancel();
     slideImages.clear();
     resources.disconnect();
@@ -326,6 +339,7 @@ const account = setupAccount({
 const resources = setupResources({
   onAccountChange: (profile) => {
     account.update(profile);
+    libraryProfile=profile;setTimeout(()=>libraryManager?.account(profile),0);
     $("sourceAccessNotice").hidden = !!profile;
     $("sourceControls").hidden = !profile;
     setTimeout(()=>{if(profile){scheduleAutoAi();explanationQueue.resume();primeStudyExplanations()}else explanationQueue.cancel()},0);
@@ -421,7 +435,7 @@ function filteredQuestions() {
   );
 }
 async function showQuestionImage(container, q) {
-  if (!container?.isConnected || (!q.url && !q.sharedDeck)) return;
+  if (!container?.isConnected || (!q.url && !q.sharedDeck && !q.mediaId)) return;
   const text = container.parentElement?.querySelector(".question-title");
   text?.classList.add("collapsed-text");
   const existing = container.querySelector("img");
@@ -448,14 +462,15 @@ async function showQuestionImage(container, q) {
     image.title = "Bấm để phóng to ảnh gốc";
     const displayImage = () => {
       if (container.isConnected) {
-        container.replaceChildren(image);
+        if(container.firstElementChild!==image)container.replaceChildren(image);
+        fitSlideImage(container,image);
         text?.classList.add("collapsed-text");
       }
     };
     image.onload = displayImage;
     image.onerror = () => {
       slideImages.invalidate(
-        q.sharedDeck ? `shared:${q.sharedDeck}:${q.sharedIndex}` : q.url,
+        q.mediaId?`local:${q.mediaId}`:q.sharedDeck ? `shared:${q.sharedDeck}:${q.sharedIndex}` : q.url,
       );
       showSlideError(container, q);
     };
@@ -503,6 +518,7 @@ async function loadLibrarySlideImages(qs) {
   }
 }
 function renderLibrary() {
+  libraryManager?.render();
   refreshStats();
   $("source").textContent = bank.length
     ? sourceSummary || `${sources().length} tài liệu đã nhập`
@@ -1072,7 +1088,14 @@ function renderPractice() {
   const eligible = bank.filter(readyForPractice),
     n = eligible.length;
   $("practice").innerHTML =
-    `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><label class="check-label practice-prefetch-setting"><input id="prefetchExplanations" type="checkbox" ${prefetchEnabled?'checked':''}> Chuẩn bị trước giải thích AI cho tối đa 3 câu sắp làm, lưu để dùng lại. Bạn có thể tắt trong danh sách câu.</label><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
+    `<div class="mode-layout"><div class="card setup-hero-card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>🎯 Ôn luyện tự do</b><small>Chọn đáp án và biết đúng/sai kèm giải thích ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>⏱️ Thi thử tính giờ</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm chi tiết sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><div class="field-count-wrap"><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><div class="count-presets"><button type="button" class="preset-pill" data-preset="10">10 câu</button><button type="button" class="preset-pill" data-preset="20">20 câu</button><button type="button" class="preset-pill" data-preset="50">50 câu</button><button type="button" class="preset-pill" data-preset="max">Tất cả (${n})</button></div></div><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án sẵn sàng ôn luyện.</p><label class="check-label practice-prefetch-setting"><input id="prefetchExplanations" type="checkbox" ${prefetchEnabled?'checked':''}> Chuẩn bị trước giải thích AI cho tối đa 3 câu sắp làm để tải siêu nhanh.</label><button id="start" class="wide-button primary-hero-btn" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
+  $('practice').querySelectorAll('.preset-pill').forEach(btn => {
+    btn.onclick = () => {
+      const poolCount = pool().length;
+      const val = btn.dataset.preset === 'max' ? poolCount : Math.min(Number(btn.dataset.preset), poolCount);
+      $('count').value = Math.max(1, val);
+    };
+  });
   $('prefetchExplanations').onchange=e=>setExplanationPrefetch(e.target.checked);
   $('prefetchExplanations').closest('label').hidden=preferredMode!=='study';
   const pool = () =>
@@ -1175,7 +1198,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  }catch(error){if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
 },onChange:(question,state)=>{
  if(state.status==='ready'){
-  const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key)return false;if(hasSpeakerNoteExplanation(q))return false;if(q.explanation===state.details.reason&&q.explanationSource==='gemini')return false;q.explanation=state.details.reason;q.explanationSource='gemini';return true};
+  const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key)return false;if(hasSpeakerNoteExplanation(q))return false;const details={...state.details,key};if(q.explanation===state.details.reason&&q.explanationSource==='gemini'&&JSON.stringify(q.explanationDetails)===JSON.stringify(details))return false;q.explanation=state.details.reason;q.explanationSource='gemini';q.explanationDetails=details;return true};
   let bankChanged=false;for(const q of bank)bankChanged=apply(q)||bankChanged;if(bankChanged)write('sot-bank',bank);
   let sessionChanged=false;for(const q of session?.questions||[])sessionChanged=apply(q)||sessionChanged;if(sessionChanged)write('sot-session',session);
  }
@@ -1184,7 +1207,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  }
 }});
 function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
-function feedbackState(q){if(hasNoteExplanation(q))return {status:'note'};let connected=false;try{connected=!!resources.apiToken()}catch{};if(!connected)return {status:'no-auth'};return explanationQueue.state(q)}
+function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready')return cached;if(hasNoteExplanation(q))return {status:'note'};let connected=false;try{connected=!!resources.apiToken()}catch{};if(!connected)return {status:'no-auth'};return cached;}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
@@ -1216,6 +1239,7 @@ function scheduleStudyAdvance(){
  },5000);
 }
 function renderQuiz() {
+  disposeSlideFitting($('practice'));
   accountHome.append(quizAccountControl);
   readingExplanation=null;
   const study = session.mode === "study",
@@ -1512,7 +1536,7 @@ function renderResult(r) {
         : !r.answers[q.id]),
   );
   $("result").innerHTML =
-    `<div class="card result-overview"><div class="score-ring" style="--score:${(r.correct / total) * 100}%"><div><strong class="score-number">${((r.correct / total) * 10).toFixed(1)}</strong><small>TRÊN 10 ĐIỂM</small></div></div><div class="result-details"><span class="overline">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"} · ĐÃ HOÀN THÀNH</span><h2>${r.correct}/${total} câu trả lời đúng</h2><p>${elapsed} phút học tập · ${new Date(r.finished).toLocaleString("vi-VN")}</p><div class="result-breakdown"><div class="correct-stat">Trả lời đúng<strong>${r.correct}</strong></div><div class="wrong-stat">Trả lời sai<strong>${wrong}</strong></div><div>Chưa trả lời<strong>${unanswered}</strong></div></div><div class="row"><button id="again">Tạo đề mới →</button><button id="retry" class="secondary" ${r.correct === total ? "disabled" : ""}>Luyện lại câu sai</button><button data-view="history" class="text-button">Xem lịch sử ↗</button></div></div></div><div class="section-heading"><div><span class="overline">HIỂU LẠI TỪNG CÂU</span><h2>Xem lại bài làm</h2></div></div><div class="result-filters">${[
+    `<div class="card result-overview"><div class="score-ring" style="--score:${(r.correct / total) * 100}%"><div><strong class="score-number">${((r.correct / total) * 10).toFixed(1)}</strong><small>TRÊN 10 ĐIỂM</small></div></div><div class="result-details"><span class="overline">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"} · ĐÃ HOÀN THÀNH</span><h2>${r.correct}/${total} câu trả lời đúng</h2><p>${elapsed} phút học tập · ${new Date(r.finished).toLocaleString("vi-VN")}</p><div class="result-breakdown"><div class="correct-stat">Trả lời đúng<strong>${r.correct}</strong></div><div class="wrong-stat">Trả lời sai<strong>${wrong}</strong></div><div>Chưa trả lời<strong>${unanswered}</strong></div></div><div class="row"><button id="again">Tạo đề mới →</button><button id="retry" class="secondary" ${r.correct === total ? "disabled" : ""}>Luyện lại câu sai</button><button data-view="history" class="text-button">Xem lịch sử ↗</button><button id="deleteSingleResult" class="text-button danger" style="margin-left:auto">Xóa bài này</button></div></div></div><div class="section-heading"><div><span class="overline">HIỂU LẠI TỪNG CÂU</span><h2>Xem lại bài làm</h2></div></div><div class="result-filters">${[
       ["all", "Tất cả (" + total + ")"],
       ["wrong", "Cần ôn lại (" + (wrong + unanswered) + ")"],
       ["unanswered", "Chưa trả lời (" + unanswered + ")"],
@@ -1529,6 +1553,17 @@ function renderResult(r) {
     lastResult = null;
     switchView("practice");
   };
+  const delSingleBtn = $("deleteSingleResult");
+  if (delSingleBtn) {
+    delSingleBtn.onclick = async () => {
+      if (await askConfirm(`Xóa kết quả bài làm này khỏi lịch sử?`, { title: "Xóa kết quả", danger: true, okText: "Xóa" })) {
+        history = history.filter((item) => item.id !== r.id);
+        write("sot-history", history);
+        lastResult = null;
+        switchView("history");
+      }
+    };
+  }
   $("retry").onclick = () => {
     const qs = r.questions.filter((q) => !isCorrect(q, r.answers[q.id]));
     if (!qs.length) return;
@@ -1562,9 +1597,9 @@ function renderHistory() {
       ) / history.length
     : 0;
   $("history").innerHTML =
-    `<div class="section-heading"><div><span class="overline">HÀNH TRÌNH CỦA BẠN</span><h2>${history.length} bài đã hoàn thành</h2><p>${history.length ? `Điểm trung bình ${average.toFixed(1)}/10 · Lưu tối đa 50 bài gần nhất trên thiết bị này.` : "Những bài bạn hoàn thành sẽ được lưu tại đây."}</p></div><button data-view="practice">Luyện một đề mới →</button></div>` +
+    `<div class="section-heading"><div><span class="overline">HÀNH TRÌNH CỦA BẠN</span><h2>${history.length} bài đã hoàn thành</h2><p>${history.length ? `Điểm trung bình ${average.toFixed(1)}/10 · Lưu tối đa 50 bài gần nhất trên thiết bị này.` : "Những bài bạn hoàn thành sẽ được lưu tại đây."}</p></div><div class="row">${history.length ? `<button type="button" class="text-button danger" id="clearAllHistory">Xóa toàn bộ lịch sử</button>` : ""}<button data-view="practice">Luyện một đề mới →</button></div></div>` +
     (history.length
-      ? `<div class="history-list">${history.map((r) => `<article class="card history-item"><div class="history-score">${((r.correct / r.questions.length) * 10).toFixed(1)}</div><div class="history-info"><span class="tag ${r.mode === "study" ? "ok" : ""}">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"}</span><h3>Đúng ${r.correct}/${r.questions.length} câu hỏi</h3><p>${new Date(r.finished).toLocaleString("vi-VN")}</p></div><button class="secondary" data-result="${esc(r.id)}">Xem bài làm ↗</button></article>`).join("")}</div>`
+      ? `<div class="history-list">${history.map((r) => `<article class="card history-item"><div class="history-score">${((r.correct / r.questions.length) * 10).toFixed(1)}</div><div class="history-info"><span class="tag ${r.mode === "study" ? "ok" : ""}">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"}</span><h3>Đúng ${r.correct}/${r.questions.length} câu hỏi</h3><p>${new Date(r.finished).toLocaleString("vi-VN")}</p></div><div class="row history-actions"><button class="secondary" data-result="${esc(r.id)}">Xem bài làm ↗</button><button class="icon-button text-button danger history-delete-btn" data-delete-result="${esc(r.id)}" title="Xóa kết quả này" aria-label="Xóa kết quả này">🗑️</button></div></article>`).join("")}</div>`
       : empty(
           "Buổi học đầu tiên đang chờ bạn",
           "Hãy bắt đầu với một đề ngắn. Kết quả sẽ giúp bạn biết mình đã vững phần nào.",
@@ -1572,7 +1607,37 @@ function renderHistory() {
           "Bắt đầu luyện tập →",
         ));
 }
-$("history").onclick = (e) => {
+$("history").onclick = async (e) => {
+  const clearBtn = e.target.closest("#clearAllHistory");
+  if (clearBtn) {
+    if (!history.length) return;
+    if (await askConfirm(`Xóa toàn bộ ${history.length} bài đã làm trong lịch sử? Dữ liệu này không thể khôi phục.`, {
+      title: "Xóa toàn bộ lịch sử",
+      danger: true,
+      okText: "Xóa hết"
+    })) {
+      history = [];
+      write("sot-history", history);
+      renderHistory();
+    }
+    return;
+  }
+  const deleteBtn = e.target.closest("[data-delete-result]");
+  if (deleteBtn) {
+    const id = deleteBtn.dataset.deleteResult;
+    const target = history.find((r) => r.id === id);
+    if (!target) return;
+    if (await askConfirm(`Xóa kết quả bài làm lúc ${new Date(target.finished).toLocaleTimeString("vi-VN")} ngày ${new Date(target.finished).toLocaleDateString("vi-VN")} (Đúng ${target.correct}/${target.questions.length})?`, {
+      title: "Xóa kết quả bài làm",
+      danger: true,
+      okText: "Xóa"
+    })) {
+      history = history.filter((r) => r.id !== id);
+      write("sot-history", history);
+      renderHistory();
+    }
+    return;
+  }
   const id = e.target.closest("[data-result]")?.dataset.result;
   if (!id) return;
   if (session && !session.done)
@@ -1587,7 +1652,12 @@ for (const [key, value] of [
   ["sot-session", session],
 ])
   if (originalStorage.get(key) !== JSON.stringify(value)) write(key, value);
-const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
+libraryManager=setupLibraryManager({base:AI_API_BASE,getBank:()=>bank,getGeneration:()=>libraryGeneration,getToken:()=>resources.apiToken(),getBlob:questionBlob,getDetails:q=>hasSpeakerNoteExplanation(q)?null:explanationQueue.state(q).details,media:libraryMedia,
+ setBank:questions=>{if(!write('sot-bank',questions))return false;bank=questions;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);refreshStats();if(view==='library')renderLibrary();else if(view==='practice'&&(!session||session.done))renderPractice();return true},
+ canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
+ onPractice:key=>{switchView('practice');if($('practiceSource')){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
+});libraryManager.account(libraryProfile);
+const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
 document.addEventListener("visibilitychange", updateTimer);
