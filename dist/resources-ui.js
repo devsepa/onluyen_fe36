@@ -1,23 +1,23 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
 import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs';
-import {solveBatch,blobToBase64} from './ai.mjs?v=20261113-fast-cache-1';
-import {selectQuestionSlides} from './question-slides.mjs?v=20261113-fast-cache-1';
+import {solveBatch,blobToBase64} from './ai.mjs?v=20261113-instant-import-1';
+import {selectQuestionSlides,inspectedQuestion} from './question-slides.mjs?v=20261113-instant-import-1';
 import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs';
 import {createSlideBlobCache} from './slide-blob-cache.mjs';
 import {directSlideImage} from './direct-slide-image.mjs';
 import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-filter-1';
 
 const $=id=>document.getElementById(id);
-export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
+export function setupResources({message,onImport,onDeferredQuestion=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
  let token=null,expires=0,files=[],suggestions=[],selected=new Map(),controller=null,busy=false,epoch=0;
  let expiryTimer,profileController;
- let accountProfile=null;
+ let accountProfile=null,classifying=false,backgroundId=0;
  const sessionKey='sot-google-session';
  function saveConnection(){try{if(token&&expires>Date.now())sessionStorage.setItem(sessionKey,JSON.stringify({token,expires,profile:accountProfile,clientId:resolveGoogleClientId()}));else sessionStorage.removeItem(sessionKey)}catch{}}
  function updateProfile(profile){accountProfile=profile;saveConnection();onAccountChange(profile)}
  const thumbnailCache=new Map(),presentations=new Map(),thumbnailQueue=createGoogleReadQueue(),slideBytes=createSlideBlobCache({owner:()=>accountProfile?.email,load:loadSlideBlob});
  function rememberPresentation(p){presentations.set(p.presentationId,{created:Date.now(),promise:Promise.resolve(p)})}
- function expireConnection(){thumbnailCache.clear();presentations.clear();slideBytes.clear();token=null;expires=0;updateProfile(null)}
+ function expireConnection(){backgroundId++;classifying=false;thumbnailCache.clear();presentations.clear();slideBytes.clear();token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
  const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Chỉ nhập slide có câu hỏi và lựa chọn. Giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc. Bỏ trang quảng cáo, giới thiệu và danh sách link.';
@@ -86,11 +86,11 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }
   $('pickerCount').textContent=`Đã chọn ${selected.size} tài liệu`;
  }
- function setBusy(value){busy=value;stopButton.hidden=!value;for(const id of ['scan','chooseFiles','import','useResources','ocrLimit','ocrStart','ocrEnd'])if($(id))$(id).disabled=value;renderSelected();renderFiles(files)}
+ function setBusy(value){busy=value;stopButton.hidden=!value&&!classifying;for(const id of ['scan','chooseFiles','import','useResources','ocrLimit','ocrStart','ocrEnd'])if($(id))$(id).disabled=value;renderSelected();renderFiles(files)}
  async function scan(){
   if(busy)return;
   if(!active())return message('Hãy kết nối Google để tìm slide trong tài khoản của bạn.');
-  const run=epoch;controller=new AbortController();setBusy(true);status('Đang tìm tài liệu trong tài khoản Google…');
+  backgroundId++;classifying=false;controller?.abort();const run=epoch;controller=new AbortController();setBusy(true);status('Đang tìm tài liệu trong tài khoản Google…');
   try{
    const found=await listSlides(request);if(run!==epoch)return;files=found;
    suggestions=suggestedResources(files);selected.clear();
@@ -139,19 +139,18 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(!Number.isInteger(startSlide)||startSlide<1||(Number.isFinite(endSlide)&&(!Number.isInteger(endSlide)||endSlide<startSlide)))return message('Khoảng slide không hợp lệ. Trang bắt đầu phải từ 1 và không lớn hơn trang kết thúc.');
   if(document.getElementById('total').textContent!=='0'&&!confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.'))return;
   const maxQuestions=Number($('ocrLimit').value)||Infinity;
-  const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;
+  backgroundId++;classifying=false;controller?.abort();const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;stopButton.textContent='Dừng nhập';
   $('useReady').hidden=true;$('useReady').disabled=false;$('ocrBar').value=0;$('ocrPercent').textContent='0%';
   const signal=controller.signal,started=Date.now();let foundBefore=0;
+  const inspect=AI_API_BASE&&document.getElementById('sourceAutoAI')?.checked?async q=>{
+   const blob=await slideBlob(q,{signal});if(signal.aborted)throw new DOMException('Stopped','AbortError');
+   if(blob.size>2100000)throw Error('Slide image exceeds 2 MB');
+   const response=await solveBatch(AI_API_BASE,[{...q,image:{mimeType:blob.type,data:await blobToBase64(blob)}}],apiToken(),{signal});return {result:response.answers[0],model:response.model};
+  }:null;
   try{
    const result=await readSelectedResources([...selected.values()],request,async(p,resource)=>{
     rememberPresentation(p);
-    return selectQuestionSlides(p,{startSlide,endSlide,maxQuestions,signal,shouldStop:()=>finishEarly,
-     inspect:AI_API_BASE&&document.getElementById('sourceAutoAI')?.checked?async q=>{
-      const blob=await slideBlob(q);if(signal.aborted)throw new DOMException('Stopped','AbortError');
-      if(blob.size>2100000)throw Error('Slide image exceeds 2 MB');
-      const response=await solveBatch(AI_API_BASE,[{...q,image:{mimeType:blob.type,data:await blobToBase64(blob)}}],apiToken(),{signal});
-      return {result:response.answers[0],model:response.model};
-     }:null,
+    return selectQuestionSlides(p,{startSlide,endSlide,maxQuestions,signal,inspect,deferInspection:true,shouldStop:()=>finishEarly,
      onProgress:progress=>{
       $('ocrBar').value=progress.slide/progress.totalSlides*100;$('ocrPercent').textContent=Math.round(progress.slide/progress.totalSlides*100)+'%';
       $('ocrHeadline').textContent=p.title+' - slide '+progress.slide+'/'+progress.totalSlides;
@@ -162,13 +161,23 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    if(run!==epoch)return;
    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrHeadline').textContent='Đã hoàn tất lọc slide câu hỏi';$('ocrTime').textContent=`Hoàn tất trong ${Math.round((Date.now()-started)/1000)} giây`;
    showDiagnostics(result.diagnostics);
-   if(!result.questions.length){status('Chưa thay đổi ngân hàng câu hỏi.');return message('Chưa tìm thấy slide đủ điều kiện câu hỏi – lựa chọn. Trang quảng cáo, hướng dẫn và ảnh chưa xác định không được nhập. '+result.failures.map(f=>`${f.name}: ${f.error}`).join('\n'))}
+   if(!result.questions.length&&!result.deferred?.length){status('Chưa thay đổi ngân hàng câu hỏi.');return message('Chưa tìm thấy slide đủ điều kiện câu hỏi – lựa chọn. Trang quảng cáo, hướng dẫn và ảnh chưa xác định không được nhập. '+result.failures.map(f=>`${f.name}: ${f.error}`).join('\n'))}
    if(result.failures.length&&!confirm(`Có ${result.failures.length} tài liệu chưa đọc được:\n${result.failures.map(f=>`${f.name}: ${f.error}`).join('\n')}\n\nTiếp tục dùng ${result.sources.length} tài liệu đã đọc được?`)){status('Đã giữ ngân hàng trước.');return}
    if(!onImport(result))return;
    const remaining=result.sources.reduce((n,s)=>n+s.remaining,0);
    status(`Đã sẵn sàng: ${result.questions.length} câu từ ${result.sources.length} tài liệu.${remaining?` Còn ${remaining} trang chưa đọc; tăng số câu hoặc chọn Đọc toàn bộ để nhập thêm.`:''}`);
    const excluded=result.diagnostics.reduce((n,d)=>n+(d.excluded||0),0),unknown=result.diagnostics.reduce((n,d)=>n+(d.unresolved||0),0);
-   message(`Đã nhập ${result.questions.length} câu, giữ nguyên ảnh và số slide gốc. Đã bỏ ${excluded} trang không phải câu hỏi.${unknown?` ${unknown} ảnh chưa xác định chưa được nhập; có thể bật AI và thử lại.`:''}`);
+   message(`Sẵn sàng ${result.questions.length} câu để ôn ngay, giữ nguyên ảnh và số slide gốc. Đã bỏ ${excluded} trang không phải câu hỏi.${result.deferred?.length?` Đang kiểm tra thêm ${result.deferred.length} ảnh ở nền; không cần chờ để bắt đầu ôn.`:unknown?` ${unknown} ảnh chưa xác định chưa được nhập; có thể bật AI và thử lại.`:''}`);
+   if(result.deferred?.length&&inspect){const job=++backgroundId;setTimeout(async()=>{
+    if(job!==backgroundId||run!==epoch||signal.aborted)return;classifying=true;stopButton.hidden=false;stopButton.textContent='Dừng kiểm tra thêm';let added=0,checked=0,other=0,total=result.questions.length;
+    try{for(const q of result.deferred){
+     if(job!==backgroundId||run!==epoch||signal.aborted||!document.getElementById('sourceAutoAI')?.checked)break;
+     $('ocrHeadline').textContent=`Đã nhập câu hỏi · kiểm tra thêm ${checked+1}/${result.deferred.length} ảnh`;$('ocrDetail').textContent='Bạn có thể ôn ngay các câu đã nhập. Chỉ bổ sung ảnh được xác định là câu hỏi.';
+     try{const output=await inspect(q);if(job!==backgroundId||run!==epoch||signal.aborted||!document.getElementById('sourceAutoAI')?.checked)break;const question=inspectedQuestion(q,output);if(output.result.kind==='other')other++;if(question){const update=onDeferredQuestion(question,{limit:maxQuestions});if(update===false)break;added++;total=typeof update?.count==='number'?update.count:total+1}}
+     catch(error){if(error.name==='AbortError'||error.code!=='AI_IMAGE_INVALID')break}
+     checked++;$('ocrCount').textContent=`${total} câu đã nhập · đã kiểm tra thêm ${checked}/${result.deferred.length} ảnh`;
+    }}finally{if(job===backgroundId&&run===epoch){classifying=false;stopButton.hidden=true;$('ocrHeadline').textContent=`Sẵn sàng ${total} câu để ôn`;$('ocrDetail').textContent=`Đã kiểm tra thêm ${checked}/${result.deferred.length} ảnh. Các ảnh chưa xác định không được đưa vào đề.`;status(`Đã sẵn sàng ${total} câu. Có thể bắt đầu ôn luyện.`);const remainingUnknown=Math.max(0,unknown-added-other);message(`Sẵn sàng ${total} câu để ôn ngay, giữ nguyên ảnh và số slide gốc. Đã bỏ ${excluded+other} trang không phải câu hỏi.${remainingUnknown?` ${remainingUnknown} ảnh chưa xác định chưa được nhập.`:''}`)}}
+   },0)}
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
   finally{if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };
@@ -230,5 +239,5 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(options.maxBytes&&blob.size>options.maxBytes&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   return blob;
  }
- return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,isBusy:()=>busy};
+ return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,isBusy:()=>busy||classifying};
 }

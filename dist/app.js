@@ -1,13 +1,13 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-fast-cache-1';
-import {setupResources} from './resources-ui.js?v=20261113-fast-cache-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-instant-import-1';
+import {setupResources} from './resources-ui.js?v=20261113-instant-import-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-fast-cache-1';
-import {setupAccount} from './account-ui.js?v=20261113-fast-cache-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-fast-cache-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-fast-cache-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-fast-cache-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-fast-cache-1';
-import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-fast-cache-1';
+import {validateBank} from './banks.mjs?v=20261113-instant-import-1';
+import {setupAccount} from './account-ui.js?v=20261113-instant-import-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-instant-import-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-instant-import-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-instant-import-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-instant-import-1';
+import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-instant-import-1';
 import {fitQuizScreen} from './quiz-screen.mjs';
 import {createQuizSound} from './quiz-sound.mjs';
 import {setupSidebar} from './sidebar.mjs';
@@ -18,6 +18,7 @@ setupSidebar();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
 let bank=read('sot-bank',[]),history=read('sot-history',[]),session=read('sot-session',null),sourceSummary=read('sot-source','');
+let pendingImportBank=null,importOrder=new Map();
 const originalStorage=new Map([['sot-bank',JSON.stringify(bank)],['sot-history',JSON.stringify(history)],['sot-session',JSON.stringify(session)]]);
 bank=bank.filter(q=>q.sourceId||presentationIdFromLink(q.url)).map(q=>cleanQuestion({...q,sourceId:q.sourceId||presentationIdFromLink(q.url)}));
 history=history.map(r=>({...r,questions:r.questions.map(cleanQuestion)}));
@@ -115,7 +116,13 @@ const resources=setupResources({onAccountChange:profile=>{
 },onAccountError:text=>message(text),message:text=>message(text,'sources'),hasActiveSession:()=>!!session&&!session.done,onImport:result=>{
  if(aiRunning||session&&!session.done){message('Dừng AI và hoàn thành bài đang làm trước khi thay ngân hàng câu hỏi.','sources');return false}
  if(!write('sot-bank',result.questions))return false;
- bank=result.questions;sourceSummary=result.sources.map(s=>s.name).join(' · ');write('sot-source',sourceSummary);page=1;refreshStats();if(view==='library')renderLibrary();$('openImportedBank').hidden=false;$('openImportedBank').textContent=`Kiểm tra ${bank.length} câu hỏi đã nhập →`;scheduleAutoAi();return true;
+ bank=result.questions;pendingImportBank=bank;importOrder=new Map(result.sources.map((source,i)=>[source.id,i]));sourceSummary=result.sources.map(s=>s.name).join(' · ');write('sot-source',sourceSummary);page=1;refreshStats();if(view==='library')renderLibrary();$('openImportedBank').hidden=false;$('openImportedBank').textContent=`Kiểm tra ${bank.length} câu hỏi đã nhập →`;scheduleAutoAi();return true;
+},onDeferredQuestion:(question,{limit})=>{
+ if(bank!==pendingImportBank)return false;
+ if(bank.some(q=>q.sourceId===question.sourceId&&q.url===question.url))return {count:bank.length};
+ const same=bank.filter(q=>q.sourceId===question.sourceId).concat(cleanQuestion(question)).sort((a,b)=>a.slide-b.slide).slice(0,limit);
+ const merged=bank.filter(q=>q.sourceId!==question.sourceId).concat(same).sort((a,b)=>(importOrder.get(a.sourceId)||0)-(importOrder.get(b.sourceId)||0)||a.slide-b.slide);
+ if(!write('sot-bank',merged))return false;bank=merged;pendingImportBank=bank;refreshStats();if(view==='library')renderLibrary();$('openImportedBank').textContent=`Kiểm tra ${bank.length} câu hỏi đã nhập →`;return {count:bank.length};
 }});
 const shared=setupSharedDecks({base:AI_API_BASE,getBank:()=>bank,getToken:()=>resources.apiToken(),getBlob:questionBlob,canChange:()=>{if(aiRunning||session&&!session.done){message('Dừng AI và hoàn thành bài đang làm trước khi đổi hoặc đăng bộ đề.');return false}return true},onUse:deck=>{
  const questions=deck.questions.map(cleanQuestion);if(!write('sot-bank',questions))return;bank=questions;sourceSummary=deck.title;write('sot-source',sourceSummary);page=1;refreshStats();switchView('practice');

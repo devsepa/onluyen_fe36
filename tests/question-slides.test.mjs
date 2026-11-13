@@ -38,3 +38,8 @@ test('client rejects a classifier claiming an advertisement has a correct answer
  const q={id:'q',stem:'Slide',options:[{id:'A',text:''},{id:'B',text:''}],image:{mimeType:'image/png',data:'aGVsbG8='}};
  await assert.rejects(()=>solveBatch('https://worker.example',[q],'token',{fetcher:async()=>Response.json({model:'vision',answers:[{id:'q',kind:'other',labels:[],status:'answered',answer:'A',explanation:'Invalid'}]})}));
 });
+test('fast import never waits for AI on introductory images before hundreds of note-backed questions',async()=>{
+ const input=p([...Array.from({length:9},(_,i)=>slide('intro-'+i)),...Array.from({length:386},(_,i)=>slide('q-'+i,{note:'A'}))]);let calls=0;
+ const result=await selectQuestionSlides(input,{deferInspection:true,inspect:()=>{calls++;return new Promise(()=>{})}});
+ assert.equal(calls,0);assert.equal(result.questions.length,386);assert.equal(result.deferred.length,9);assert.equal(result.questions[0].slide,10);assert.equal(result.questions.at(-1).slide,395);assert.ok(result.deferred.every(q=>q.slideKind==='pending'));
+});

@@ -61,3 +61,7 @@ Google getThumbnail calls share a paced queue (1.2 s minimum spacing), a short-l
 
 ## Reusing original slide images
 The browser stores downloaded private image bytes in an account-scoped local CacheStorage (hashed keys, source-revision keys, 24-hour reuse TTL, approximate 128 MB budget). Viewing, AI and sharing use the same bytes, including after a page reload; no content is published until the user confirms sharing. Single-image slides without extra elements, crops or rotation can use the image URL already returned by presentations.get. Composed slides and oversized originals retain the paced getThumbnail fallback. Publishing uses three workers, while cache misses still share the Google throttle; resumed drafts skip completed indices. Storage denial falls back to downloading normally.
+
+
+## Nonblocking imports
+Source import commits structured/note-backed questions immediately without awaiting image classification. Ambiguous images remain outside the bank until the optional background classifier confirms a question. Background additions preserve source slide ordering and per-source count limits, do not modify the active quiz snapshot, and stop applying if the bank/account is replaced. Source controls remain usable; no speculative A-D cards are shown for introductions or ads.
