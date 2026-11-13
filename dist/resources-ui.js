@@ -226,6 +226,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(!response||[401,403,404].includes(response.status)){thumbnailCache.delete(q.url);response=await fetch(await slideImage(q,{...options,forceThumbnail:true}),{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}
   if(!response.ok)throw Error('Chưa tải được ảnh gốc.');
   const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
+  if(!['image/png','image/jpeg','image/webp'].includes(blob.type)&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   if(options.maxBytes&&blob.size>options.maxBytes&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   return blob;
  }
