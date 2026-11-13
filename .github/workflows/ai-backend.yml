@@ -11,6 +11,8 @@ on:
       - 'dist/resources.mjs'
       - 'dist/site-config.mjs'
       - 'scripts/check-gemini.mjs'
+      - 'scripts/read-config.mjs'
+      - 'scripts/select-gemini-model.mjs'
       - 'scripts/check-private-library.mjs'
       - 'scripts/check-explanation-cache.mjs'
       - 'scripts/configure-quality.mjs'

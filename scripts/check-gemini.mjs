@@ -2,7 +2,8 @@
 import {generateWithFallback} from '../backend/worker.mjs';
 import {normalizeExplanation} from '../dist/explanation-data.mjs';
 import {readFile} from 'node:fs/promises';
-const config=JSON.parse(await readFile(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8'));
+import {parseConfig} from './read-config.mjs';
+const config=parseConfig(await readFile(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8'));
 const image=await readFile(new URL('../tests/fixtures/vision-smoke.png',import.meta.url));
 const questions=[{id:'smoke',stem:'Read the question and choices from the slide image.',options:[{id:'A',text:''},{id:'B',text:''}],image:{mimeType:'image/png',data:image.toString('base64')}}];
 questions[0].explain=true;

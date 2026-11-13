@@ -1,6 +1,7 @@
 // Resolve a model actually available to this project before deployment; no billed generation.
 import {readFile,writeFile} from 'node:fs/promises';
-const path=new URL('../backend/wrangler.jsonc',import.meta.url),config=JSON.parse(await readFile(path,'utf8'));
+import {parseConfig} from './read-config.mjs';
+const path=new URL('../backend/wrangler.jsonc',import.meta.url),config=parseConfig(await readFile(path,'utf8'));
 const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',{headers:{'x-goog-api-key':process.env.GEMINI_API_KEY},signal:AbortSignal.timeout(20000)});
 if(!response.ok)throw Error(`Cannot list Gemini models (HTTP ${response.status}); check API key and project access.`);
 const body=await response.json(),names=(body.models||[]).filter(m=>m.supportedGenerationMethods?.includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
