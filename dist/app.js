@@ -283,10 +283,9 @@ function switchView(next, mode) {
   if (
     session &&
     !session.done &&
-    session.mode !== "study" &&
     next !== "practice"
   )
-    return message("Hãy nộp bài thi thử trước khi mở tài liệu hoặc kết quả.");
+    return message(session.mode === "study" ? "Hãy bấm 'Kết thúc' để hoàn thành buổi ôn trước khi rời giao diện này." : "Hãy nộp bài thi thử trước khi mở tài liệu hoặc kết quả.");
   if (mode) preferredMode = mode;
   if (next === "result" && !lastResult) next = "history";
   view = next;
@@ -1982,4 +1981,11 @@ applyThemeMode(initialTheme);
 themeToggle?.addEventListener('click',()=>{
  const current=document.documentElement.getAttribute('data-theme')||'light';
  applyThemeMode(current==='dark'?'light':'dark');
+});
+
+window.addEventListener("beforeunload", (e) => {
+  if (session && !session.done) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
 });

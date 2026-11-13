@@ -3,10 +3,7 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),layout=root.querySelector('.quiz-layout'),aside=layout?.querySelector('aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';
  head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
- if(study&&!head.querySelector('.quiz-leave')){
-  const back=document.createElement('button');back.type='button';back.className='secondary quiz-leave';back.dataset.view='library';back.textContent='← Thư viện';back.title='Tạm rời, bài ôn luyện vẫn được giữ';
-  head.prepend(back);
- }
+ head.querySelector('.quiz-leave')?.remove();
 
  const multi=card.querySelector('.multi-hint');
  if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';

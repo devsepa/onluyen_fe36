@@ -609,3 +609,5 @@ body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important
   color:var(--muted);
 }
 
+
+.quiz-leave{display:none !important;}
