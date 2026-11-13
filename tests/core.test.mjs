@@ -2,6 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion,confirmQuestion,normalizeAnswer} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
+test('reads answer followed by SQL explanation on the same notes line',()=>{
+ for(const note of ['B    SELECT MAX(salary) FROM Employee GROUP BY dept_code: explanation.','B. SELECT MAX(salary) FROM Employee','Answer: B SELECT MAX(salary) FROM Employee']){
+  const q=parsePresentation({slides:[{pageElements:[shape('q','Which SQL?\nA. First\nB. Second\nC. Third\nD. Fourth')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
+  assert.equal(q.answer,'B',note);assert.equal(q.verified,true);assert.ok(q.explanation.startsWith('SELECT MAX(salary)'));assert.ok(!q.stem.includes('MAX'));
+ }
+});
 test('retains source SQL punctuation and placeholders verbatim instead of guessing missing OCR characters',()=>{
  const text='How to execute a procedure?\nA. EXECUTE name_sp <parameter>\nB. EXEC name_sp @value = \'x\'\nC. WHERE x <= 10 AND y <> 2\nD. name_sp <parameter=';
  const q=parsePresentation({slides:[{pageElements:[shape('q',text)]}]}).questions[0];

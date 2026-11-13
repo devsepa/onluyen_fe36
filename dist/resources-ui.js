@@ -1,9 +1,9 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-jpn-19';
+import {parseWithOcr} from './ocr.mjs?v=20261113-auto-20';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-jpn-19';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-jpn-19';
+import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-auto-20';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-auto-20';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -237,5 +237,5 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
   return URL.createObjectURL(blob);
  }
- return {connect,disconnect,readAnswers,apiToken,slideImage};
+ return {connect,disconnect,readAnswers,apiToken,slideImage,isBusy:()=>busy};
 }

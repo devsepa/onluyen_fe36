@@ -1,4 +1,5 @@
 export function questionFingerprint(q){return JSON.stringify([q.sourceId,q.url,q.stem,q.options.map(o=>[o.id,o.text])])}
+export function readyForPractice(q){return !!q.answer&&(q.verified===true||q.answerSource==='gemini')}
 export function applyAiResults(bank,submitted,results,model){
  const sent=new Map(submitted.map(q=>[q.id,q]));let applied=0,uncertain=0;
  const seen=new Set();

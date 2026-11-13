@@ -65,10 +65,15 @@ export function speakerNotesText(slide){
 export function detailsFromNotes(slide,options){
  const lines=speakerNotesText(slide).split('\n').map(line=>line.trim()).filter(Boolean);
  const pattern=/^(?:(?:answers?|correct answers?|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H](?:[A-H]|[ ,;/&+]+[A-H])*)\)?[.)]?\s*$/i;
- const match=lines[0]?.normalize('NFKC').match(pattern);
- const answer=normalizeAnswer(match?.[1],options);
+ const first=lines[0]?.normalize('NFKC')||'';
+ const match=first.match(pattern);
+ // Some notes have the answer and its SQL explanation on the same first line.
+ const inline=match?null:first.match(/^(?:(?:answers?|correct answers?|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H]+(?:[ ,;/&+]+[A-H]+)*)\)?[.)]?[ \t]+(.+)$/i);
+ if(inline&&/^(?:or|and|hoặc|hay)\b/i.test(inline[2]))return {answer:'',explanation:''};
+ const answer=normalizeAnswer(match?.[1]||inline?.[1],options);
  if(!answer||lines.slice(1).some(line=>{const other=line.normalize('NFKC').match(pattern);return other&&normalizeAnswer(other[1],options)!==answer}))return {answer:'',explanation:''};
- return {answer,explanation:cleanSlideContent(lines.slice(1).join('\n'))};
+ const firstExplanation=inline?lines[0].slice(inline[0].length-inline[2].length):'';
+ return {answer,explanation:cleanSlideContent([firstExplanation,...lines.slice(1)].filter(Boolean).join('\n'))};
 }
 export function answerFromNotes(slide,options){
  return detailsFromNotes(slide,options).answer;

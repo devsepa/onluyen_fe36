@@ -1,6 +1,6 @@
 // No secrets, question text or Google tokens are logged or persisted by this worker.
 const BATCH_LIMIT=5,MAX_BODY=50000;
-class ApiError extends Error{constructor(status,message){super(message);this.status=status}}
+class ApiError extends Error{constructor(status,message,upstreamStatus=null){super(message);this.status=status;this.upstreamStatus=upstreamStatus}}
 async function readLimited(request,max){
  if(Number(request.headers.get('content-length'))>max)throw new ApiError(413,'Nội dung gửi lên quá lớn.');
  const reader=request.body?.getReader();if(!reader)return '';
@@ -40,10 +40,14 @@ export async function generateAnswers(questions,env,fetcher=fetch){
  if(!response.ok){
   // Return actionable categories, never forward Google's raw body or credentials.
   if(response.status===429)throw new ApiError(429,'Gemini đã đạt hạn mức yêu cầu hoặc token (429). Hãy kiểm tra hạn mức dự án hoặc tiếp tục sau.');
-  if(response.status===503)throw new ApiError(503,'Gemini đang quá tải tạm thời (503). Không cần đăng nhập lại hay đổi key. Các đáp án đã lưu vẫn được giữ; hãy thử lại sau.');
+  if(response.status===503)throw new ApiError(503,'Gemini đang quá tải tạm thời (503). Không cần đăng nhập lại hay đổi key. Các đáp án đã lưu vẫn được giữ; hãy thử lại sau.',503);
   if(response.status===401||response.status===403)throw new ApiError(502,'Gemini từ chối quyền truy cập (401/403). Chủ web cần kiểm tra API key và quyền của dự án.');
-  if(response.status===404)throw new ApiError(502,'Model Gemini chưa khả dụng cho dự án (404). Chủ web cần cập nhật model.');
-  if(response.status===400)throw new ApiError(502,'Gemini từ chối cấu hình yêu cầu (400). Chủ web cần kiểm tra cấu hình AI.');
+  if(response.status===404)throw new ApiError(502,'Model Gemini chưa khả dụng cho dự án (404). Chủ web cần cập nhật model.',404);
+  if(response.status===400){
+   let detail='';try{const body=await response.clone().json();detail=String(body.error?.message||'')}catch{}
+   const error=new ApiError(502,'Gemini từ chối cấu hình yêu cầu (400). Chủ web cần kiểm tra cấu hình AI.',400);
+   error.retryableConfiguration=/response.?schema|generation.?config|thinking|not supported.*model/i.test(detail)&&! /API key/i.test(detail);throw error;
+  }
   throw new ApiError(502,`Gemini gặp lỗi dịch vụ (${response.status}). Các câu đã lưu vẫn được giữ.`);
  }
  let body;try{body=await response.json()}catch{throw new ApiError(502,'Không đọc được phản hồi AI.')}
@@ -51,6 +55,14 @@ export async function generateAnswers(questions,env,fetcher=fetch){
  const text=(candidate.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');
  let data;try{data=JSON.parse(text)}catch{throw new ApiError(502,'AI chưa trả đúng định dạng. Hãy thử lại.')}
  return validateResults(data,questions);
+}
+export async function generateWithFallback(questions,env,fetcher=fetch){
+ const primary=env.GEMINI_MODEL||'gemini-3.8-flash',fallback=env.GEMINI_FALLBACK_MODEL;
+ try{return {answers:await generateAnswers(questions,env,fetcher),model:primary}}
+ catch(error){
+  if(!fallback||fallback===primary||!(/^[a-zA-Z0-9._-]+$/.test(fallback))||!(error.upstreamStatus===503||error.upstreamStatus===404||error.status===504||error.retryableConfiguration))throw error;
+  return {answers:await generateAnswers(questions,{...env,GEMINI_MODEL:fallback},fetcher),model:fallback};
+ }
 }
 // One global Durable Object serializes quota reservations before billable requests.
 // Stores counts only; per-user keys expire by deleting older UTC-day records.
@@ -95,7 +107,6 @@ export default {async fetch(request,env){
   const quota=env.AI_QUOTA.get(env.AI_QUOTA.idFromName('global'));
   const reservation=await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
   if(!reservation.ok)throw new ApiError(429,'Đã đạt giới hạn AI. Kết quả đã có vẫn được giữ; hãy tiếp tục sau.');
-  const answers=await generateAnswers(questions,env);
-  return reply({answers,model:env.GEMINI_MODEL||'gemini-3.8-flash'});
+  return reply(await generateWithFallback(questions,env));
  }catch(error){return reply({error:error instanceof ApiError?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.'},error instanceof ApiError?error.status:503)}
 }};

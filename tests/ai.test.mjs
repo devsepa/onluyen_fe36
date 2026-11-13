@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import worker,{validateQuestions,validateResults,generateAnswers,AIQuota} from '../backend/worker.mjs';
-import {applyAiResults,solveBatch} from '../dist/ai.mjs';
+import worker,{validateQuestions,validateResults,generateAnswers,generateWithFallback,AIQuota} from '../backend/worker.mjs';
+import {applyAiResults,solveBatch,readyForPractice} from '../dist/ai.mjs';
 const q=()=>({id:'q1',sourceId:'slide',url:'https://docs.google.com/presentation/d/slide/edit#slide=id.s1',stem:'Which clause filters groups?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}],answer:'',verified:false});
 const answered=()=>({id:'q1',status:'answered',answer:'B',explanation:'HAVING lọc các nhóm.'});
 test('batch validation limits spend and strips identity/source fields from model input',()=>{
@@ -17,9 +17,16 @@ test('rejects unknown ids, invalid options, duplicates and missing model results
 test('applies proposals without confirming or overwriting source answers and discards stale edits',()=>{
  const bank=[q()],submitted=structuredClone(bank);assert.deepEqual(applyAiResults(bank,submitted,[answered()],'test-model'),{applied:1,uncertain:0});
  assert.equal(bank[0].answer,'B');assert.equal(bank[0].verified,false);assert.equal(bank[0].answerSource,'gemini');
+ assert.equal(readyForPractice(bank[0]),true);assert.equal(readyForPractice(q()),false);
  bank[0].answer='A';applyAiResults(bank,submitted,[answered()],'x');assert.equal(bank[0].answer,'A');
  const edited=[q()];edited[0].stem='Changed';assert.equal(applyAiResults(edited,submitted,[answered()],'x').applied,0);
  const uncertain=[q()];applyAiResults(uncertain,submitted,[{id:'q1',status:'uncertain',answer:'',explanation:'OCR unclear'}],'x');assert.equal(uncertain[0].answer,'');assert.equal(uncertain[0].aiStatus,'uncertain');
+});
+test('uses a verified fallback once for upstream overload but not quota or credentials',async()=>{
+ const env={GEMINI_MODEL:'gemini-3.8-flash',GEMINI_FALLBACK_MODEL:'gemini-3.5-flash-lite',GEMINI_API_KEY:'private'};let calls=[];
+ const result=await generateWithFallback([q()],env,async url=>{calls.push(url);return calls.length===1?Response.json({}, {status:503}):Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[answered()]})}]}}]})});
+ assert.equal(result.model,env.GEMINI_FALLBACK_MODEL);assert.equal(calls.length,2);assert.equal(result.answers[0].answer,'B');
+ for(const status of [401,429]){let count=0;await assert.rejects(()=>generateWithFallback([q()],env,async()=>{count++;return Response.json({}, {status})}));assert.equal(count,1)}
 });
 test('Gemini request uses server-only key, structured schema and safe model validation',async()=>{
  const results=await generateAnswers([q()],{GEMINI_API_KEY:'private-test',GEMINI_MODEL:'gemini-2.5-flash'},async(url,init)=>{

@@ -12,4 +12,7 @@ if(!names.includes(model)){
  if(!model)throw Error('No stable Flash model available to this project. Select a supported Gemini model.');
  config.vars.GEMINI_MODEL=model;await writeFile(path,JSON.stringify(config,null,2)+'\n');
 }
-console.log(`Verified available Gemini model: ${model}`);
+const fallbacks=names.filter(n=>n!==model&&/^gemini-\d+(?:\.\d+)?-flash-lite$/.test(n)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
+if(fallbacks[0])config.vars.GEMINI_FALLBACK_MODEL=fallbacks[0];else delete config.vars.GEMINI_FALLBACK_MODEL;
+await writeFile(path,JSON.stringify(config,null,2)+'\n');
+console.log(`Verified available Gemini model: ${model}; fallback: ${config.vars.GEMINI_FALLBACK_MODEL||'none'}`);
