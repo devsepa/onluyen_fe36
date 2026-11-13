@@ -1,10 +1,11 @@
-export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound}){
+export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,autoAdvance,onAutoAdvance}){
  document.body.classList.add('quiz-active');window.scrollTo(0,0);
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),aside=root.querySelector('.quiz-layout>aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
  if(study){const back=document.createElement('button');back.type='button';back.className='secondary quiz-leave';back.dataset.view='library';back.textContent='← Thư viện';back.title='Tạm rời, bài ôn luyện vẫn được giữ';head.prepend(back)}
 
  const multi=card.querySelector('.multi-hint');if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
+ if(study){const label=document.createElement('label');label.className='study-auto-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=autoAdvance;input.onchange=()=>onAutoAdvance(input.checked);label.append(input,'Tự chuyển · 5 giây');head.append(label)}
  const controls=root.querySelector('.quiz-controls');if(controls&&controls.children.length>=2){controls.children[0].textContent='← Trước';controls.children[1].textContent='Tiếp →'}
  function paginateMap(container){
   const grid=container.querySelector('.quiz-navigation'),size=innerHeight<440?5:innerHeight<700?10:20,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
@@ -21,16 +22,12 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   const result=document.createElement('strong');result.textContent=(isCorrect(question,session.answers[question.id])?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer;
   mainRow.append(result);
   if(question.explanation){
-   const button=document.createElement('button');button.type='button';button.className='text-button feedback-toggle-btn';button.textContent='Xem giải thích';
-   const expBox=document.createElement('div');expBox.className='feedback-inline-exp';expBox.hidden=true;
-   const expTitle=document.createElement('b');expTitle.textContent=question.answerSource==='gemini'?'Giải thích AI:':'Ghi chú / Giải thích:';
+   const button=document.createElement('button');button.type='button';button.className='text-button feedback-toggle-btn';button.textContent='Đọc toàn bộ';
+   const expBox=document.createElement('div');expBox.className='feedback-inline-exp';expBox.hidden=false;
+   const expTitle=document.createElement('b');expTitle.textContent=(question.explanationSource==='gemini'||question.answerSource==='gemini')?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:';
    const expText=document.createElement('span');expText.textContent=question.explanation;
    expBox.append(expTitle,expText);
-   button.onclick=()=>{
-    const show=expBox.hidden;
-    expBox.hidden=!show;
-    button.textContent=show?'Ẩn giải thích':'Xem giải thích';
-   };
+   button.onclick=()=>{clearTimeout(window._autoAdvanceTimer);openPagedText(root,expTitle.textContent,question.explanation)};
    mainRow.append(button);
    feedback.append(mainRow,expBox);
   }else{
