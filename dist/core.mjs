@@ -27,7 +27,7 @@ export function cleanSlideContent(value){
 }
 export function cleanQuestion(q){
  const answer=normalizeAnswer(q.answer,q.options);
- return {...q,answer,verified:!!answer&&q.verified===true,explanation:q.answerSource==='gemini'?q.explanation:'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
+ return {...q,answer,verified:!!answer&&q.verified===true,explanation:typeof q.explanation==='string'?cleanSlideContent(q.explanation):'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
 }
 export function normalizeAnswer(value,options){
  if(typeof value!=='string'||! /^[A-H](?:[A-H]|[\s,;/&+]+[A-H])*$/i.test(value.trim()))return '';
@@ -79,8 +79,8 @@ export function parsePresentation(p){
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   pages.push({slide:i+1,objectId:s.objectId,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}
-  const answer=answerFromNotes(s,parts.options);
-  questions.push({id:crypto.randomUUID(),...parts,answer,explanation:'',verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
+  const {answer,explanation}=detailsFromNotes(s,parts.options);
+  questions.push({id:crypto.randomUUID(),...parts,answer,explanation,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
  }
  return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
 }

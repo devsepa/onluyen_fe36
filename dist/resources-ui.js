@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-fidelity-17';
+import {parseWithOcr} from './ocr.mjs?v=20261113-notes-18';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-fidelity-17';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-notes-18';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -187,19 +187,22 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(!active())throw Error('Đăng nhập Google ở ảnh đại diện để đọc ghi chú từ slide.');
   if(busy)throw Error('Hãy đợi nhập tài liệu xong rồi lấy đáp án.');
   const updates=[],failures=[],unresolved={missingSlide:[],empty:[],unmatched:[]},run=epoch;
-  const ids=[...new Set(questions.filter(q=>!q.verified).map(q=>q.sourceId||presentationIdFromLink(q.url)).filter(Boolean))];
+  const needsNotes=q=>!q.verified||!q.explanation;
+  const ids=[...new Set(questions.filter(needsNotes).map(q=>q.sourceId||presentationIdFromLink(q.url)).filter(Boolean))];
   for(const id of ids){
    try{
     const p=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(id)}`);
     if(run!==epoch)throw Error('Tài khoản đã thay đổi. Hãy thử lại.');
     if(p.presentationId!==id)throw Error('Nguồn trả về không khớp.');
-    for(const q of questions.filter(q=>!q.verified&&(q.sourceId||presentationIdFromLink(q.url))===id)){
+    for(const q of questions.filter(q=>needsNotes(q)&&(q.sourceId||presentationIdFromLink(q.url))===id)){
      const objectId=q.url?.match(/#slide=id\.(.+)$/)?.[1];
      const slide=p.slides?.find(s=>s.objectId===objectId);
      if(!slide){unresolved.missingSlide.push(q.slide);continue;}
-     const {answer}=detailsFromNotes(slide,q.options);
-     if(answer)updates.push({id:q.id,answer,explanation:''});
-     else unresolved[speakerNotesText(slide)?'unmatched':'empty'].push(q.slide);
+     const {answer,explanation}=detailsFromNotes(slide,q.options);
+     if(answer){
+      if(!q.verified||q.answer===answer&&explanation&&!q.explanation)updates.push({id:q.id,answer,explanation});
+      else if(q.answer!==answer)unresolved.unmatched.push(q.slide);
+     }else if(!q.verified)unresolved[speakerNotesText(slide)?'unmatched':'empty'].push(q.slide);
     }
    }catch(error){if(run!==epoch)throw error;failures.push(error.message)}
   }

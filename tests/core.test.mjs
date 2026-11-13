@@ -10,7 +10,7 @@ test('retains source SQL punctuation and placeholders verbatim instead of guessi
 test('reads the leading answer separately from translated question and explanation',()=>{
  const note='A\n\nTùy chọn ON UPDATE CASCADE có tác dụng gì?\nA. Tự động cập nhật giá trị khóa ngoại.\nON UPDATE CASCADE giúp duy trì tính toàn vẹn tham chiếu.';
  const slide={pageElements:[shape('q','What does ON UPDATE CASCADE do?\nA. Updates the foreign key\nB. Deletes the row')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}};
- const q=parsePresentation({slides:[slide]}).questions[0];assert.equal(q.answer,'A');assert.equal(q.verified,true);assert.equal(q.explanation,'');assert.ok(!q.stem.includes('Tùy chọn'));
+ const q=parsePresentation({slides:[slide]}).questions[0];assert.equal(q.answer,'A');assert.equal(q.verified,true);assert.ok(q.explanation.startsWith('Tùy chọn'));assert.ok(!q.stem.includes('Tùy chọn'));
  slide.slideProperties.notesPage.pageElements=[shape('n','A\nB')];assert.equal(parsePresentation({slides:[slide]}).questions[0].answer,'');
 });
 test('single uppercase note survives split runs and invisible direction marks',()=>{
@@ -38,7 +38,7 @@ test('accepts explicit note formats but leaves missing, conflicting and multiple
 test('splits AD, ACE and ABC notes into valid ordered sets, including explanation tails',()=>{
  for(const [note,expected] of [['AD','AD'],['ACE','ACE'],['ABC','ABC'],['ECA','ACE'],['A, D','AD'],['Đáp án: ACE\nGiải thích bằng tiếng Việt.','ACE']]){
   const q=parsePresentation({slides:[{pageElements:[shape('q','Choose correct answers\nA. First\nB. Second\nC. Third\nD. Fourth\nE. Fifth')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
-  assert.equal(q.answer,expected,note);assert.equal(q.verified,true);assert.equal(q.explanation,'');
+  assert.equal(q.answer,expected,note);assert.equal(q.verified,true);assert.equal(q.explanation,note.includes('Giải thích')?'Giải thích bằng tiếng Việt.':'');
  }
  assert.equal(normalizeAnswer('AZ',[{id:'A'}]),'');
 });
@@ -81,7 +81,7 @@ test('removes standalone logo OCR without touching SQL or English question conte
  const text='Which SQL statement returns matching records?\nFORU\nA. SELECT * FROM source_table INNER JOIN sales ON id = custID;\nLEARN TO KNOW\nB. SELECT * FROM source_table;\n© Hoàng Hoàng Buén Sourge';
  const q=parsePresentation({slides:[{pageElements:[shape('q',text)]}]}).questions[0];
  assert.equal(q.stem,'Which SQL statement returns matching records?');assert.equal(q.options[0].text,'SELECT * FROM source_table INNER JOIN sales ON id = custID;');assert.equal(q.options[1].text,'SELECT * FROM source_table;');
- const old=cleanQuestion({...q,answerSource:'speaker-notes',explanation:'Tùy chọn này có nghĩa là…'});assert.equal(old.explanation,'');assert.equal(old.options[1].text,q.options[1].text);
+ const old=cleanQuestion({...q,answerSource:'speaker-notes',explanation:'Tùy chọn này có nghĩa là…'});assert.equal(old.explanation,'Tùy chọn này có nghĩa là...');assert.equal(old.options[1].text,q.options[1].text);
  assert.equal(cleanSlideContent("SELECT * FROM source WHERE name = 'Việt Nam';"),"SELECT * FROM source WHERE name = 'Việt Nam';");
 });
 test('keeps meaningful source terminology and content following a watermark',()=>{

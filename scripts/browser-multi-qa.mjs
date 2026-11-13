@@ -10,7 +10,7 @@ async function evaluate(expression){const r=await call('Runtime.evaluate',{expre
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function waitFor(expression){for(let i=0;i<60;i++){try{if(await evaluate(expression))return}catch(error){if(!/null|context|navigat/.test(error.message))throw error}await pause(100)}throw Error('Timed out '+expression)}
 await call('Page.enable');await call('Runtime.enable');await mkdir('outputs/multi',{recursive:true});
-const fixture={id:'multi',stem:'Choose all correct answers.',options:'ABCDE'.split('').map(id=>({id,text:'Option '+id})),answer:'ACE',verified:true,sourceId:'multi_source',sourceName:'QA',slide:353,url:'https://docs.google.com/presentation/d/multi_source/edit#slide=id.s353'};
+const fixture={id:'multi',stem:'Choose all correct answers.',options:'ABCDE'.split('').map(id=>({id,text:'Option '+id})),answer:'ACE',explanation:'Giải thích ghi chú: chọn đầy đủ A, C và E. にまん。',verified:true,sourceId:'multi_source',sourceName:'QA',slide:353,url:'https://docs.google.com/presentation/d/multi_source/edit#slide=id.s353'};
 await evaluate(`localStorage.clear();sessionStorage.clear();localStorage.setItem('sot-bank',JSON.stringify([${JSON.stringify(fixture)}]));location.reload()`);
 await waitFor(`!!document.querySelector('.question-card')`);
 assert.equal(await evaluate(`document.querySelector('[data-answer]').value`),'ACE');
