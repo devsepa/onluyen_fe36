@@ -29,7 +29,7 @@ export function validateResults(data,questions){
  return questions.map(q=>results.find(a=>a.id===q.id));
 }
 export async function generateAnswers(questions,env,fetcher=fetch){
- const schema={type:'OBJECT',properties:{answers:{type:'ARRAY',items:{type:'OBJECT',properties:{id:{type:'STRING'},status:{type:'STRING',enum:['answered','uncertain']},answer:{type:'STRING',enum:['','A','B','C','D','E','F','G','H']},explanation:{type:'STRING'}},required:['id','status','answer','explanation']}}},required:['answers']};
+ const schema={type:'OBJECT',properties:{answers:{type:'ARRAY',items:{type:'OBJECT',properties:{id:{type:'STRING'},status:{type:'STRING',enum:['answered','uncertain']},answer:{type:'STRING'},explanation:{type:'STRING'}},required:['id','status','answer','explanation']}}},required:['answers']};
  const model=env.GEMINI_MODEL||'gemini-2.5-flash';
  if(!/^[a-zA-Z0-9._-]+$/.test(model))throw new ApiError(503,'Dịch vụ AI chưa sẵn sàng.');
  let response;
