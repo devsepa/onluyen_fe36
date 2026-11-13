@@ -567,6 +567,7 @@ $("questions").onchange = (e) => {
         "Nhập các chữ cái đáp án có trong câu, ví dụ AD hoặc ACE.",
       );
     }
+    if(q.answer!==value&&(q.explanationSource==='gemini'||q.answerSource==='gemini')){q.explanation='';q.explanationSource=null}
     q.answer = value;
     q.answerSource = "manual";
     q.aiStatus = null;
@@ -774,6 +775,7 @@ async function runAi({ automatic = false } = {}) {
           ) {
             q.answer = update.answer;
             q.explanation = update.explanation;
+            q.explanationSource = 'speaker-notes';
             q.verified = true;
             q.answerSource = "speaker-notes";
             fromNotes++;
@@ -894,6 +896,7 @@ notesButton.onclick = async () => {
       if (q && (!q.verified || q.answer === update.answer)) {
         q.answer = update.answer;
         q.explanation = update.explanation;
+        q.explanationSource = 'speaker-notes';
         q.verified = true;
         q.answerSource = "speaker-notes";
       }
@@ -961,6 +964,7 @@ $("editForm").onsubmit = (e) => {
     return message("Đáp án phải là các chữ cái hợp lệ, ví dụ AD hoặc ACE.");
   Object.assign(q, updated);
   q.explanation = explanation;
+  q.explanationSource = explanation?'manual':null;
   q.answer = correct;
   q.answerSource = "manual";
   q.aiStatus = null;
@@ -1070,6 +1074,7 @@ function renderPractice() {
   $("practice").innerHTML =
     `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><label class="check-label practice-prefetch-setting"><input id="prefetchExplanations" type="checkbox" ${prefetchEnabled?'checked':''}> Chuẩn bị trước giải thích AI cho tối đa 3 câu sắp làm, lưu để dùng lại. Bạn có thể tắt trong danh sách câu.</label><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
   $('prefetchExplanations').onchange=e=>setExplanationPrefetch(e.target.checked);
+  $('prefetchExplanations').closest('label').hidden=preferredMode!=='study';
   const pool = () =>
     eligible.filter(
       (q) =>
@@ -1086,6 +1091,7 @@ function renderPractice() {
     (input) =>
       (input.onchange = () => {
         preferredMode = input.value;
+        $('prefetchExplanations').closest('label').hidden=preferredMode!=='study';
         $("timeSetting").hidden = preferredMode === "study";
         $("start").textContent =
           (preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử") +

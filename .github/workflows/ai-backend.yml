@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'backend/**'
+      - 'dist/explanation-data.mjs'
+      - 'scripts/check-gemini.mjs'
       - '.github/workflows/ai-backend.yml'
 permissions:
   contents: read
@@ -33,6 +35,10 @@ jobs:
         run: node scripts/select-gemini-model.mjs
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Verify Gemini answers and structured explanations
+        run: node scripts/check-gemini.mjs
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - name: Deploy Worker and private Gemini key
         uses: cloudflare/wrangler-action@v3
         with:
@@ -43,9 +49,5 @@ jobs:
           command: deploy --config wrangler.jsonc
           secrets: |
             GEMINI_API_KEY
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      - name: Verify Gemini with one synthetic question
-        run: node scripts/check-gemini.mjs
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

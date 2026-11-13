@@ -12,6 +12,7 @@
 body.quiz-active .app-update-notice{display:none}
 body.quiz-active{height:100dvh;min-height:0;overflow:hidden}
 body.quiz-active main,body.quiz-active .page-content{height:100dvh;min-height:0}
+body.quiz-active main{margin:0}
 body.quiz-active #practice,body.quiz-active .quiz-layout,body.quiz-active .quiz-layout>div{min-height:0}
 body.quiz-active .quiz-head{flex:none}
 body.quiz-active .quiz-layout{flex:1;align-items:stretch}

@@ -7,7 +7,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
  }}catch{cache.clear()}
  const state=q=>cache.has(explanationKey(q))?{status:'ready',details:cache.get(explanationKey(q))}:states.get(explanationKey(q))||{status:'idle'};
  function emit(job,value){states.set(job.key,value);try{onChange(job.q,value)}catch{}}
- function persist(){try{while(cache.size>limit)cache.delete(cache.keys().next().value);let entries=[...cache];while(entries.length>1&&JSON.stringify(entries).length>600000){cache.delete(entries[0][0]);entries=entries.slice(1)}storage?.setItem('sot-explanation-cache-v1',JSON.stringify(entries))}catch{/* Cache denial must never block practice. */}}
+ function persist(){try{while(cache.size>limit){const key=cache.keys().next().value;cache.delete(key);states.delete(key)}let entries=[...cache];while(entries.length>1&&JSON.stringify(entries).length>600000){states.delete(entries[0][0]);cache.delete(entries[0][0]);entries=entries.slice(1)}storage?.setItem('sot-explanation-cache-v1',JSON.stringify(entries))}catch{/* Cache denial must never block practice. */}}
  function drop(job){jobs.delete(job.key);states.delete(job.key);job.resolve(null)}
  async function pump(){
   if(running||disposed)return;

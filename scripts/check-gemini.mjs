@@ -1,9 +1,11 @@
 // CI smoke test: one tiny synthetic question; never log the key or upstream body.
 import {generateWithFallback} from '../backend/worker.mjs';
+import {normalizeExplanation} from '../dist/explanation-data.mjs';
 import {readFile} from 'node:fs/promises';
 const config=JSON.parse(await readFile(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8'));
 const image=await readFile(new URL('../tests/fixtures/vision-smoke.png',import.meta.url));
 const questions=[{id:'smoke',stem:'Read the question and choices from the slide image.',options:[{id:'A',text:''},{id:'B',text:''}],image:{mimeType:'image/png',data:image.toString('base64')}}];
+questions[0].explain=true;
 const other=await readFile(new URL('../tests/fixtures/non-question-smoke.png',import.meta.url));
 questions.push({id:'resource-page',stem:'Slide 2',options:[{id:'A',text:''},{id:'B',text:''}],image:{mimeType:'image/png',data:other.toString('base64')}});
 try{
@@ -14,5 +16,6 @@ try{
   return response;
  });
  if(answers[0]?.answer!=='A'||answers[0]?.kind!=='question'||answers[1]?.kind!=='other'||answers[1]?.answer!=='')throw Error('Synthetic question/non-question image check did not pass.');
- console.log(`Gemini live image-answer smoke test passed with ${model}.`);
+ normalizeExplanation({...questions[0],answer:'A'},answers[0]);
+ console.log(`Gemini live image-answer and structured explanation smoke test passed with ${model}.`);
 }catch(error){console.error(error.message);process.exitCode=1}

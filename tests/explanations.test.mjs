@@ -45,6 +45,10 @@ test('changed target window drops obsolete queued requests without losing curren
 test('storage denial and malformed cache cannot break practice',async()=>{
  const queue=createExplanationQueue({storage:{getItem:()=>'{invalid',setItem(){throw Error('Full')}},load:async q=>normalizeExplanation(q,result(q.id))});assert.equal((await queue.request(question())).answer,'B');
 });
+test('bounded caches evict old memory entries and cancelled foreground requests can be requested again',async()=>{
+ const queue=createExplanationQueue({limit:1,load:async q=>normalizeExplanation(q,result(q.id))});await queue.request(question());await queue.request(question('q2'));assert.equal(queue.state(question()).status,'idle');
+ let release,calls=0;const restarted=createExplanationQueue({load:async q=>{calls++;if(calls===1)await new Promise(r=>release=r);return normalizeExplanation(q,result(q.id))}});const old=restarted.request(question());restarted.cancel();const fresh=restarted.request(question());release();assert.equal(await old,null);assert.equal((await fresh).answer,'B');assert.equal(calls,2);
+});
 test('structured AI purpose is validated and the prompt requests exact choice contents and targeted reasons',async()=>{
  const questions=validateQuestions({purpose:'explanation',questions:[question()]});assert.equal(questions[0].explain,true);assert.throws(()=>validateQuestions({purpose:'anything',questions:[question()]}));
  await generateAnswers(questions,{GEMINI_API_KEY:'test-only'},async(_url,init)=>{const sent=JSON.parse(init.body);assert.ok(sent.systemInstruction.parts[0].text.includes('complete exact original choice text'));assert.ok(sent.generationConfig.responseSchema.properties.answers.items.required.includes('optionReasons'));return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[result()]})}]}}]})});

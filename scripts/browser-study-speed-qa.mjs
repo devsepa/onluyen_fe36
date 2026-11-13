@@ -10,17 +10,18 @@ const run=async expression=>{const r=await call('Runtime.evaluate',{expression,a
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(expression){for(let i=0;i<120;i++){await pause(65);if(await run(expression))return}throw Error('Timed out: '+expression+' '+JSON.stringify({errors,feedback:await run(`document.querySelector('.feedback')?.textContent`)}))}
 await call('Page.enable');await call('Runtime.discardConsoleEntries');await call('Runtime.enable');await call('Fetch.enable',{patterns:[{urlPattern:'*site-config.mjs*'}]});
-const png=(await readFile('tests/fixtures/vision-smoke.png')).toString('base64'),deck='11111111-1111-4111-8111-111111111111';
+const deck='11111111-1111-4111-8111-111111111111';
 const questions=Array.from({length:4},(_,i)=>({id:'q'+i,sourceId:'shared-'+deck,sourceName:'DBI202',sharedDeck:deck,sharedIndex:i,slide:i+1,url:'',stem:'Which clause filters groups after aggregation?',options:'ABCD'.split('').map(id=>({id,text:''})),answer:'B',verified:true,answerSource:'speaker-notes',explanation:''}));
 const mock=await call('Page.addScriptToEvaluateOnNewDocument',{source:`
  window.aiCalls=[];window.aiMode=sessionStorage.getItem('qa-ai-mode')||'ok';window.releaseNew=false;
+ window.qaSlideData=(()=>{const canvas=document.createElement('canvas');canvas.width=1000;canvas.height=560;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,1000,560);c.fillStyle='black';c.font='28px Arial';['Which clause filters groups after aggregation?','A. WHERE','B. HAVING','C. ORDER BY','D. SELECT'].forEach((text,i)=>c.fillText(text,45,80+i*65));return canvas.toDataURL()})();
  const original=fetch;window.fetch=(url,init={})=>{
   const address=String(url),path=new URL(address,location.href).pathname;
   if(path.endsWith('/version.json'))return Promise.resolve(Response.json({version:window.releaseNew?'release-next':'2026.11.14.1'}));
   if(address==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa',name:'QA',email:'speed-qa@example.com'}));
   if(address.startsWith('https://www.googleapis.com/drive/'))return Promise.resolve(Response.json({files:[]}));
   if(address.startsWith('https://speed-qa.example/')){
-   if(path.includes('/images/'))return Promise.resolve(new Response(Uint8Array.from(atob(${JSON.stringify(png)}),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}}));
+   if(path.includes('/images/'))return original(qaSlideData);
    if(path==='/v1/decks')return Promise.resolve(Response.json([]));
    if(path==='/v1/answers'){
     const body=JSON.parse(init.body),q=body.questions[0];aiCalls.push({id:q.id,purpose:body.purpose,hasAnswer:'answer' in q});
@@ -67,7 +68,7 @@ try{
  }
  await seed({prefetch:false});await run(`document.querySelector('[data-o="A"]').click()`);await wait(`!!document.querySelector('.explanation-answer')`);
  await run(`document.querySelector('[data-view="library"]').click();releaseNew=true;document.querySelector('footer .app-update-control').click()`);await wait(`!document.querySelector('.app-update-notice').hidden`);
- await run(`document.querySelector('[data-view="practice"]').click()`);await wait(`!!document.querySelector('.quiz-head .app-update-control:not([hidden])`);
+ await run(`document.querySelector('[data-view="practice"]').click()`);await wait(`!!document.querySelector('.quiz-head .app-update-control:not([hidden])')`);
  await run(`document.querySelector('.quiz-head .app-update-control').click()`);await wait(`!!document.querySelector('#appConfirmDialog[open]')`);await run(`document.querySelector('#appConfirmDialog .confirm-btn-ok').click()`);await pause(250);await wait(`location.search.includes('v=release-next')&&document.querySelector('.slide-media-img')?.naturalWidth>0`);assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).answers.q0`),'A','updating preserves the active session');
  assert.deepEqual(errors,[]);console.log('Study speed QA passed: bounded prefetch and persistent cache, exact selected-choice explanation, stable image/control nodes on grading and retry, retry/login/conflict paths, multi-answer confirmation, 16 viewport/theme/mode layouts and safe version update.');
 }finally{await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:mock.identifier});await call('Fetch.disable');ws.close()}
