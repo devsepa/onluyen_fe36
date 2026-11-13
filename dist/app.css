@@ -142,3 +142,12 @@ body.quiz-active .quiz-controls .quiz-sound-toggle{min-width:40px;width:40px;pad
 .quiz-map-card .legend-box.empty{padding:0;width:12px;height:12px;margin:0;border-radius:3px}
 
 body.quiz-active .quiz-head{flex-wrap:nowrap}body.quiz-active .quiz-head>div:not(.quiz-clock){flex:1;min-width:0}body.quiz-active .quiz-controls button{white-space:nowrap}@media(max-width:540px){body.quiz-active .quiz-controls{gap:6px}body.quiz-active .quiz-controls button{font-size:11px;padding:8px 10px}}
+
+.sidebar-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.sidebar-heading .brand{padding:0;min-width:0;font-size:16px;gap:9px}
+.sidebar-heading .brand>span:last-child{min-width:0;white-space:nowrap}
+.sidebar-toggle{width:34px;min-width:34px;height:36px;padding:0;font-size:26px;line-height:1;flex:none}
+.nav-text{min-width:0}
+@media(min-width:761px){body.sidebar-collapsed .sidebar{width:78px;padding:22px 12px}body.sidebar-collapsed main{margin-left:78px}body.sidebar-collapsed .sidebar-heading{flex-direction:column;gap:16px}body.sidebar-collapsed .brand>span:last-child,body.sidebar-collapsed .nav-label,body.sidebar-collapsed .nav-text,body.sidebar-collapsed .nav-arrow,body.sidebar-collapsed .nav-count{display:none}body.sidebar-collapsed .sidebar nav{margin-top:24px}body.sidebar-collapsed .nav{justify-content:center;padding:13px 8px;min-height:48px}body.sidebar-collapsed .nav-icon{font-size:22px}}
+@media(max-width:760px){.sidebar{padding:12px 17px}.sidebar-heading .brand{font-size:16px}.sidebar-toggle{width:40px;height:40px;font-size:22px}.sidebar nav{display:none}body.mobile-menu-open .sidebar nav{display:grid;margin-top:14px}.sidebar .nav{min-height:56px}.sidebar .nav-text{white-space:normal}}
+body.quiz-active.sidebar-collapsed main{margin:0}
