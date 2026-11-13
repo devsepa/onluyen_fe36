@@ -1,6 +1,6 @@
 # Xuất bản GitHub Pages
 
-Repository người dùng yêu cầu tạo: `onluyen_fe36`. Chưa xác định owner và chưa xác nhận tạo/publish; không đoán URL đã hoạt động. Khi có owner thật, URL dự kiến theo mẫu `https://<owner>.github.io/onluyen_fe36/`.
+Repository đích: `devsepa/onluyen_fe36`. URL dự kiến: `https://devsepa.github.io/onluyen_fe36/`. Chỉ xác nhận website hoạt động sau khi workflow triển khai thành công và URL trả về trang web.
 
 Website hiện tại là HTML/CSS/JavaScript tĩnh trong `dist/`. Workflow `.github/workflows/pages.yml` kiểm tra cú pháp, chạy test rồi chỉ xuất bản thư mục `dist`; không xuất bản profile browser QA, ảnh chụp trong `outputs/`, file môi trường hoặc dữ liệu tài liệu riêng tư.
 
