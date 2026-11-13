@@ -1,5 +1,5 @@
 import {shuffle,grade,answerQuestion,optionState} from './core.mjs';
-import {setupResources} from './resources-ui.js';
+import {setupResources} from './resources-ui.js?v=20261113-account-7';
 import {presentationIdFromLink} from './resources.mjs';
 import {validateBank} from './banks.mjs';
 import {setupAccount} from './account-ui.js';
@@ -13,7 +13,7 @@ if(session?.questions.some(q=>!q.sourceId&&!presentationIdFromLink(q.url)))sessi
 let view=bank.length?'library':'sources',lastResult=null,preferredMode='study',page=1,editing=null,resultFilter='all';
 const pageSize=10;
 const pageInfo={
- sources:['Tài liệu của tôi','Tài liệu của tôi','Kết nối Google, chọn tài liệu và nhập câu hỏi từ slide.'],
+ sources:['Tài liệu của tôi','Tài liệu của tôi','Chọn tài liệu và nhập câu hỏi từ slide.'],
  library:['Ngân hàng câu hỏi','Ngân hàng câu hỏi','Kiểm tra nội dung và xác nhận đáp án trước khi đưa câu hỏi vào đề.'],
  practice:['Ôn luyện & Thi thử','Ôn luyện & Thi thử','Chọn chế độ, nguồn câu hỏi và số câu để bắt đầu làm bài.'],
  history:['Lịch sử & Kết quả','Lịch sử & Kết quả','Xem các bài đã nộp và mở lại kết quả chi tiết.'],
@@ -49,9 +49,11 @@ function switchView(next,mode){
 document.addEventListener('click',event=>{const action=event.target.closest('[data-view]');if(action){event.preventDefault();switchView(action.dataset.view,action.dataset.mode)}});
 const account=setupAccount({onConnect:()=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi đổi tài khoản Google.');
- $('connect').click();
-},onDisconnect:()=>$('disconnect').click()});
-setupResources({onAccountChange:profile=>account.update(profile),onAccountError:text=>message(text),message:text=>message(text,'sources'),hasActiveSession:()=>!!session&&!session.done,onImport:result=>{
+ resources.connect();
+},onDisconnect:()=>resources.disconnect()});
+const resources=setupResources({onAccountChange:profile=>{
+ account.update(profile);$('sourceAccessNotice').hidden=!!profile;$('sourceControls').hidden=!profile;
+},onAccountError:text=>message(text),message:text=>message(text,'sources'),hasActiveSession:()=>!!session&&!session.done,onImport:result=>{
  if(session&&!session.done){message('Hoàn thành bài đang làm trước khi thay ngân hàng câu hỏi.','sources');return false}
  if(!write('sot-bank',result.questions))return false;
  bank=result.questions;sourceSummary=result.sources.map(s=>s.name).join(' · ');write('sot-source',sourceSummary);page=1;refreshStats();if(view==='library')renderLibrary();$('openImportedBank').hidden=false;$('openImportedBank').textContent=`Kiểm tra ${bank.length} câu hỏi đã nhập →`;return true;

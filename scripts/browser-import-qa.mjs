@@ -10,6 +10,9 @@ function call(method,params={}){return new Promise((resolve,reject)=>{const id=+
 ws.onmessage=event=>{const m=JSON.parse(event.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}};
 async function evaluate(expression){const r=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value}
 await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Wrong origin');localStorage.clear();location.reload()`);await new Promise(resolve=>setTimeout(resolve,500));
+assert.equal(await evaluate(`document.querySelector('#connect,#disconnect')===null`),true,'login controls must exist only in the avatar');
+assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),true);
+assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidden`),false);
 await evaluate(`(()=>{
  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=700;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,1400,700);c.fillStyle='black';c.font='34px Arial';['Which clause filters groups after aggregation?','A. WHERE','B. HAVING','C. ORDER BY','D. SELECT'].forEach((t,i)=>c.fillText(t,60,100+i*90));
  const image=canvas.toDataURL();const originalFetch=window.fetch;window.qaCalls=[];
@@ -32,6 +35,8 @@ assert.equal(await evaluate(`document.querySelector('#settings,#settingsMobile,#
 assert.equal(await evaluate(`document.querySelector('#accountName').textContent`),'Người học QA');
 assert.equal(await evaluate(`document.querySelector('#accountEmail').textContent`),'qa@example.com');
 assert.equal(await evaluate(`document.querySelector('#accountButton').classList.contains('connected')`),true);
+assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),false);
+assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidden`),true);
 assert.equal(await evaluate(`document.querySelectorAll('#selectedResources input:checked').length`),0);
 assert.equal(await evaluate(`document.querySelector('#useResources').disabled`),true);
 await mkdir('outputs/source-selection',{recursive:true});
@@ -70,5 +75,7 @@ assert.equal(result.active,'library');assert.equal(result.questions,4);assert.eq
 await evaluate(`document.querySelector('#accountButton').click();document.querySelector('#accountLogout').click()`);
 assert.equal(await evaluate(`document.querySelector('#accountName').textContent`),'Khách');
 assert.equal(await evaluate(`document.querySelector('#accountButton').classList.contains('connected')`),false);
+assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),true);
+assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidden`),false);
 assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).length`),4,'logout must preserve local study resources');
 console.log(JSON.stringify({result:'passed',...result,selection:'unchecked by default, toggle and picker sync, rescan unchecked, unselected source not read',viewports:'PC/mobile × light/dark',note:'Mock Google authorization and API responses; real Tesseract browser OCR'}));ws.close();

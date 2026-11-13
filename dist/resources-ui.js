@@ -32,7 +32,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }
  }
  function active(){return token&&Date.now()<expires}
- function reset(){clearTimeout(expiryTimer);profileController?.abort();onAccountChange(null);stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])$(id).disabled=false;epoch++;controller?.abort();controller=null;token=null;expires=0;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('disconnect').hidden=true;$('connection').textContent='Chưa kết nối';$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
+ function reset(){clearTimeout(expiryTimer);profileController?.abort();onAccountChange(null);stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])$(id).disabled=false;epoch++;controller?.abort();controller=null;token=null;expires=0;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
  let nextThumbnailAt=0;
  function delay(ms,signal){return new Promise((resolve,reject)=>{
   if(signal?.aborted)return reject(new DOMException('Đã dừng.','AbortError'));
@@ -47,7 +47,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal});
   if((r.status===429||r.status>=500)&&attempt<4){await delay(Math.max(Number(r.headers.get('Retry-After')||0)*1000,2**attempt*1000+Math.random()*500),signal);continue;}
   if(!r.ok){
-   if(r.status===401){token=null;expires=0;onAccountChange(null);$('connection').textContent='Phiên đã hết hạn';throw Object.assign(Error('Phiên Google đã hết hạn. Hãy kết nối lại.'),{ocrFatal:true});}
+   if(r.status===401){token=null;expires=0;onAccountChange(null);throw Object.assign(Error('Phiên Google đã hết hạn. Hãy kết nối lại.'),{ocrFatal:true});}
    if(r.status===403||r.status===404)throw Error('Chưa truy cập được tài liệu. Hãy dùng đúng tài khoản Google có quyền xem tài liệu rồi thử lại.');
    throw Error(`Google trả lỗi ${r.status}. Hãy thử lại.`);
   }
@@ -94,7 +94,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }catch(error){if(run!==epoch||error.name==='AbortError')return;status('Chưa tìm được danh sách tài liệu.');message(error.message)}
   finally{if(run===epoch)setBusy(false)}
  }
- $('connect').onclick=()=>{
+ function connect(){
   if(hasActiveSession())return onAccountError('Hãy hoàn thành bài đang làm trước khi đổi kết nối Google.');
   if(busy)return;
   const clientId=resolveGoogleClientId();if(!clientId)return onAccountError('Kết nối Google hiện chưa sẵn sàng. Vui lòng thử lại sau.');
@@ -104,10 +104,10 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    if(run!==epoch)return;
    if(r.error)return onAccountError('Chưa đăng nhập được Google. Hãy thử lại.');
    if(!google.accounts.oauth2.hasGrantedAllScopes(r,...GOOGLE_SCOPES))return onAccountError('Cần đồng ý chia sẻ thông tin tài khoản và quyền đọc tài liệu để kết nối Google.');
-   reset();token=r.access_token;expires=Date.now()+r.expires_in*1000;$('connection').textContent='Đã kết nối Google';$('disconnect').hidden=false;
+   reset();token=r.access_token;expires=Date.now()+r.expires_in*1000;
     const accountEpoch=epoch;profileController=new AbortController();
     onAccountChange({name:'Tài khoản Google'});
-    expiryTimer=setTimeout(()=>{if(accountEpoch===epoch){token=null;expires=0;onAccountChange(null);$('connection').textContent='Phiên kết nối đã hết hạn';$('disconnect').hidden=true;}},Math.max(0,expires-Date.now()));
+    expiryTimer=setTimeout(()=>{if(accountEpoch===epoch){token=null;expires=0;onAccountChange(null);}},Math.max(0,expires-Date.now()));
     try{
      const response=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:`Bearer ${token}`},signal:profileController.signal});
      if(response.ok){const profile=await response.json();if(accountEpoch!==epoch)return;onAccountChange({name:profile.name,email:profile.email,picture:profile.picture});}
@@ -116,7 +116,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    message('');scan();
   },error_callback:()=>{if(run===epoch)onAccountError('Cửa sổ Google bị đóng hoặc chặn. Hãy kết nối lại.')}}).requestAccessToken({prompt:'select_account'});
  };
- $('disconnect').onclick=()=>{const oldToken=token;reset();if(oldToken)google.accounts.oauth2.revoke(oldToken,()=>{});status('Kết nối Google để tự tìm tài liệu theo tên.');message('Đã ngắt Google. Dữ liệu đã nhập vẫn nằm trên trình duyệt này; không tự nhập thêm tài liệu.')};
+ function disconnect(){const oldToken=token;reset();if(oldToken)google.accounts.oauth2.revoke(oldToken,()=>{});status('Đăng nhập ở góc phải để chọn tài liệu.');message('Đã đăng xuất Google. Dữ liệu đã nhập vẫn được giữ trên trình duyệt này.')}
  $('scan').onclick=scan;
  $('chooseFiles').onclick=()=>{if(!active())return message('Kết nối Google trước khi chọn tài liệu.');renderFiles(files);$('filePicker').showModal()};
  $('resourceSearch').oninput=()=>renderFiles(files);
@@ -169,4 +169,5 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
   finally{await recognizer.terminate();if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };
+ return {connect,disconnect};
 }
