@@ -1201,18 +1201,6 @@ function renderPractice() {
           </div>
         </div>
 
-        <!-- Prefetch toggle -->
-        <div class="prefetch-toggle-card-v2" id="prefetchWrapper" ${preferredMode !== "study" ? "hidden" : ""}>
-          <div class="toggle-card-content">
-            <span class="toggle-card-title">⚡ Tải trước giải thích AI</span>
-            <span class="toggle-card-desc">Chuẩn bị trước tối đa 3 câu và lưu giải thích để giảm thời gian chờ.</span>
-          </div>
-          <label class="switch-toggle-v2">
-            <input id="prefetchExplanations" type="checkbox" ${prefetchEnabled ? "checked" : ""}>
-            <span class="slider-toggle-v2"></span>
-          </label>
-        </div>
-
         <!-- Action Button -->
         <button id="start" class="hero-start-btn" ${!initialPoolCount ? "disabled" : ""}>
           <span class="btn-text">${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"}</span>
@@ -1367,12 +1355,6 @@ function renderPractice() {
     };
   });
 
-  // Prefetch Toggle
-  const prefetchEl = $("prefetchExplanations");
-  if (prefetchEl) {
-    prefetchEl.onchange = e => setExplanationPrefetch(e.target.checked);
-  }
-
   // Subject change
   $("practiceSource").onchange = () => {
     currentSubject = $("practiceSource").value;
@@ -1400,7 +1382,6 @@ function renderPractice() {
         if (inp.checked) seg.classList.add("active");
         else seg.classList.remove("active");
       });
-      $("prefetchWrapper").hidden = preferredMode !== "study";
       $("timeSetting").hidden = preferredMode === "study";
       const startBtn = $("start");
       const btnText = startBtn.querySelector(".btn-text");
