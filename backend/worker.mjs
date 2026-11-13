@@ -1,4 +1,4 @@
-﻿import {sharedDeckRoute} from './shared-decks.mjs';
+import {sharedDeckRoute} from './shared-decks.mjs';
 import {qualityRoute} from './quality.mjs';
 import {cacheModerationRoute} from './cache-moderation.mjs';
 export {QualityStore} from './quality.mjs';
@@ -143,7 +143,7 @@ export default {async fetch(request,env){
    const fbody=JSON.parse(await readLimited(request,8192));
    if(!fbody?.prompt||typeof fbody.prompt!=='string')throw new ApiError(400,'Thiếu prompt.');
    const prompt=fbody.prompt.slice(0,2000);
-   const gemResp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${env.GEMINI_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:512,temperature:0.5}})});
+   const gemResp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:512,temperature:0.5}})});
    if(!gemResp.ok)return reply({error:'AI lỗi: '+gemResp.status},503);
    const gdata=await gemResp.json();
    const text=gdata?.candidates?.[0]?.content?.parts?.[0]?.text||'AI không có phản hồi.';

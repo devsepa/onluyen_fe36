@@ -1,5 +1,8 @@
 ﻿import {setupLibraryManager} from './library-manager.mjs';
 import {createLibraryMedia} from './library-media.mjs';
+import {createStudySelection} from './study-selection.mjs';
+import {createTelemetry} from './telemetry.mjs';
+import {setupQuality} from './quality-ui.mjs';
 import {createBankTracker} from './library-data.mjs';
 import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
 import {createExplanationQueue} from './explanation-queue.mjs';
@@ -68,6 +71,11 @@ let bank = read("sot-bank", []),
   session = read("sot-session", null),
   sourceSummary = read("sot-source", "");
 let libraryManager=null,libraryProfile=null,libraryGeneration=0;
+let quality=null;
+const telemetry=createTelemetry({base:AI_API_BASE});
+const studySelection=createStudySelection(localStorage,history,session);
+let selectionStrategy=read('sot-selection-strategy','unseen');
+if(!['unseen','random'].includes(selectionStrategy))selectionStrategy='unseen';
 const libraryMedia=createLibraryMedia();
 let libraryTracker;
 let pendingImportBank = null,
@@ -200,16 +208,19 @@ function hasAiText(q) {
   );
 }
 async function questionBlob(q, options = {}) {
+  const started=performance.now();try{
   try{const local=await libraryMedia.forQuestion(q);if(local)return local}catch{}
 
-  return q.sharedDeck
+  return await (q.sharedDeck
     ? (
         await deckRequest(AI_API_BASE, sharedImagePath(q), {
           signal: options.signal,
         })
       ).blob()
-    : resources.slideBlob(q, options);
+    : resources.slideBlob(q, options));
+  }catch(error){if(!['AbortError','TimeoutError'].includes(error.name))telemetry.record('image_error');throw error}finally{telemetry.record('image_ms',performance.now()-started)}
 }
+
 async function questionImage(q) {
   return URL.createObjectURL(await questionBlob(q));
 }
@@ -360,7 +371,7 @@ const account = setupAccount({
 const resources = setupResources({
   onAccountChange: (profile) => {
     account.update(profile);
-    libraryProfile=profile;setTimeout(()=>libraryManager?.account(profile),0);
+    libraryProfile=profile;setTimeout(()=>{libraryManager?.account(profile);quality?.setProfile(profile)},0);
     $("sourceAccessNotice").hidden = !!profile;
     $("sourceControls").hidden = !profile;
     if (!profile && (view === "sources" || view === "library")) {
@@ -588,7 +599,7 @@ function renderLibrary() {
     ? qs
         .map(
           (q, i) =>
-            `<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page - 1) * pageSize + i + 1} · ${esc(q.sourceName || "Tài liệu đã nhập")}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction === "ocr" ? " · Nhận dạng từ ảnh" : ""}</div><span class="tag ${q.verified ? "ok" : ""}">${q.answerSource === "gemini" ? "✦ Đáp án AI gợi ý" : q.verified ? (q.answerSource === "speaker-notes" ? "✓ Đáp án từ ghi chú" : "✓ Đáp án đã xác nhận") : "Chờ kiểm tra"}</span></div>${sourceReference(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-sm">${q.options.map((o) => `<span class="choice-pill static-pill ${q.answer.includes(o.id) ? "correct" : ""}">${esc(o.id)}</span>`).join("")}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer || "Chưa có")}</strong></span></div>${(q.answerSource === "gemini" || q.explanationSource === "gemini") && q.explanation ? `<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>` : ""}${q.explanation && q.answerSource !== "gemini" && q.explanationSource !== "gemini" ? `<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>` : ""}${q.aiStatus === "uncertain" ? `<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>` : ""}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page - 1) * pageSize + i + 1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified ? "secondary" : ""}" data-verify="${esc(q.id)}">${q.verified ? "Bỏ xác nhận" : "✓ Xác nhận"}</button>${q.extraction === "ocr" ? `<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>` : ""}<button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`,
+            `<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page - 1) * pageSize + i + 1} · ${esc(q.sourceName || "Tài liệu đã nhập")}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction === "ocr" ? " · Nhận dạng từ ảnh" : ""}</div><span class="tag ${q.verified ? "ok" : ""}">${q.answerSource === "gemini" ? "✦ Đáp án AI gợi ý" : q.verified ? (q.answerSource === "speaker-notes" ? "✓ Đáp án từ ghi chú" : "✓ Đáp án đã xác nhận") : "Chờ kiểm tra"}</span></div>${sourceReference(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-sm">${q.options.map((o) => `<span class="choice-pill static-pill ${q.answer.includes(o.id) ? "correct" : ""}">${esc(o.id)}</span>`).join("")}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer || "Chưa có")}</strong></span></div>${(q.answerSource === "gemini" || q.explanationSource === "gemini") && q.explanation ? `<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>` : ""}${q.explanation && q.answerSource !== "gemini" && q.explanationSource !== "gemini" ? `<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>` : ""}${q.aiStatus === "uncertain" ? `<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>` : ""}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page - 1) * pageSize + i + 1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified ? "secondary" : ""}" data-verify="${esc(q.id)}">${q.verified ? "Bỏ xác nhận" : "✓ Xác nhận"}</button>${q.extraction === "ocr" ? `<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>` : ""}<button class="secondary" data-report-question="${esc(q.id)}">Báo lỗi</button><button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`,
         )
         .join("")
     : empty(
@@ -1142,14 +1153,16 @@ function renderPractice() {
     write("sot-practice-subject", preferredSubject);
   }
 
-  const pool = (subj = $("practiceSource") ? $("practiceSource").value : currentSubject) =>
+  const allPool = (subj = $("practiceSource") ? $("practiceSource").value : currentSubject) =>
     eligible.filter(
       (q) => !subj || subjectKey(q) === subj,
     );
 
+  const pool = subj => selectionStrategy==='unseen'?studySelection.remaining(allPool(subj)):allPool(subj);
   const initialPool = pool(currentSubject);
   const initialPoolCount = initialPool.length;
   const initialCount = Math.min(20, initialPoolCount) || 1;
+  const selectionSummary=()=>{const all=allPool(),remaining=studySelection.remaining(all).length;return remaining?`Còn ${remaining}/${all.length} câu chưa bốc trong vòng này. Câu được tính đã bốc khi bắt đầu buổi học, kể cả khi chưa trả lời.`:'Bạn đã bốc hết các câu trong nhóm này. Bắt đầu vòng mới để ôn tiếp hoặc chọn ngẫu nhiên toàn bộ.'};
 
   $("practice").innerHTML = `
 <div class="setup-container-v2">
@@ -1204,6 +1217,12 @@ function renderPractice() {
         </div>
 
         <!-- Question Count Selection with Range Slider & Presets -->
+        <div class="form-group-v2">
+          <label class="form-label-v2" for="selectionStrategy">Cách chọn câu hỏi</label>
+          <select id="selectionStrategy" class="select-control-v2"><option value="unseen" ${selectionStrategy==='unseen'?'selected':''}>Ưu tiên câu chưa làm · không trùng trong vòng</option><option value="random" ${selectionStrategy==='random'?'selected':''}>Ngẫu nhiên toàn bộ · có thể gặp lại câu cũ</option></select>
+          <p id="selectionSummary" class="selection-summary">${selectionSummary()}</p>
+          <button type="button" id="resetSelection" class="secondary selection-reset" ${studySelection.remaining(allPool()).length?'hidden':''}>Bắt đầu vòng mới cho nhóm câu này</button>
+        </div>
         <div class="form-group-v2">
           <div class="form-label-row">
             <label class="form-label-v2" for="count">Số câu làm bài</label>
@@ -1348,6 +1367,8 @@ function renderPractice() {
   };
 
   // Slider & Number input sync
+  $("selectionStrategy").onchange=()=>{selectionStrategy=$("selectionStrategy").value;write('sot-selection-strategy',selectionStrategy);renderPractice()};
+  $("resetSelection").onclick=async()=>{if(await askConfirm('Bắt đầu vòng mới cho môn / nguồn đang chọn? Các môn khác giữ nguyên tiến độ.',{title:'Ôn vòng tiếp theo',okText:'Bắt đầu vòng mới'})){try{studySelection.reset(allPool());renderPractice()}catch{message('Không lưu được tiến độ. Hãy kiểm tra dung lượng trình duyệt.')}}};
   $("countSlider").oninput = (e) => {
     $("count").value = e.target.value;
     updateDashboard();
@@ -1404,6 +1425,8 @@ function renderPractice() {
     preferredSubject = currentSubject;
     write("sot-practice-subject", preferredSubject);
     const count = pool().length;
+    $("selectionSummary").textContent = selectionSummary();
+    $("resetSelection").hidden = !!studySelection.remaining(allPool()).length;
     $("count").max = count || 1;
     $("countSlider").max = count || 1;
     const currentVal = Number($("count").value);
@@ -1447,8 +1470,7 @@ function renderPractice() {
       return message("Kiểm tra lại số câu và thời gian.");
     session = {
       mode: preferredMode,
-      questions: shuffle(questions)
-        .slice(0, count)
+      questions: studySelection.select(questions,count,selectionStrategy)
         .map((q) => ({ ...q, options: [...q.options] })),
       answers: {},
       flags: [],
@@ -1457,7 +1479,9 @@ function renderPractice() {
       deadline: preferredMode === "exam" ? Date.now() + mins * 60000 : null,
       done: false,
     };
-    write("sot-session", session);
+    let undo;
+    try{undo=studySelection.commit(session.questions)}catch{session=null;return message("Không lưu được tiến độ bốc câu. Hãy kiểm tra dung lượng trình duyệt.")}
+    if(!write("sot-session", session)){try{undo()}catch{}session=null;return}
     message("");
     renderQuiz();
     startSessionPreload(session.questions);
@@ -1500,15 +1524,18 @@ function navItemClass(session, item, index, study) {
   return classes.join(" ");
 }
 let autoAdvance=read('sot-auto-advance',true),prefetchEnabled=read('sot-explanation-prefetch',true),readingExplanation=null;
+const generatedExplanationKeys=new Set(),localExplanationHits=new Set();
 const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},load:async(q,{signal})=>{
  if(!AI_API_BASE)throw Error('Giải thích AI đang được chuẩn bị. Hãy thử lại sau.');
  let token=null;try{token=resources.apiToken()}catch{token=null;}
+ const started=performance.now();generatedExplanationKeys.add(explanationKey(q));
  const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(95000)]),submitted=structuredClone(q);
  try{
   if(q.url||q.sharedDeck){const blob=await questionBlob(q,{signal:requestSignal});if(blob.size>2100000)throw Error('Ảnh slide quá lớn để gửi AI.');submitted.image={mimeType:blob.type,data:await blobToBase64(blob)}}
   const result=await solveBatch(AI_API_BASE,[submitted],token,{signal:requestSignal,purpose:'explanation'});
+  telemetry.record('ai_ms',performance.now()-started);telemetry.record(result.answers[0].reused?'shared_hit':'shared_miss');
   return normalizeExplanation(q,result.answers[0]);
- }catch(error){if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
+ }catch(error){if(error.name!=='AbortError')telemetry.record('ai_error');if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
 },onChange:(question,state)=>{
  if(state.status==='ready'){
   const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key)return false;if(hasSpeakerNoteExplanation(q))return false;const details={...state.details,key};if(q.explanation===state.details.reason&&q.explanationSource==='gemini'&&JSON.stringify(q.explanationDetails)===JSON.stringify(details))return false;q.explanation=state.details.reason;q.explanationSource='gemini';q.explanationDetails=details;return true};
@@ -1519,8 +1546,9 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
   refreshQuizState();if(state.status==='ready')scheduleStudyAdvance();
  }
 }});
+function invalidateSharedExplanation(question){const key=explanationKey(question);explanationQueue.invalidate(question);for(const q of [...bank,...(session?.questions||[])])if(explanationKey(q)===key){delete q.explanationDetails;if(q.explanationSource==='gemini'){q.explanation='';delete q.explanationSource}}write('sot-bank',bank);if(session)write('sot-session',session);if(view==='practice'&&session?.mode==='study')refreshQuizState()}
 function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
-function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready')return cached;if(cached.status==='idle'){explanationQueue.request(q,{priority:true});return {status:'queued'};}return cached;}
+function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready'){quality?.checkFresh(q,cached.details,invalidateSharedExplanation);const key=explanationKey(q);if(!generatedExplanationKeys.has(key)&&!localExplanationHits.has(key)){localExplanationHits.add(key);telemetry.record('local_hit')}return cached;}if(cached.status==='idle'){explanationQueue.request(q,{priority:true});return {status:'queued'};}return cached;}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
@@ -1866,7 +1894,7 @@ function renderResult(r) {
       )
       .join(
         "",
-      )}</div>${visible.length ? visible.map((q) => `<article class="card question-card"><div class="question-top"><span>CÂU ${r.questions.indexOf(q) + 1}</span><span class="tag ${isCorrect(q, r.answers[q.id]) ? "ok" : ""}">${isCorrect(q, r.answers[q.id]) ? "✓ Đúng" : r.answers[q.id] ? "Sai" : "Chưa trả lời"}</span></div>${sourceReference(q)}${aiBadge(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-result">${q.options.map((o, i) => `<div class="choice-pill ${q.answer.includes(o.id) ? "correct" : (r.answers[q.id] || "").includes(o.id) ? "wrong" : ""}">${esc(o.id)}</div>`).join("")}</div><div class="result-answer-row"><span>Đáp án đúng: <strong class="badge-answer ok">${esc(q.answer)}</strong></span><span>Bạn chọn: <strong class="badge-answer ${isCorrect(q, r.answers[q.id]) ? "ok" : r.answers[q.id] ? "danger" : "muted"}">${esc(r.answers[q.id] || "Chưa trả lời")}</strong></span></div>${noteExplanation(q)}</article>`).join("") : empty("Không có câu hỏi trong nhóm này", "Thử chọn Tất cả để xem toàn bộ bài làm.", "history", "Về lịch sử →")}`;
+      )}</div>${visible.length ? visible.map((q) => `<article class="card question-card"><div class="question-top"><span>CÂU ${r.questions.indexOf(q) + 1}</span><span class="tag ${isCorrect(q, r.answers[q.id]) ? "ok" : ""}">${isCorrect(q, r.answers[q.id]) ? "✓ Đúng" : r.answers[q.id] ? "Sai" : "Chưa trả lời"}</span></div>${sourceReference(q)}${aiBadge(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-result">${q.options.map((o, i) => `<div class="choice-pill ${q.answer.includes(o.id) ? "correct" : (r.answers[q.id] || "").includes(o.id) ? "wrong" : ""}">${esc(o.id)}</div>`).join("")}</div><div class="result-answer-row"><span>Đáp án đúng: <strong class="badge-answer ok">${esc(q.answer)}</strong></span><span>Bạn chọn: <strong class="badge-answer ${isCorrect(q, r.answers[q.id]) ? "ok" : r.answers[q.id] ? "danger" : "muted"}">${esc(r.answers[q.id] || "Chưa trả lời")}</strong></span></div>${noteExplanation(q)}<button class="secondary" data-report-question="${esc(q.id)}">Báo lỗi câu hỏi</button></article>`).join("") : empty("Không có câu hỏi trong nhóm này", "Thử chọn Tất cả để xem toàn bộ bài làm.", "history", "Về lịch sử →")}`;
   setTimeout(() => loadLibrarySlideImages(visible), 0);
   $("again").onclick = () => {
     lastResult = null;
@@ -1982,6 +2010,8 @@ libraryManager=setupLibraryManager({base:AI_API_BASE,getBank:()=>bank,getGenerat
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
  onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);
+quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id),getDetails:q=>explanationQueue.state(q).details||q.explanationDetails,onRead:readExplanation});quality.setProfile(libraryProfile);
+window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
@@ -2033,7 +2063,7 @@ async function askAiFollowup(question, userQuery, token) {
   const resp = await fetch(base + '/followup', {
    method: 'POST',
    headers,
-   body: JSON.stringify({prompt, model:'gemini-2.0-flash-lite'})
+   body: JSON.stringify({prompt, model:'gemini-2.5-flash'})
   });
   if(!resp.ok) throw new Error('API lỗi ' + resp.status);
   const data = await resp.json();
