@@ -3,11 +3,9 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),aside=root.querySelector('.quiz-layout>aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
  if(study){const back=document.createElement('button');back.type='button';back.className='secondary quiz-leave';back.dataset.view='library';back.textContent='← Thư viện';back.title='Tạm rời, bài ôn luyện vẫn được giữ';head.prepend(back)}
- const group=card.querySelector('.quiz-nav-group'),counter=group?.querySelector('.question-counter');if(group&&counter)group.replaceWith(counter);
+
  const multi=card.querySelector('.multi-hint');if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
- const controls=root.querySelector('.quiz-controls');controls.children[0].textContent='← Trước';controls.children[1].textContent='Tiếp →';
- const mapButton=document.createElement('button');mapButton.type='button';mapButton.className='secondary quiz-map-open';mapButton.textContent='Câu hỏi';controls.insertBefore(mapButton,controls.children[1]);
- if(study&&sound){const button=document.createElement('button');button.type='button';button.className='secondary quiz-sound-toggle';const update=()=>{button.textContent=sound.enabled?'♪':'⊘';button.setAttribute('aria-pressed',String(sound.enabled));button.title=button.ariaLabel=sound.enabled?'Tắt âm báo đúng/sai':'Bật âm báo đúng/sai'};button.onclick=()=>{sound.toggle();update()};update();controls.insertBefore(button,controls.lastElementChild)}
+ const controls=root.querySelector('.quiz-controls');if(controls&&controls.children.length>=2){controls.children[0].textContent='← Trước';controls.children[1].textContent='Tiếp →'}
  function paginateMap(container){
   const grid=container.querySelector('.quiz-navigation'),size=innerHeight<440?5:innerHeight<700?10:20,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
   const pager=document.createElement('div');pager.className='quiz-map-pager';const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');prev.className=next.className='secondary';prev.type=next.type='button';prev.textContent='←';next.textContent='→';prev.setAttribute('aria-label','Trang câu hỏi trước');next.setAttribute('aria-label','Trang câu hỏi tiếp');pager.append(prev,label,next);grid.after(pager);
@@ -15,10 +13,7 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   prev.onclick=()=>{page--;render()};next.onclick=()=>{page++;render()};render();
  }
  aside.classList.add('quiz-map-card');aside.querySelector('p').textContent='Chọn số để chuyển câu.';paginateMap(aside);
- const mapDialog=document.createElement('dialog');mapDialog.className='quiz-map-dialog';mapDialog.setAttribute('aria-label','Danh sách câu hỏi');
- mapDialog.innerHTML='<div class="modal-heading"><h2>Danh sách câu hỏi</h2><button type="button" class="secondary">Đóng</button></div>';
- mapDialog.querySelector('button').onclick=()=>mapDialog.close();root.append(mapDialog);
- mapButton.onclick=()=>{mapDialog.querySelector('.quiz-map-card')?.remove();const copy=aside.cloneNode(true);copy.querySelector('.quiz-map-pager').remove();copy.querySelector('h3').remove();paginateMap(copy);mapDialog.append(copy);mapDialog.showModal()};
+
  const feedback=card.querySelector('.feedback');
  if(feedback){
   feedback.replaceChildren();
