@@ -1,11 +1,11 @@
-{
+﻿{
   "name": "onluyen-fe36-ai",
   "main": "worker.mjs",
   "compatibility_date": "2026-11-13",
   "workers_dev": true,
   "vars": {
     "ALLOWED_ORIGINS": "https://devsepa.github.io",
-    "GEMINI_MODEL": "gemini-3.8-flash",
+    "GEMINI_MODEL": "gemini-3.5-flash",
     "USER_DAILY_QUESTIONS": "150",
     "GLOBAL_DAILY_QUESTIONS": "1000"
   },
