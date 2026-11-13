@@ -316,17 +316,36 @@ body.quiz-active .feedback-inline-exp b{display:block;margin-bottom:4px;font-siz
 .explanation-answer,.explanation-chosen{margin:6px 0;font-size:13px}
 .explanation-choice-reason{margin:4px 0 4px 12px;font-size:12.5px;color:var(--muted)}
 
-/* Enhanced Shared Deck Cards */
-.shared-deck{border-radius:14px;border:1px solid var(--line);background:var(--panel);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;display:flex;flex-direction:column;gap:8px}
-.shared-deck:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,0.18);border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
-.shared-deck-header{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.shared-deck-date{font-size:11px;color:var(--muted)}
-.shared-deck-title{font-size:17px;font-weight:700;color:var(--text);margin:2px 0 4px}
-.shared-deck-badges{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}
-.shared-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;background:var(--soft);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent)}
-.shared-badge.count{background:color-mix(in srgb,var(--success) 12%,var(--panel));color:var(--success);border-color:color-mix(in srgb,var(--success) 28%,transparent)}
-.shared-deck-actions{display:flex;align-items:center;gap:10px;margin-top:auto}
-.shared-use-btn{flex:1;min-height:42px;font-size:13px;font-weight:600}
+/* ==========================================================================
+   REDESIGNED SHARED DECK CARDS (KHO ĐỀ CHUNG)
+   ========================================================================== */
+.shared-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:22px}
+.shared-deck{border-radius:16px;border:1px solid var(--line);background:var(--panel);transition:transform .2s cubic-bezier(0.16,1,0.3,1),box-shadow .2s cubic-bezier(0.16,1,0.3,1),border-color .2s ease;display:flex;flex-direction:column;justify-content:space-between;padding:22px;gap:14px;box-shadow:0 6px 20px -8px rgba(0,0,0,0.25)}
+[data-theme="dark"] .shared-deck{box-shadow:0 12px 28px -10px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)}
+.shared-deck:hover{transform:translateY(-3px);box-shadow:0 16px 36px -10px rgba(0,0,0,0.4);border-color:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.shared-deck.is-owner-deck{border-color:color-mix(in srgb,#f59e0b 35%,var(--line))}
+
+.shared-deck-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.deck-type-tag{font-size:11px;font-weight:700;padding:3.5px 10px;border-radius:6px;letter-spacing:.3px;display:inline-flex;align-items:center;gap:4px}
+.deck-type-tag.owner-tag{background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)}
+.deck-type-tag.community-tag{background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.3)}
+.shared-deck-date{font-size:11.5px;color:var(--muted);white-space:nowrap}
+
+.shared-deck-main{display:flex;flex-direction:column;gap:10px}
+.shared-deck-title{font-size:17.5px;font-weight:800;color:var(--text);margin:0;line-height:1.4;letter-spacing:-.3px;overflow-wrap:anywhere}
+.shared-deck-badges{display:flex;flex-wrap:wrap;gap:8px}
+.shared-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:7px;background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.shared-badge.count{background:rgba(16,185,129,0.12);color:#10b981;border-color:rgba(16,185,129,0.3)}
+
+.shared-deck-footer,.shared-deck-actions{display:flex;align-items:center;gap:10px;margin-top:auto;padding-top:16px;border-top:1px solid var(--line)}
+.btn-deck-use,.shared-use-btn{flex:1;min-height:44px;font-size:13.5px;font-weight:700;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent) 0%,#4338ca 100%);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 16px rgba(99,102,241,0.3);transition:all .18s ease;letter-spacing:-.2px}
+.btn-deck-use:hover:not(:disabled),.shared-use-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 24px rgba(99,102,241,0.48);filter:brightness(1.08)}
+.btn-deck-use .btn-arrow,.shared-use-btn .btn-arrow{font-size:16px;transition:transform .18s ease}
+.btn-deck-use:hover:not(:disabled) .btn-arrow,.shared-use-btn:hover:not(:disabled) .btn-arrow{transform:translateX(3px)}
+
+.btn-deck-remove{min-height:44px;padding:0 16px;font-size:13px;font-weight:600;border-radius:10px;border:1.5px solid rgba(239,68,68,0.35);background:rgba(239,68,68,0.08);color:#ef4444;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;flex:none;transition:all .18s ease}
+.btn-deck-remove:hover:not(:disabled){background:rgba(239,68,68,0.18);border-color:#ef4444;color:#f87171;transform:translateY(-1px);box-shadow:0 4px 14px rgba(239,68,68,0.22)}
+.btn-deck-remove .del-icon{font-size:14px;line-height:1}
 /* History actions & delete button */
 .history-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
 .history-delete-btn{min-width:38px;min-height:38px;width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;transition:all .15s ease}

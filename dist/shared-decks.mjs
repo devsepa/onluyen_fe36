@@ -83,7 +83,35 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
 
  function cards(){
   const term=$('deckSearch').value.trim().toLocaleLowerCase(),filtered=items.filter(d=>d.title.toLocaleLowerCase().includes(term));
-  $('deckList').innerHTML=filtered.length?filtered.map(d=>`<article class="card shared-deck"><div class="shared-deck-header"><span class="overline">${owned().includes(d.id)?'⭐ BỘ ĐỀ CỦA BẠN':'🌐 BỘ ĐỀ CỘNG ĐỒNG'}</span><span class="shared-deck-date">${new Date(d.created).toLocaleDateString('vi-VN')}</span></div><h2 class="shared-deck-title">${esc(d.title)}</h2><div class="shared-deck-badges"><span class="shared-badge count">📚 ${d.count} câu</span><span class="shared-badge">🖼️ Slide gốc</span><span class="shared-badge">💡 Có giải thích</span></div><div class="shared-deck-actions"><button class="primary shared-use-btn" data-use-deck="${esc(d.id)}">Vào ôn luyện ngay →</button>${owned().includes(d.id)?`<button class="text-button danger" data-delete-deck="${esc(d.id)}" title="Gỡ bộ đề khỏi kho chung">Gỡ</button>`:''}</div></article>`).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>';
+  $('deckList').innerHTML=filtered.length?filtered.map(d=>{
+   const isOwner=owned().includes(d.id);
+   return `<article class="card shared-deck ${isOwner?'is-owner-deck':''}">
+     <div class="shared-deck-topbar">
+       <span class="deck-type-tag ${isOwner?'owner-tag':'community-tag'}">
+         ${isOwner?'⭐ Bộ đề của bạn':'🌐 Bộ đề công khai'}
+       </span>
+       <span class="shared-deck-date">📅 ${new Date(d.created).toLocaleDateString('vi-VN')}</span>
+     </div>
+     <div class="shared-deck-main">
+       <h3 class="shared-deck-title" title="${esc(d.title)}">${esc(d.title)}</h3>
+       <div class="shared-deck-badges">
+         <span class="shared-badge count">📚 <b>${d.count}</b> câu</span>
+         <span class="shared-badge">🖼️ Slide gốc</span>
+         <span class="shared-badge">💡 Có giải thích AI</span>
+       </div>
+     </div>
+     <div class="shared-deck-footer shared-deck-actions">
+       <button class="btn-deck-use shared-use-btn" data-use-deck="${esc(d.id)}">
+         <span>Vào ôn luyện ngay</span>
+         <span class="btn-arrow">→</span>
+       </button>
+       ${isOwner?`<button class="btn-deck-remove" data-delete-deck="${esc(d.id)}" title="Gỡ bộ đề khỏi kho chung" aria-label="Gỡ bộ đề khỏi kho chung">
+         <span class="del-icon">🗑️</span>
+         <span class="del-text">Gỡ đề</span>
+       </button>`:''}
+     </div>
+   </article>`;
+  }).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>';
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';

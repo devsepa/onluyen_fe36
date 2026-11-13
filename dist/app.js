@@ -39,7 +39,7 @@ import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=multi-bank-1";
+} from "./shared-decks.mjs?v=shared-card-v2";
 import { fitQuizScreen } from "./quiz-screen.mjs?v=study-speed-1";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
@@ -98,6 +98,7 @@ if (
 let view = bank.length ? "library" : "shared",
   lastResult = null,
   preferredMode = "study",
+  preferredSubject = read("sot-practice-subject") || "",
   page = 1,
   editing = null,
   resultFilter = "all";
@@ -413,7 +414,18 @@ const shared = setupSharedDecks({
     write("sot-source", sourceSummary);
     page = 1;
     refreshStats();
+    const key = (questions[0] ? subjectKey(questions[0]) : "") ||
+      questionSubject({ sourceName: deck.title }) ||
+      (deck.id ? `shared-${deck.id}` : "");
+    if (key) {
+      preferredSubject = key;
+      write("sot-practice-subject", key);
+    }
     switchView("practice");
+    if ($("practiceSource") && key) {
+      $("practiceSource").value = key;
+      $("practiceSource").dispatchEvent(new Event("change"));
+    }
   },
 });
 setupSlidePreview({
@@ -1087,15 +1099,25 @@ function renderPractice() {
   if (session && !session.done) return renderQuiz();
   const eligible = bank.filter(readyForPractice),
     n = eligible.length;
+  const subjects = practiceSubjects(eligible);
 
-  const pool = () =>
+  let currentSubject = "";
+  if (preferredSubject && subjects.some((s) => s.key === preferredSubject)) {
+    currentSubject = preferredSubject;
+  } else if (subjects.length > 0) {
+    currentSubject = subjects[0].key;
+    preferredSubject = currentSubject;
+    write("sot-practice-subject", preferredSubject);
+  }
+
+  const pool = (subj = $("practiceSource") ? $("practiceSource").value : currentSubject) =>
     eligible.filter(
-      (q) =>
-        !$("practiceSource")?.value || subjectKey(q) === $("practiceSource").value,
+      (q) => !subj || subjectKey(q) === subj,
     );
 
-  const initialCount = Math.min(20, n) || 1;
-  const subjects = practiceSubjects(eligible);
+  const initialPool = pool(currentSubject);
+  const initialPoolCount = initialPool.length;
+  const initialCount = Math.min(20, initialPoolCount) || 1;
 
   $("practice").innerHTML = `
 <div class="setup-container-v2">
@@ -1133,12 +1155,12 @@ function renderPractice() {
         <div class="form-group-v2">
           <div class="form-label-row">
             <label class="form-label-v2" for="practiceSource">Mã môn / Nguồn đề</label>
-            <span class="label-hint" id="availableQuestionsCount">${n} câu sẵn sàng</span>
+            <span class="label-hint" id="availableQuestionsCount">${initialPoolCount} câu sẵn sàng</span>
           </div>
           <div class="select-wrapper-v2">
             <select id="practiceSource" class="select-control-v2">
-              <option value="">Tất cả môn (${n} câu sẵn sàng)</option>
-              ${subjects.map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}
+              ${subjects.map(({key,label,count})=>`<option value="${esc(key)}" ${key === currentSubject ? "selected" : ""}>${esc(label)} (${count} câu)</option>`).join("")}
+              ${subjects.length > 1 ? `<option value="" ${currentSubject === "" ? "selected" : ""}>Tất cả môn (${n} câu sẵn sàng)</option>` : ""}
             </select>
           </div>
         </div>
@@ -1150,14 +1172,14 @@ function renderPractice() {
             <span class="count-display-badge"><span id="countDisplayVal">${initialCount}</span> câu</span>
           </div>
           <div class="slider-row-v2">
-            <input type="range" id="countSlider" class="range-slider-v2" min="1" max="${n || 1}" value="${initialCount}">
-            <input id="count" type="number" class="number-input-v2" min="1" max="${n || 1}" value="${initialCount}">
+            <input type="range" id="countSlider" class="range-slider-v2" min="1" max="${initialPoolCount || 1}" value="${initialCount}">
+            <input id="count" type="number" class="number-input-v2" min="1" max="${initialPoolCount || 1}" value="${initialCount}">
           </div>
           <div class="count-presets-v2">
             <button type="button" class="preset-pill-v2" data-preset="10">10 câu</button>
             <button type="button" class="preset-pill-v2" data-preset="20">20 câu</button>
             <button type="button" class="preset-pill-v2" data-preset="50">50 câu</button>
-            <button type="button" class="preset-pill-v2" data-preset="max">Tất cả (${n})</button>
+            <button type="button" class="preset-pill-v2" data-preset="max">Tất cả (${initialPoolCount})</button>
           </div>
         </div>
 
@@ -1183,7 +1205,7 @@ function renderPractice() {
         <div class="prefetch-toggle-card-v2" id="prefetchWrapper" ${preferredMode !== "study" ? "hidden" : ""}>
           <div class="toggle-card-content">
             <span class="toggle-card-title">⚡ Tải trước giải thích AI</span>
-            <span class="toggle-card-desc">Tự động nạp trước đáp án & lời giải 3 câu tiếp theo để chuyển câu siêu mượt không độ trễ.</span>
+            <span class="toggle-card-desc">Chuẩn bị trước tối đa 3 câu và lưu giải thích để giảm thời gian chờ.</span>
           </div>
           <label class="switch-toggle-v2">
             <input id="prefetchExplanations" type="checkbox" ${prefetchEnabled ? "checked" : ""}>
@@ -1192,7 +1214,7 @@ function renderPractice() {
         </div>
 
         <!-- Action Button -->
-        <button id="start" class="hero-start-btn" ${!n ? "disabled" : ""}>
+        <button id="start" class="hero-start-btn" ${!initialPoolCount ? "disabled" : ""}>
           <span class="btn-text">${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"}</span>
           <span class="btn-arrow">→</span>
         </button>
@@ -1222,7 +1244,7 @@ function renderPractice() {
         </div>
         <div class="preview-metric-box">
           <span class="metric-icon">📦</span>
-          <span class="metric-val" id="previewPoolCount">${n}</span>
+          <span class="metric-val" id="previewPoolCount">${initialPoolCount}</span>
           <span class="metric-lbl">Kho câu sẵn</span>
         </div>
       </div>
@@ -1236,6 +1258,26 @@ function renderPractice() {
             <li><span class="chk-icon">✓</span> <span>Kèm slide bài giảng gốc đối chiếu trực quan</span></li>
             <li><span class="chk-icon">✓</span> <span>Xem giải thích chi tiết có sẵn không cần chờ</span></li>
             <li><span class="chk-icon">✓</span> <span>Không giới hạn thời gian, tự do lướt qua lại các câu</span></li>
+          ` : `
+            <li><span class="chk-icon">⏱️</span> <span>Đồng hồ đếm ngược chính xác theo thời gian thực</span></li>
+            <li><span class="chk-icon">🔒</span> <span>Tự động thu bài và khóa đáp án khi hết giờ</span></li>
+            <li><span class="chk-icon">📊</span> <span>Bảng tổng kết điểm số, tỷ lệ đúng/sai và phân tích</span></li>
+            <li><span class="chk-icon">💾</span> <span>Lưu kết quả vào Lịch sử để xem lại bất cứ lúc nào</span></li>
+          `}
+        </ul>
+      </div>
+
+      <!-- Tip card -->
+      <div class="preview-tip-card">
+        <div class="tip-icon">💡</div>
+        <div class="tip-body">
+          <strong class="tip-title">Mẹo học tập hiệu quả</strong>
+          <p id="previewTipText">${preferredMode === "study" ? "Nên ôn theo từng nhóm 20 câu để nắm vững kiến thức từ slide trước khi thử sức thi thử tính giờ." : "Phân bổ thời gian hợp lý: hãy đánh dấu cờ các câu khó để quay lại sau và không bỏ sót câu nào."}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
           ` : `
             <li><span class="chk-icon">⏱️</span> <span>Đồng hồ đếm ngược chính xác theo thời gian thực</span></li>
             <li><span class="chk-icon">🔒</span> <span>Tự động thu bài và khóa đáp án khi hết giờ</span></li>
@@ -1273,10 +1315,10 @@ function renderPractice() {
     if ($("minutesDisplayVal")) $("minutesDisplayVal").textContent = mins;
 
     const sourceEl = $("practiceSource");
-    const selectedOpt = sourceEl.options[sourceEl.selectedIndex];
-    if ($("previewSubjectName")) $("previewSubjectName").textContent = sourceEl.value ? selectedOpt.text.replace(/\s*\(\d+\s*câu\)$/, "") : "Tất cả môn học";
+    const selectedOpt = sourceEl && sourceEl.selectedIndex >= 0 ? sourceEl.options[sourceEl.selectedIndex] : null;
+    if ($("previewSubjectName")) $("previewSubjectName").textContent = (sourceEl?.value && selectedOpt) ? selectedOpt.text.replace(/\s*\(\d+\s*câu\)$/, "") : "Tất cả môn học";
     if ($("previewSubjectDesc")) {
-      $("previewSubjectDesc").textContent = sourceEl.value ? `Kho câu hỏi dành riêng cho môn ${selectedOpt.text}.` : "Sử dụng kho câu hỏi tổng hợp từ các slide đã nhập.";
+      $("previewSubjectDesc").textContent = (sourceEl?.value && selectedOpt) ? `Kho câu hỏi dành riêng cho môn ${selectedOpt.text}.` : "Sử dụng kho câu hỏi tổng hợp từ các slide đã nhập.";
     }
 
     if ($("previewFeaturesTitle")) $("previewFeaturesTitle").textContent = preferredMode === "study" ? "Đặc quyền chế độ Ôn luyện" : "Quy chế phòng Thi thử";
@@ -1352,6 +1394,9 @@ function renderPractice() {
 
   // Subject change
   $("practiceSource").onchange = () => {
+    currentSubject = $("practiceSource").value;
+    preferredSubject = currentSubject;
+    write("sot-practice-subject", preferredSubject);
     const count = pool().length;
     $("count").max = count || 1;
     $("countSlider").max = count || 1;
@@ -1360,6 +1405,8 @@ function renderPractice() {
     $("count").value = newVal;
     $("countSlider").value = newVal;
     $("start").disabled = !count;
+    const maxPill = $("practice").querySelector('[data-preset="max"]');
+    if (maxPill) maxPill.textContent = `Tất cả (${count})`;
     updateDashboard();
   };
 
@@ -1410,6 +1457,7 @@ function renderPractice() {
     renderQuiz();
     startSessionPreload(session.questions);
   };
+  updateDashboard();
 }
 function noteExplanation(q) {
   return q.explanation
@@ -1921,7 +1969,7 @@ for (const [key, value] of [
 libraryManager=setupLibraryManager({base:AI_API_BASE,getBank:()=>bank,getGeneration:()=>libraryGeneration,getToken:()=>resources.apiToken(),getBlob:questionBlob,getDetails:q=>hasSpeakerNoteExplanation(q)?null:explanationQueue.state(q).details,media:libraryMedia,
  setBank:questions=>{if(!write('sot-bank',questions))return false;bank=questions;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);refreshStats();if(view==='library')renderLibrary();else if(view==='practice'&&(!session||session.done))renderPractice();return true},
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
- onPractice:key=>{switchView('practice');if($('practiceSource')){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
+ onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
