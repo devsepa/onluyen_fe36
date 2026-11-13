@@ -238,5 +238,5 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
   if(options.maxBytes&&blob.size>options.maxBytes&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   return blob;
  }
- return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,isBusy:()=>busy||classifying};
+ return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,active,isBusy:()=>busy||classifying};
 }

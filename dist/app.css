@@ -615,3 +615,54 @@ body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important
 .shared-status-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap;}
 .shared-status-bar p{margin:0;color:var(--muted);font-size:13px;}
 .refresh-decks-btn{padding:7px 14px;font-size:12px;border-radius:8px;}
+
+/* Keep the mobile shell independent of desktop sidebar/footer overrides. */
+main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
+.page-content{width:100%}
+.account-menu{max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain}
+@media(max-width:760px){
+ body:not(.quiz-active) main{margin-left:0;width:100%;min-width:0}
+ body:not(.quiz-active) .sidebar{position:relative;inset:auto;width:100%;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+ body:not(.quiz-active) .topbar{height:auto;min-height:64px;padding:10px 16px;gap:12px}
+ .breadcrumb{min-width:0;overflow-wrap:anywhere;line-height:1.6}
+ .breadcrumb span{margin:0 6px}
+ .top-actions{flex:none;gap:8px}
+ body:not(.quiz-active) section button{min-height:44px}
+ body:not(.quiz-active) .page-content{margin:0;padding:20px 14px 0}
+ .page-heading{gap:12px;align-items:flex-start;flex-wrap:wrap}
+ .page-heading h1{font-size:24px;overflow-wrap:anywhere}
+ .page-heading p{line-height:1.7}
+ .sidebar nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .sidebar .nav{font-size:12px;padding:12px 8px;gap:8px;white-space:normal}
+ .card,.setup-card-v2{padding:18px 16px}
+ .setup-grid-v2{grid-template-columns:minmax(0,1fr);gap:16px}
+ .setup-title{font-size:21px}
+ .segmented-mode-picker{gap:6px;padding:4px}
+ .mode-segment{min-width:0;gap:7px;padding:11px 8px}
+ .mode-segment .segment-icon{font-size:18px}
+ .mode-segment .segment-title{font-size:13px}
+ .mode-segment .segment-desc{font-size:11px;overflow-wrap:anywhere}
+ .slider-row-v2 input[type=range]{min-width:0;flex:1;width:0}
+ .form-label-row,.section-heading,.library-actions,.history-top-actions{flex-wrap:wrap;gap:10px}
+ .library-toolbar>*{min-width:0;max-width:100%}
+ .section-heading>.row,.library-actions>.row,.resource-tools,.modal-actions{flex-wrap:wrap}
+ .result-overview{flex-direction:column;align-items:stretch;padding:18px;gap:20px}
+ .score-ring{align-self:center}
+ .result-details .row,.result-filters{flex-wrap:wrap}
+ .history-info-header{flex-wrap:wrap}
+ .history-item-title,.history-time-stamp{overflow-wrap:anywhere}
+ .app-footer{margin-left:0;width:100%;padding:20px 16px}
+ .footer-brand-block,.footer-container{min-width:0;max-width:100%}
+ dialog{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:16px;overflow:auto}
+ .modal-heading{gap:10px;align-items:flex-start}
+ .modal-heading h2{min-width:0;overflow-wrap:anywhere}
+ .modal-heading button{flex:none}
+ .account-menu{max-height:calc(100dvh - 160px);overflow-y:auto}
+ input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea{min-width:0;max-width:100%;font-size:16px}
+}
+@media(max-width:360px){
+ .segmented-mode-picker{grid-template-columns:minmax(0,1fr)}
+ .mode-segment{align-items:center}
+ .preview-metrics-row{gap:6px}
+ .history-actions{flex-wrap:wrap}
+}

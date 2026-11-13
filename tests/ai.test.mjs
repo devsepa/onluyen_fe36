@@ -43,22 +43,28 @@ test('distinguishes overload, quota, permission, missing model and request error
   await assert.rejects(()=>generateAnswers([q()],{GEMINI_API_KEY:'private-test'},async()=>Response.json({error:{message:'private-test must not reach the client'}},{status})),error=>error.message.includes(expected)&&!error.message.includes('private-test'));
  }
 });
-test('public Worker rejects foreign origins, missing config, and unauthenticated calls without invoking AI',async()=>{
+test('public Worker rejects foreign origins and missing config; same-origin guests can request AI',async()=>{
  const env={ALLOWED_ORIGINS:'https://devsepa.github.io',GEMINI_API_KEY:'fake',AI_QUOTA:{}};
  const request=(origin,headers={})=>new Request('https://ai.example/v1/answers',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:JSON.stringify({questions:[q()]})});
  assert.equal((await worker.fetch(request('https://other.example'),env)).status,403);
- assert.equal((await worker.fetch(request('https://devsepa.github.io'),env)).status,401);
+ const original=globalThis.fetch;let modelCalls=0;
+ try{
+  globalThis.fetch=async()=>{modelCalls++;return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[answered()]})}]}}]})};
+  assert.equal((await worker.fetch(request('https://devsepa.github.io'),env)).status,200);
+  assert.equal(modelCalls,1);
+ }finally{globalThis.fetch=original}
  assert.equal((await worker.fetch(request('https://devsepa.github.io'),{ALLOWED_ORIGINS:env.ALLOWED_ORIGINS})).status,503);
  const preflight=await worker.fetch(new Request('https://ai.example/v1/answers',{method:'OPTIONS',headers:{Origin:'https://devsepa.github.io'}}),env);assert.equal(preflight.status,204);
 });
-test('Worker verifies Google identity and reserves quota before Gemini; errors never expose keys',async()=>{
+test('Worker uses Google identity when valid and falls back to guest access; keys remain private',async()=>{
  const old=globalThis.fetch;let quota=0,model=0;
  const env={ALLOWED_ORIGINS:'https://devsepa.github.io',GEMINI_API_KEY:'never-return-this',AI_QUOTA:{idFromName:n=>n,get:()=>({fetch:async()=>{quota++;return Response.json({ok:true})}})}};
  const req=()=>new Request('https://ai.example/v1/answers',{method:'POST',headers:{Origin:env.ALLOWED_ORIGINS,Authorization:'Bearer fake-google','Content-Type':'application/json'},body:JSON.stringify({questions:[q()]})});
  try{
   globalThis.fetch=async url=>String(url).includes('userinfo')?Response.json({sub:'user-123'}):(model++,Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[answered()]})}]}}]}));
   const r=await worker.fetch(req(),env);assert.equal(r.status,200);assert.equal(quota,1);assert.equal(model,1);assert.ok(!(await r.text()).includes(env.GEMINI_API_KEY));
-  globalThis.fetch=async()=>Response.json({}, {status:401});assert.equal((await worker.fetch(req(),env)).status,401);assert.equal(model,1);
+  globalThis.fetch=async url=>String(url).includes('userinfo')?Response.json({}, {status:401}):(model++,Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[answered()]})}]}}]}));
+  const guest=await worker.fetch(req(),env);assert.equal(guest.status,200);assert.equal(model,2);assert.equal(quota,2);assert.ok(!(await guest.text()).includes(env.GEMINI_API_KEY));
  }finally{globalThis.fetch=old}
 });
 test('durable quota enforces global and per-user ceilings across requests',async()=>{
