@@ -28,6 +28,7 @@ test('only a standalone uncropped unrotated image uses the direct source; compos
  assert.equal(directSlideImage({pageElements:[{...slide.pageElements[0],transform:{shearX:1}}]}),null);
  assert.equal(directSlideImage({pageElements:[{image:{...slide.pageElements[0].image,imageProperties:{cropProperties:{leftOffset:.1}}}}]}),null);
  assert.equal(directSlideImage({...slide,pageProperties:{pageBackgroundFill:{stretchedPictureFill:{}}}}),null);
+ assert.equal(directSlideImage({pageElements:[],pageProperties:{pageBackgroundFill:{stretchedPictureFill:{contentUrl:'https://images.example/background.png'}}}}),'https://images.example/background.png');
 });
 test('oversized original images request a thumbnail for publishing instead of returning the same cached large blob',async()=>{
  const cache=new MemoryCache(),calls=[],images=createSlideBlobCache({owner:()=> 'alice',storage:{open:async()=>cache},load:async(q,options)=>{calls.push(!!options.forceThumbnail);return new Blob([new Uint8Array(options.forceThumbnail?50:200)],{type:'image/png'})}});

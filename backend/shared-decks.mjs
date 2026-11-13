@@ -70,6 +70,7 @@ export async function sharedDeckRoute(request,env,cors){
  const wrap=response=>{const headers=new Headers(response.headers);for(const [k,v]of Object.entries(cors))headers.set(k,v);headers.set('Cache-Control','no-store');return new Response(response.body,{status:response.status,headers})};
  if(!env.SHARED_DECKS)return wrap(json({error:'Kho đề đang được chuẩn bị.'},503));
  const url=new URL(request.url),match=url.pathname.match(/^\/v1\/decks(?:\/([a-f0-9-]{36})(\/.*)?)?$/);if(!match)return wrap(json({error:'Không tìm thấy bộ đề.'},404));
+ if(match[1]){const path=match[2]||'/',allowed=request.method==='GET'&&(path==='/'||path==='/draft'||/^\/images\/\d+$/.test(path))||request.method==='PUT'&&(path==='/questions-batch'||/^\/questions\/\d+$/.test(path))||request.method==='POST'&&path==='/publish'||request.method==='DELETE'&&path==='/';if(!allowed)return wrap(json({error:'Không tìm thấy chức năng.'},404))}
  const authorization=request.headers.get('Authorization')||'',uploadToken=request.method==='PUT'&&/^\/(?:questions\/\d+|questions-batch)$/.test(match[2]||'')&&/^Upload [a-f0-9]{64}$/.test(authorization)?authorization.slice(7):'';
  let user='';if(!uploadToken&&(request.method!=='GET'||url.pathname.endsWith('/draft'))){
   const authorization=request.headers.get('Authorization')||'';if(!/^Bearer [\w.~-]+$/.test(authorization)||authorization.length>4096)return wrap(json({error:'Đăng nhập Google ở ảnh đại diện để đăng hoặc gỡ bộ đề.'},401));

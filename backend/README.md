@@ -65,3 +65,7 @@ The browser stores downloaded private image bytes in an account-scoped local Cac
 
 ## Nonblocking imports
 Source import commits structured/note-backed questions immediately without awaiting image classification. Ambiguous images remain outside the bank until the optional background classifier confirms a question. Background additions preserve source slide ordering and per-source count limits, do not modify the active quiz snapshot, and stop applying if the bank/account is replaced. Source controls remain usable; no speculative A-D cards are shown for introductions or ads.
+
+
+## Batched background publication
+Draft creation and owner-authenticated resume issue an ephemeral, draft-scoped upload capability. It is held in page memory, never the local draft checkpoint, permits only image PUT operations on that draft, expires with the 24-hour draft and is revoked at publication. Publishing/removing still requires Google owner authentication. Up to 5 validated images are stored atomically per batch (6 MB request cap); three batches may run concurrently. Older single-image Bearer uploads remain supported. This avoids a Google userinfo round trip for every image. Closing the progress dialog does not stop upload; the tab must remain open. Active quizzes hide the progress toast so it cannot cover answer controls.

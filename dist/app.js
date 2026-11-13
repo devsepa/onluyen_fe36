@@ -1,13 +1,13 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-instant-import-1';
-import {setupResources} from './resources-ui.js?v=20261113-instant-import-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-background-publish-1';
+import {setupResources} from './resources-ui.js?v=20261113-background-publish-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-instant-import-1';
-import {setupAccount} from './account-ui.js?v=20261113-instant-import-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-instant-import-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-instant-import-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-instant-import-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-instant-import-1';
-import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-instant-import-1';
+import {validateBank} from './banks.mjs?v=20261113-background-publish-1';
+import {setupAccount} from './account-ui.js?v=20261113-background-publish-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-background-publish-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-background-publish-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-background-publish-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-background-publish-1';
+import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-background-publish-1';
 import {fitQuizScreen} from './quiz-screen.mjs';
 import {createQuizSound} from './quiz-sound.mjs';
 import {setupSidebar} from './sidebar.mjs';
@@ -109,7 +109,7 @@ document.addEventListener('click',event=>{const action=event.target.closest('[da
 const account=setupAccount({onConnect:options=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi đổi tài khoản Google.');
  resources.connect(options);
-},onDisconnect:()=>{aiController?.abort();slideImages.clear();resources.disconnect()}});
+},onDisconnect:()=>{aiController?.abort();shared.pause();slideImages.clear();resources.disconnect()}});
 const resources=setupResources({onAccountChange:profile=>{
  account.update(profile);$('sourceAccessNotice').hidden=!!profile;$('sourceControls').hidden=!profile;
  if(profile)setTimeout(scheduleAutoAi,0);
@@ -321,9 +321,11 @@ function navItemClass(session,item,index,study){
 }
 function renderQuiz(){
  const study=session.mode==='study',qs=session.questions;session.current=Math.max(0,Math.min(session.current||0,qs.length-1));const q=qs[session.current],answered=session.answers[q.id],multiple=q.answer.length>1;
+ const answeredCount=Object.keys(session.answers).length;
+ const pct=Math.round((answeredCount/qs.length)*100);
  const legendContent=study?`<span><i class="legend-box correct"></i> Đúng</span><span><i class="legend-box wrong"></i> Sai</span><span><i class="legend-box flagged"></i> Xem lại</span>`:`<span><i class="legend-box answered"></i> Đã làm</span><span><i class="legend-box flagged"></i> Xem lại</span>`;
  document.body.classList.toggle('exam-active',!study);pageHeading.hidden=true;
- $('practice').innerHTML=`<div class="quiz-head"><div><span class="overline">${study?'ÔN LUYỆN':'THI THỬ'} · ${qs.length} CÂU HỎI</span><h2>${study?'Ôn luyện':'Thi thử'}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study?'Thời gian đã học':'Thời gian còn lại'}</small><div class="timer" id="timer"></div></div><button id="submit">${study?'Kết thúc buổi học':'Nộp bài'} ↗</button></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="question-top"><div class="quiz-nav-group"><button type="button" class="secondary nav-btn" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><span class="question-counter">CÂU ${session.current+1} / ${qs.length}</span><button type="button" class="nav-btn next-btn" data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div><label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id)?'checked':''}> Đánh dấu xem lại</label></div>${sourceReference(q,true)}${aiBadge(q)}${multiple?'<p class="multi-hint">Chọn tất cả đáp án đúng.'+(study?' Bấm Kiểm tra sau khi chọn xong.':' Có thể thay đổi lựa chọn trước khi nộp bài.')+'</p>':''}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${(q.url||q.sharedDeck)?'collapsed-text':''}">${esc(displayContent(q))}</div><div class="choice-pills">${q.options.map((o,i)=>`<button class="choice-pill ${optionState(session,q,o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered||session.drafts?.[q.id]||'').includes(o.id)}" ${study&&answered?'disabled':''}>${esc(o.id)}</button>`).join('')}</div>${study&&multiple&&!answered?`<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id]?'disabled':''}>Kiểm tra đáp án</button>`:''}${study&&answered?`<div class="feedback ${isCorrect(q,answered)?'right':'incorrect'}" role="status">${isCorrect(q,answered)?'✓ Chính xác. Bạn đã nắm được câu này!':'✕ Chưa đúng. Cùng ghi nhớ đáp án nhé.'}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>`:''}</article><div class="quiz-controls"><button class="secondary" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><button data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study?'Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra.':'Bạn có thể quay lại và thay đổi đáp án.'}</p><div class="quiz-navigation">${qs.map((item,i)=>`<button data-index="${i}" class="${navItemClass(session,item,i,study)}" aria-label="Đến câu ${i+1}" ${session.current===i?'aria-current="step"':''}>${i+1}</button>`).join('')}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
+ $('practice').innerHTML=`<div class="quiz-head"><div><span class="overline">${study?'ÔN LUYỆN':'THI THỬ'} · ${qs.length} CÂU HỎI</span><h2>${study?'Ôn luyện':'Thi thử'}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study?'Thời gian đã học':'Thời gian còn lại'}</small><div class="timer" id="timer"></div></div><button id="submit">${study?'Kết thúc buổi học':'Nộp bài'} ↗</button></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div></div><div class="question-top"><div class="quiz-nav-group"><button type="button" class="secondary nav-btn" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><span class="question-counter">CÂU ${session.current+1} / ${qs.length}</span><button type="button" class="nav-btn next-btn" data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div><label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id)?'checked':''}> Đánh dấu xem lại</label></div>${sourceReference(q,true)}${aiBadge(q)}${multiple?'<p class="multi-hint">Chọn tất cả đáp án đúng.'+(study?' Bấm Kiểm tra sau khi chọn xong.':' Có thể thay đổi lựa chọn trước khi nộp bài.')+'</p>':''}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${(q.url||q.sharedDeck)?'collapsed-text':''}">${esc(displayContent(q))}</div><div class="choice-pills">${q.options.map((o,i)=>`<button class="choice-pill ${optionState(session,q,o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered||session.drafts?.[q.id]||'').includes(o.id)}" ${study&&answered?'disabled':''}>${esc(o.id)}</button>`).join('')}</div>${study&&multiple&&!answered?`<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id]?'disabled':''}>Kiểm tra đáp án (Enter)</button>`:''}${study&&answered?`<div class="feedback ${isCorrect(q,answered)?'right':'incorrect'}" role="status">${isCorrect(q,answered)?'✓ Chính xác. Bạn đã nắm được câu này!':'✕ Chưa đúng. Cùng ghi nhớ đáp án nhé.'}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>`:''}<div class="quiz-shortcuts-hint"><span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Chuyển câu</span><span><kbd>F</kbd> Đánh dấu</span>${q.explanation?'<span><kbd>E</kbd> Giải thích</span>':''}<span><kbd>Z</kbd> Phóng to ảnh</span></div></article><div class="quiz-controls"><button class="secondary" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><button data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study?'Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra.':'Bạn có thể quay lại và thay đổi đáp án.'}</p><div class="quiz-navigation">${qs.map((item,i)=>`<button data-index="${i}" class="${navItemClass(session,item,i,study)}" aria-label="Đến câu ${i+1}" ${session.current===i?'aria-current="step"':''}>${i+1}</button>`).join('')}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
  fitQuizScreen({root:$('practice'),session,question:q,isCorrect,navItemClass,sound:quizSound});
  if($('checkMultiple'))$('checkMultiple').onclick=()=>{if(confirmQuestion(session,q.id)){quizSound.play(isCorrect(q,session.answers[q.id]));write('sot-session',session);renderQuiz()}};
  $('flagCurrent').onchange=e=>{session.flags=e.target.checked?[...new Set([...session.flags,q.id])]:session.flags.filter(id=>id!==q.id);write('sot-session',session);switchView('practice')};
@@ -336,7 +338,151 @@ function renderQuiz(){
   if(session.current>0)preloadSlideImage(qs[session.current-1]);
  },0);
 }
-$('practice').onclick=e=>{const toggleBtn=e.target.closest('[data-toggle-text]');if(toggleBtn){const t=toggleBtn.closest('.quiz-question')?.querySelector('.question-title');if(t)t.classList.toggle('collapsed-text');return}const indexButton=e.target.closest('[data-index]');if(indexButton&&session&&!session.done){if(session.mode!=='study'&&Date.now()>=session.deadline)return finish();session.current=Number(indexButton.dataset.index);write('sot-session',session);renderQuiz();return}const answer=e.target.closest('[data-q]');if(answer&&session&&!session.done){if(answerQuestion(session,answer.dataset.q,answer.dataset.o)){if(session.mode==='study'&&session.answers[answer.dataset.q])quizSound.play(isCorrect(session.questions.find(q=>q.id===answer.dataset.q),session.answers[answer.dataset.q]));write('sot-session',session);renderQuiz()}else updateTimer()}};
+$('practice').onclick=e=>{
+ const toggleBtn=e.target.closest('[data-toggle-text]');
+ if(toggleBtn){
+  const t=toggleBtn.closest('.quiz-question')?.querySelector('.question-title');
+  if(t)t.classList.toggle('collapsed-text');
+  return;
+ }
+ const indexButton=e.target.closest('[data-index]');
+ if(indexButton&&session&&!session.done){
+  if(session.mode!=='study'&&Date.now()>=session.deadline)return finish();
+  clearTimeout(window._autoAdvanceTimer);
+  session.current=Number(indexButton.dataset.index);
+  write('sot-session',session);
+  renderQuiz();
+  return;
+ }
+ const answer=e.target.closest('[data-q]');
+ if(answer&&session&&!session.done){
+  clearTimeout(window._autoAdvanceTimer);
+  if(answerQuestion(session,answer.dataset.q,answer.dataset.o)){
+   const currentQ=session.questions.find(q=>q.id===answer.dataset.q);
+   const correct=isCorrect(currentQ,session.answers[answer.dataset.q]);
+   if(session.mode==='study'&&session.answers[answer.dataset.q])quizSound.play(correct);
+   write('sot-session',session);
+   renderQuiz();
+   if(session.mode==='study'&&correct&&currentQ.answer.length===1&&session.current<session.questions.length-1){
+    window._autoAdvanceTimer=setTimeout(()=>{
+     if(session&&!session.done&&session.current<session.questions.length-1){
+      session.current++;
+      write('sot-session',session);
+      renderQuiz();
+     }
+    },750);
+   }
+  }else updateTimer();
+ }
+};
+window.addEventListener('keydown',e=>{
+ if(!session||session.done||!document.body.classList.contains('quiz-active'))return;
+ if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+ if(document.querySelector('dialog[open]')){
+  if(e.key==='Escape'||e.key==='z'||e.key==='Z'){
+   document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+   e.preventDefault();
+  }
+  return;
+ }
+ const key=e.key.toUpperCase();
+ if(e.key==='ArrowLeft'){
+  if(session.current>0){
+   e.preventDefault();
+   clearTimeout(window._autoAdvanceTimer);
+   session.current--;
+   write('sot-session',session);
+   renderQuiz();
+  }
+  return;
+ }
+ if(e.key==='ArrowRight'){
+  if(session.current<session.questions.length-1){
+   e.preventDefault();
+   clearTimeout(window._autoAdvanceTimer);
+   session.current++;
+   write('sot-session',session);
+   renderQuiz();
+  }
+  return;
+ }
+ if(key==='F'){
+  e.preventDefault();
+  const flagEl=$('flagCurrent');
+  if(flagEl){
+   flagEl.checked=!flagEl.checked;
+   flagEl.dispatchEvent(new Event('change'));
+  }
+  return;
+ }
+ if(key==='E'){
+  const expBtn=document.querySelector('.feedback-toggle-btn');
+  if(expBtn){
+   e.preventDefault();
+   expBtn.click();
+  }
+  return;
+ }
+ if(key==='Z'){
+  const zoomBtn=document.querySelector('.source-image-check');
+  if(zoomBtn){
+   e.preventDefault();
+   zoomBtn.click();
+  }
+  return;
+ }
+ if(e.key==='Enter'){
+  const checkBtn=$('checkMultiple');
+  if(checkBtn&&!checkBtn.disabled){
+   e.preventDefault();
+   checkBtn.click();
+   return;
+  }
+  const q=session.questions[session.current];
+  if(session.answers[q.id]&&session.current<session.questions.length-1){
+   e.preventDefault();
+   clearTimeout(window._autoAdvanceTimer);
+   session.current++;
+   write('sot-session',session);
+   renderQuiz();
+   return;
+  }
+ }
+ const q=session.questions[session.current];
+ const option=q.options.find(o=>o.id.toUpperCase()===key);
+ if(option){
+  e.preventDefault();
+  const btn=document.querySelector(`.choice-pill[data-o="${option.id}"]`);
+  if(btn&&!btn.disabled)btn.click();
+ }
+});
+let touchStartX=0,touchStartY=0;
+window.addEventListener('touchstart',e=>{
+ if(!session||session.done||!document.body.classList.contains('quiz-active'))return;
+ const touch=e.changedTouches[0];
+ touchStartX=touch.clientX;
+ touchStartY=touch.clientY;
+},{passive:true});
+window.addEventListener('touchend',e=>{
+ if(!session||session.done||!document.body.classList.contains('quiz-active'))return;
+ if(document.querySelector('dialog[open]'))return;
+ const touch=e.changedTouches[0];
+ const dx=touch.clientX-touchStartX;
+ const dy=touch.clientY-touchStartY;
+ if(Math.abs(dx)>55&&Math.abs(dy)<45){
+  if(dx<0&&session.current<session.questions.length-1){
+   clearTimeout(window._autoAdvanceTimer);
+   session.current++;
+   write('sot-session',session);
+   renderQuiz();
+  }else if(dx>0&&session.current>0){
+   clearTimeout(window._autoAdvanceTimer);
+   session.current--;
+   write('sot-session',session);
+   renderQuiz();
+  }
+ }
+},{passive:true});
 function updateTimer(){if(!session||session.done)return;const study=session.mode==='study',seconds=study?Math.max(0,Math.floor((Date.now()-session.started)/1000)):Math.max(0,Math.ceil((session.deadline-Date.now())/1000));if($('timer'))$('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;if($('progress'))$('progress').textContent=`${Object.keys(session.answers).length}/${session.questions.length} câu đã trả lời${study?' · Đúng '+grade(session.questions,session.answers)+' câu':''}`;if(!study&&!seconds)finish()}
 function finish(){if(!session||session.done)return;session.done=true;lastResult={...session,id:crypto.randomUUID(),finished:Date.now(),correct:grade(session.questions,session.answers)};history.unshift(lastResult);history=history.slice(0,50);write('sot-history',history);write('sot-session',null);session=null;resultFilter='all';switchView('result');message('Đã lưu kết quả buổi học trên thiết bị này.')}
 function renderResult(r){

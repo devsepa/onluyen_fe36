@@ -93,7 +93,20 @@ body.quiz-active .timer{font-size:22px;font-weight:700}
 body.quiz-active .quiz-head button{min-height:38px;padding:8px 16px;font-size:12px;font-weight:600;white-space:nowrap;border-radius:8px}
 body.quiz-active .quiz-layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:20px;align-items:start}
 body.quiz-active .quiz-layout>div{display:flex;flex-direction:column;min-width:0;gap:12px}
-body.quiz-active .quiz-question{display:flex;flex-direction:column;gap:10px;margin:0;padding:20px 22px;border-radius:14px;background:var(--panel);border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+body.quiz-active .quiz-question{display:flex;flex-direction:column;gap:10px;margin:0;padding:20px 22px;border-radius:14px;background:var(--panel);border:1px solid var(--border);box-shadow:0 2px 10px rgba(0,0,0,0.03);animation:fadeInCard .2s cubic-bezier(.16,1,.3,1)}
+.quiz-progress-track{width:100%;height:4px;background:var(--line);border-radius:99px;overflow:hidden;margin-bottom:8px}
+.quiz-progress-bar{height:100%;background:linear-gradient(90deg,var(--accent) 0%,#10b981 100%);border-radius:99px;transition:width .35s cubic-bezier(0.4,0,0.2,1)}
+@keyframes fadeInCard{from{opacity:.2;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes correctPulse{0%{transform:scale(1);box-shadow:0 0 0 0 rgba(16,185,129,.7)}50%{transform:scale(1.06);box-shadow:0 0 0 10px rgba(16,185,129,0)}100%{transform:scale(1);box-shadow:0 0 0 0 rgba(16,185,129,0)}}
+@keyframes wrongShake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-5px)}40%,80%{transform:translateX(5px)}}
+.choice-pill.correct{animation:correctPulse .45s ease-out}
+.choice-pill.wrong{animation:wrongShake .35s ease-in-out}
+.choice-pill:active:not(:disabled){transform:scale(.92)!important;transition:transform .08s ease}
+.nav-btn:active:not(:disabled),.quiz-head button:active{transform:scale(.95);transition:transform .08s ease}
+.quiz-shortcuts-hint{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11px;color:var(--muted);user-select:none}
+.quiz-shortcuts-hint span{display:inline-flex;align-items:center;gap:4px}
+.quiz-shortcuts-hint kbd{display:inline-block;padding:2px 6px;font-family:inherit;font-size:10px;font-weight:700;line-height:1.2;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:4px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+@media(max-width:640px){.quiz-shortcuts-hint{display:none}}
 body.quiz-active .quiz-question .question-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px;min-height:38px}
 body.quiz-active .question-counter{white-space:nowrap}
 body.quiz-active .quiz-question .check-label{font-size:12px;margin:0;cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
@@ -149,3 +162,5 @@ body.quiz-active .quiz-read-text{flex:none;padding:3px;font-size:11px}
 @media(min-width:761px){body.sidebar-collapsed .sidebar{width:78px;padding:22px 12px}body.sidebar-collapsed main{margin-left:78px}body.sidebar-collapsed .sidebar-heading{flex-direction:column;gap:16px}body.sidebar-collapsed .brand>span:last-child,body.sidebar-collapsed .nav-label,body.sidebar-collapsed .nav-text,body.sidebar-collapsed .nav-arrow,body.sidebar-collapsed .nav-count{display:none}body.sidebar-collapsed .sidebar nav{margin-top:24px}body.sidebar-collapsed .nav{justify-content:center;padding:13px 8px;min-height:48px}body.sidebar-collapsed .nav-icon{font-size:22px}}
 @media(max-width:760px){.sidebar{padding:12px 17px}.sidebar-heading .brand{font-size:16px}.sidebar-toggle{width:40px;height:40px;font-size:22px}.sidebar nav{display:none}body.mobile-menu-open .sidebar nav{display:grid;margin-top:14px}.sidebar .nav{min-height:56px}.sidebar .nav-text{white-space:normal}}
 body.quiz-active.sidebar-collapsed main{margin:0}
+
+.upload-toast{position:fixed;right:18px;bottom:18px;z-index:35;width:min(360px,calc(100vw - 32px));padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--text);box-shadow:var(--shadow)}.upload-toast[hidden],body.quiz-active .upload-toast{display:none}.upload-toast p{font-size:12px;line-height:1.6;margin:8px 0 12px}.upload-toast button{min-height:40px;font-size:12px}.upload-toast .row{justify-content:space-between}

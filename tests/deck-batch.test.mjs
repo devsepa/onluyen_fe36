@@ -27,5 +27,6 @@ test('scoped upload bypasses repeated Google identity calls but remains limited 
  try{globalThis.fetch=async()=>{identityCalls++;throw Error('Google identity must not be called for each image')};
   const response=await sharedDeckRoute(new Request(`https://worker/v1/decks/${id}/questions-batch`,{method:'PUT',headers:{Authorization:'Upload '+init.uploadToken},body:JSON.stringify({items:[input(0)]})}),env,{});assert.equal(response.status,200);assert.equal(identityCalls,0);
   for(const path of ['/publish','/draft']){const response=await sharedDeckRoute(new Request(`https://worker/v1/decks/${id}${path}`,{method:path==='/draft'?'GET':'POST',headers:{Authorization:'Upload '+init.uploadToken}}),env,{});assert.equal(response.status,401)}
+  for(const path of ['/init','/catalog','/reserve'])assert.equal((await sharedDeckRoute(new Request(`https://worker/v1/decks/${id}${path}`,{method:'POST',headers:{Authorization:'Upload '+init.uploadToken}}),env,{})).status,404);
  }finally{globalThis.fetch=previous}
 });
