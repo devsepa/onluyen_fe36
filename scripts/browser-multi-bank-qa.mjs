@@ -53,7 +53,7 @@ try{
  await run(`document.querySelector('#useResources').click()`);await wait(`!document.querySelector('#useResources').disabled`);assert.equal((await saved()).length,5,'repeating Google Slides import preserves older subjects without duplicates');
  await run(`document.querySelector('[data-view="shared"]').click()`);await wait(`!!document.querySelector('[data-use-deck]')`);await run(`document.querySelector('[data-use-deck]').click()`);await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===6`);
  await run(`document.querySelector('[data-view="shared"]').click();document.querySelector('[data-use-deck]').click()`);await pause(150);assert.equal((await saved()).length,6,'shared deck also accumulates without duplicates');
- await run(`location.reload()`);await wait(`!!document.querySelector('[data-view="practice"]')`);assert.equal((await saved()).length,6,'subjects survive reload');
+ await run(`location.reload()`);await pause(250);await wait(`!!document.querySelector('#publishDeck')`);assert.equal((await saved()).length,6,'subjects survive reload');
  for(const theme of ['light','dark'])for(const [width,height]of [[1440,900],[390,844],[320,568]]){
   await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<900});
   await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};document.querySelector('[data-view="practice"]').click();window.scrollTo(0,0)`);
@@ -64,6 +64,6 @@ try{
  }
  await run(`(()=>{window.qaExportBlob=null;const original=URL.createObjectURL;URL.createObjectURL=blob=>{qaExportBlob=blob;return original(blob)};document.addEventListener('click',e=>{if(e.target.closest('a[download]'))e.preventDefault()},true);document.querySelector('[data-view="library"]').click();document.querySelector('#exportBank').click()})()`);
  const backup=JSON.parse(await run(`qaExportBlob.text()`));assert.equal(backup.questions.length,6);assert.equal(backup.questions.find(q=>q.sharedDeck).sharedIndex,0);
- await run(`localStorage.setItem('sot-bank','[]');location.reload()`);await wait(`!!document.querySelector('#bankFile')`);await importFile(backup.questions);assert.equal((await saved()).length,6,'export restores all subjects, including shared-image references');
+ await run(`localStorage.setItem('sot-bank','[]');location.reload()`);await pause(250);await wait(`!!document.querySelector('#publishDeck')`);await importFile(backup.questions);assert.equal((await saved()).length,6,'export restores all subjects, including shared-image references');
  assert.deepEqual(errors,[]);console.log('Multi-bank QA passed: JSON + Google Slides + shared deck accumulation, duplicate prevention, persistence, backup round trip, correct course pools and 6 PC/mobile theme layouts.');
 }finally{await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:mock.identifier});await call('Fetch.disable');ws.close()}

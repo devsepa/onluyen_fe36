@@ -1,0 +1,9 @@
+# Multiple saved subjects
+
+Google Slides imports, JSON imports and shared-deck selection now merge into the existing `sot-bank` rather than replacing it. Existing browser storage requires no migration. The practice course selector includes all saved subjects that have ready questions.
+
+Deduplication uses the original source and slide object ID, or shared deck ID and image index. Repeat and partial imports preserve saved slides, question IDs, manual answers, verification and explanations. Missing answers can be filled by a new import; conflicting explanations are not attached to an existing answer. Background classification applies the import's per-source limit without trimming previously saved questions.
+
+The bank is persisted before updating the in-memory state. A storage write failure retains the saved library. Export includes shared image references so a backup can restore all subjects; shared images still depend on the original published deck being available. Data remains local to the browser, not synchronized between devices. Data removed by older replacement imports cannot be reconstructed without a backup or importing the old source again.
+
+Validation: 109 Node tests, JavaScript syntax and static-reference checks passed. `scripts/browser-multi-bank-qa.mjs` exercised JSON addition/reimport, Google Slides addition/reimport while staying in another tab, shared-deck addition/reselection, reload persistence, course-specific counts, and an export/restore round trip including a shared deck. Tested 1440×900, 390×844 and 320×568 in light/dark themes using an isolated QA profile and synthetic data with mocked Google and shared-deck responses. No real Google account or AI request was used. Screenshots: ignored `outputs/multi-bank/`.

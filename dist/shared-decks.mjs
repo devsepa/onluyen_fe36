@@ -1,11 +1,14 @@
-import { presentationIdFromLink, readyForPractice } from './core.mjs';
+import { presentationIdFromLink } from './resources.mjs';
+import { readyForPractice } from './ai.mjs';
 import { askConfirm } from './confirm-dialog.mjs';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
-async function deckRequest(base,path,{method='GET',token,uploadToken,body,signal}={}){
- const headers={};if(token)headers['Authorization']='Bearer '+token;if(uploadToken)headers['X-Upload-Token']=uploadToken;if(body)headers['Content-Type']='application/json';
- const response=await fetch(base+path,{method,headers,body:body?JSON.stringify(body):undefined,signal});
+export function sharedImagePath(q){if(!/^[a-f0-9-]{36}$/.test(q.sharedDeck)||!Number.isInteger(q.sharedIndex)||q.sharedIndex<0)throw Error('Ảnh trong kho không hợp lệ.');return `/v1/decks/${q.sharedDeck}/images/${q.sharedIndex}`}
+export async function deckRequest(base,path,{method='GET',token,uploadToken,body,signal,fetcher=fetch}={}){
+ if(!base)throw Error('Kho đề đang được chuẩn bị.');const root=new URL(base);if(root.protocol!=='https:'&&!(root.protocol==='http:'&&['localhost','127.0.0.1'].includes(root.hostname)))throw Error('Kho đề chưa sẵn sàng.');
+ const headers={};if(uploadToken)headers.Authorization='Upload '+uploadToken;else if(token)headers.Authorization='Bearer '+token;if(body)headers['Content-Type']='application/json';
+ const response=await fetcher(new URL(path,root),{method,headers,...(body?{body:JSON.stringify(body)}:{}),signal});
  if(!response.ok){let message=response.statusText;try{const data=await response.json();message=data.error||message}catch{}const error=new Error(message);error.status=response.status;throw error}
  return response;
 }
