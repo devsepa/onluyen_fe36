@@ -666,3 +666,6 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
  .preview-metrics-row{gap:6px}
  .history-actions{flex-wrap:wrap}
 }
+
+.shared-status-bar #deckStatus:empty{display:none}
+.shared-status-bar .refresh-decks-btn{margin-left:auto}

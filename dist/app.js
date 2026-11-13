@@ -108,7 +108,7 @@ const pageInfo = {
   shared: [
     "Kho đề & Ôn luyện",
     "Kho đề & Ôn luyện",
-    "Chọn bộ đề từ cộng đồng hoặc ngân hàng máy để bắt đầu ôn luyện ngay.",
+    "",
   ],
   sources: [
     "Tài liệu của tôi",
@@ -308,6 +308,7 @@ function switchView(next, mode) {
   $("breadcrumb").textContent = crumb;
   $("pageTitle").textContent = title;
   $("pageDescription").textContent = description;
+  $("pageDescription").hidden = !description;
   $("pageHeading").hidden = view === "practice" && !!session && !session.done;
   document.body.classList.toggle(
     "exam-active",
@@ -351,7 +352,7 @@ const resources = setupResources({
     if (!profile && (view === "sources" || view === "library")) {
       switchView("shared");
     }
-    setTimeout(()=>{if(profile){scheduleAutoAi();explanationQueue.resume();primeStudyExplanations()}else explanationQueue.cancel()},0);
+    setTimeout(()=>{if(profile){scheduleAutoAi();}explanationQueue.resume();primeStudyExplanations();},0);
   },
   onAccountError: (text) => message(text),
   message: (text) => message(text, "sources"),
