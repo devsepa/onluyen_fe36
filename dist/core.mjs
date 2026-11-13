@@ -36,6 +36,14 @@ function optionParts(text){
  return null;
 }
 function imageCount(elements=[]){return elements.reduce((n,e)=>n+(e.image?1:0)+(e.elementGroup?imageCount(e.elementGroup.children):0),0)}
+export function answerFromNotes(slide,options){
+ const page=slide.slideProperties?.notesPage,id=page?.notesProperties?.speakerNotesObjectId;
+ if(!id)return '';
+ const note=normalizeSlideText(textOf((page.pageElements||[]).filter(e=>e.objectId===id)));
+ const match=note.match(/^(?:(?:answer|correct answer|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i);
+ const answer=match?.[1].toUpperCase()||'';
+ return options.some(o=>o.id===answer)?answer:'';
+}
 export function parsePresentation(p){
  const questions=[],skipped=[],pages=[];
  for(const [i,s] of (p.slides||[]).entries()){
@@ -43,10 +51,8 @@ export function parsePresentation(p){
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   pages.push({slide:i+1,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}
-  const np=s.slideProperties?.notesPage,noteId=np?.notesProperties?.speakerNotesObjectId;
-  const note=normalizeSlideText(textOf((np?.pageElements||[]).filter(e=>e.objectId===noteId)));
-  const a=note.match(/^(?:(?:answer|correct answer|đáp án)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i);
-  questions.push({id:crypto.randomUUID(),...parts,answer:a&&parts.options.some(o=>o.id===a[1].toUpperCase())?a[1].toUpperCase():'',verified:false,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
+  const answer=answerFromNotes(s,parts.options);
+  questions.push({id:crypto.randomUUID(),...parts,answer,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
  }
  return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
 }

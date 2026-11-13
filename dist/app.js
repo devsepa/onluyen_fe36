@@ -1,7 +1,7 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-slide-8';
-import {setupResources} from './resources-ui.js?v=20261113-slide-8';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-notes-9';
+import {setupResources} from './resources-ui.js?v=20261113-notes-9';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-slide-8';
+import {validateBank} from './banks.mjs?v=20261113-notes-9';
 import {setupAccount} from './account-ui.js';
 
 const $=id=>document.getElementById(id);
@@ -17,7 +17,7 @@ let view=bank.length?'library':'sources',lastResult=null,preferredMode='study',p
 const pageSize=10;
 const pageInfo={
  sources:['Tài liệu của tôi','Tài liệu của tôi','Chọn tài liệu và nhập câu hỏi từ slide.'],
- library:['Ngân hàng câu hỏi','Ngân hàng câu hỏi','Kiểm tra nội dung và xác nhận đáp án trước khi đưa câu hỏi vào đề.'],
+ library:['Ngân hàng câu hỏi','Ngân hàng câu hỏi','Đáp án rõ ràng trong ghi chú được dùng ngay. Chỉ cần kiểm tra câu thiếu đáp án.'],
  practice:['Ôn luyện & Thi thử','Ôn luyện & Thi thử','Chọn chế độ, nguồn câu hỏi và số câu để bắt đầu làm bài.'],
  history:['Lịch sử & Kết quả','Lịch sử & Kết quả','Xem các bài đã nộp và mở lại kết quả chi tiết.'],
  result:['Lịch sử & Kết quả','Kết quả bài làm','Đối chiếu đáp án và chọn những câu cần ôn lại.']
@@ -81,6 +81,17 @@ $('questions').onclick=e=>{const button=e.target.closest('button');if(!button)re
  if(button.dataset.delete){if(!confirm('Xóa câu hỏi này khỏi ngân hàng?'))return;bank=bank.filter(q=>q.id!==id)}saveBank();
 };
 $('verifyPage').onclick=()=>{const qs=filteredQuestions().slice((page-1)*pageSize,page*pageSize).filter(q=>q.answer&&!q.verified);if(!qs.length)return;if(confirm(`Bạn đã kiểm tra nội dung và đáp án của ${qs.length} câu trong trang này? Xác nhận để đưa các câu này vào đề luyện.`)){qs.forEach(q=>q.verified=true);saveBank()}};
+const notesButton=document.createElement('button');notesButton.className='secondary';notesButton.textContent='Lấy đáp án từ ghi chú';$('verifyPage').before(notesButton);
+notesButton.onclick=async()=>{
+ if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi cập nhật đáp án.');
+ const snapshot=bank;notesButton.disabled=true;notesButton.textContent='Đang đọc ghi chú…';
+ try{
+  const {updates,failures}=await resources.readAnswers(snapshot);
+  if(bank!==snapshot||session&&!session.done)return message('Ngân hàng hoặc bài làm đã thay đổi. Hãy lấy lại đáp án.');
+  for(const update of updates){const q=bank.find(q=>q.id===update.id);if(q&&!q.verified){q.answer=update.answer;q.verified=true;q.answerSource='speaker-notes'}}
+  saveBank();message(`Đã lấy ${updates.length} đáp án từ ghi chú, có thể ôn luyện ngay. Không quét lại ảnh.${failures.length?' Một số tài liệu không đọc được: '+failures.join('; '):''}${bank.some(q=>!q.answer)?' Câu thiếu hoặc ghi chú không rõ vẫn cần kiểm tra.':''}`);
+ }catch(error){message(error.message)}finally{notesButton.disabled=false;notesButton.textContent='Lấy đáp án từ ghi chú'}
+};
 $('clear').onclick=()=>{if(confirm('Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.')){bank=[];sourceSummary='';write('sot-source','');saveBank()}};
 function editQuestion(q){editing=q.id;$('editFields').innerHTML=`<label>Nội dung câu hỏi<textarea name="stem" required>${esc(q.stem)}</textarea></label>${q.options.map(o=>`<label>Lựa chọn ${esc(o.id)}<textarea name="option-${o.id}" required>${esc(o.text)}</textarea></label>`).join('')}<label>Đáp án đúng<select name="answer"><option value="">Chưa biết</option>${q.options.map(o=>`<option ${q.answer===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>`;$('editQuestion').showModal()}
 for(const id of ['closeEdit','cancelEdit'])$(id).onclick=()=>$('editQuestion').close();

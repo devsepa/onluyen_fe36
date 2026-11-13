@@ -2,8 +2,18 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
-test('reads grouped questions and speaker notes, leaves imported answer unverified',()=>{const p={presentationId:'abc',slides:[{objectId:'s1',pageElements:[{elementGroup:{children:[shape('q','What is an index?\nA. Fast lookup\nB. Alias')]}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[shape('number','1'),shape('note','Answer: A\n')]}}},{objectId:'s2',pageElements:[{image:{}}]}]};const r=parsePresentation(p);assert.equal(r.questions.length,1);assert.equal(r.questions[0].answer,'A');assert.equal(r.questions[0].verified,false);assert.equal(r.questions[0].options[1].text,'Alias');assert.deepEqual(r.skipped,[2]);});
+test('reads grouped questions and speaker notes, automatically accepts explicit speaker-note answer',()=>{const p={presentationId:'abc',slides:[{objectId:'s1',pageElements:[{elementGroup:{children:[shape('q','What is an index?\nA. Fast lookup\nB. Alias')]}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[shape('number','1'),shape('note','Answer: A\n')]}}},{objectId:'s2',pageElements:[{image:{}}]}]};const r=parsePresentation(p);assert.equal(r.questions.length,1);assert.equal(r.questions[0].answer,'A');assert.equal(r.questions[0].verified,true);assert.equal(r.questions[0].options[1].text,'Alias');assert.deepEqual(r.skipped,[2]);});
 test('ambiguous notes never create a guessed answer',()=>{const r=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n','A or B')]}}}]});assert.equal(r.questions[0].answer,'')});
+test('accepts explicit note formats but leaves missing, conflicting and multiple answers for review',()=>{
+ for(const note of ['B','(B)','Answer: B','Correct answer: b','Đáp án: B','Đáp án đúng: B']){
+  const q=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
+  assert.equal(q.answer,'B',note);assert.equal(q.verified,true);assert.equal(q.answerSource,'speaker-notes');
+ }
+ for(const note of ['','A or B','A, B','Answer: H','A\nB','Maybe B']){
+  const q=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
+  assert.equal(q.answer,'',note);assert.equal(q.verified,false);
+ }
+});
 test('grade uses stable option identifiers after shuffling',()=>{const q={id:'q',answer:'B',options:shuffle([{id:'A'},{id:'B'}])};assert.equal(grade([q],{q:'B'}),1);assert.equal(grade([q],{}),0);assert.equal(grade([q],{q:'A'}),0);assert.equal(q.options.length,2)});
 const makeSession=mode=>({mode,questions:[{id:'q',answer:'B',options:[{id:'B'},{id:'A'}]}],answers:{},deadline:mode==='study'?null:2000,done:false});
 test('study immediately shows correct and wrong choices, locks first answer, survives reload',()=>{const s=makeSession('study'),q=s.questions[0];assert.equal(optionState(s,q,'B'),'');assert.equal(answerQuestion(s,'q','A',5000),true);assert.equal(optionState(s,q,'A'),'wrong');assert.equal(optionState(s,q,'B'),'correct');const restored=JSON.parse(JSON.stringify(s));assert.equal(answerQuestion(restored,'q','B',6000),false);assert.equal(grade(restored.questions,restored.answers),0);assert.equal(optionState(restored,q,'B'),'correct')});

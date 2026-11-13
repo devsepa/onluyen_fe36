@@ -9,7 +9,7 @@ test('OCRs only unresolved image pages, preserves notes, source URL, page number
  const p=makePresentation(),calls=[],progress=[];
  const parsed=await parseWithOcr(p,{},{request:async url=>{calls.push(url);return{contentUrl:'https://google.example/image'}},recognize:async url=>{assert.equal(url,'https://google.example/image');return {text:'Image question?\nA. First\nB. Second',confidence:89}},onProgress:x=>progress.push(x)});
  assert.equal(calls.length,1);assert.ok(calls[0].includes('/pages/image/thumbnail?'));
- assert.equal(parsed.questions.length,2);assert.equal(parsed.questions[1].answer,'B');assert.equal(parsed.questions[1].slide,2);assert.equal(parsed.questions[1].extraction,'ocr');assert.equal(parsed.questions[1].verified,false);assert.ok(parsed.questions[1].url.endsWith('id.image'));assert.deepEqual(parsed.skipped,[3]);assert.equal(progress.at(-1).done,true);
+ assert.equal(parsed.questions.length,2);assert.equal(parsed.questions[1].answer,'B');assert.equal(parsed.questions[1].slide,2);assert.equal(parsed.questions[1].extraction,'ocr');assert.equal(parsed.questions[1].verified,true);assert.ok(parsed.questions[1].url.endsWith('id.image'));assert.deepEqual(parsed.skipped,[3]);assert.equal(progress.at(-1).done,true);
 });
 test('reuses cached OCR without fetching a signed image and invalidates on modified time',async()=>{
  const p={presentationId:'private',slides:[imageSlide('s')]},map=new Map();let reads=0;

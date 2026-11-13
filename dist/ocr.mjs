@@ -1,4 +1,4 @@
-import {parsePresentation,textOf} from './core.mjs?v=20261113-slide-8';
+import {parsePresentation,textOf} from './core.mjs?v=20261113-notes-9';
 
 export function checkAbort(signal){if(signal?.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError')}
 export async function cacheKey(p,slide,resource={}){
@@ -51,7 +51,7 @@ export async function parseWithOcr(p,resource,{request,recognize,cache,signal,on
    const parsed=parsePresentation({...p,slides:[{...slide,pageElements:[{shape:{text:{textElements:[{textRun:{content:result.text}}]}}}]}]});
    const q=parsed.questions[0];
    page.ocr=true;page.ocrConfidence=result.confidence;page.preview=result.text.slice(0,1200);
-   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrConfidence=result.confidence;q.verified=false;questions.push(q);page.recognized=true;}
+   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrConfidence=result.confidence;questions.push(q);page.recognized=true;}
   }catch(error){checkAbort(signal);if(error.ocrFatal)throw error;page.ocrError=error.message;}
   completed++;progress(page);
  }

@@ -34,7 +34,7 @@ Ngân hàng đã kiểm tra có thể xuất thành JSON và nhập lại để 
 
 Giới hạn nhịp yêu cầu thumbnail, thử lại khi Google trả 429/5xx. Hiển thị slide đang đọc, số trang đã xử lý và số câu đã nhận diện. Có nút Dừng nhập. OCR text/confidence được lưu trong IndexedDB theo file, trang, thời điểm sửa và cấu trúc slide; nguồn sửa sẽ đọc lại. Nếu thiếu version/thời điểm sửa hoặc IndexedDB không khả dụng thì không tái sử dụng cache bền vững. Có thể xóa toàn bộ dữ liệu trang trong trình duyệt để xóa cache này.
 
-Giữ đáp án từ speaker notes của trang gốc; không đoán đáp án khi thiếu. Câu OCR luôn cần xác nhận, giữ liên kết về slide gốc. Slide không có câu hỏi, OCR không nhận diện được hoặc ảnh không tải được sẽ được báo trong chẩn đoán. Không đảm bảo OCR chính xác với ảnh mờ, bố cục phức tạp hoặc một ảnh có nhiều câu hỏi.
+Giữ đáp án từ speaker notes của trang gốc; đáp án đơn rõ ràng được dùng ngay cho cả chữ và OCR, không cần xác nhận từng câu. Nút “Lấy đáp án từ ghi chú” cập nhật toàn bộ câu chưa xác nhận trong ngân hàng đã lưu bằng slide object ID, không OCR lại và không thay đáp án đã xác nhận. Câu thiếu ghi chú, ghi chú mơ hồ hoặc nhiều đáp án vẫn cần kiểm tra. Giữ liên kết về slide gốc. Không đảm bảo OCR chính xác với ảnh mờ, bố cục phức tạp hoặc một ảnh có nhiều câu hỏi.
 
 Google Identity Services token model; token chỉ tồn tại trong bộ nhớ và được cấp lại bằng thao tác người dùng khi hết hạn. Ứng dụng gọi Google Slides API trực tiếp. Không chuyển token hoặc tài liệu tới backend/AI. OAuth chỉ cấp quyền đọc Slides, không tạo một tài khoản ứng dụng riêng.
 
@@ -61,7 +61,7 @@ Gồm bốn trang: Tài liệu của tôi, Ngân hàng câu hỏi (lọc nguồn
 
 ## Nội dung tài liệu
 
-Trích câu hỏi có lựa chọn A. B. C. D., A) B), (A), [A], xuống dòng hoặc cùng dòng; hỗ trợ shape, group và table, OCR cho trang dạng ảnh. Đáp án đơn lấy từ speaker notes dạng `A` hoặc `Answer: A` hoặc `Đáp án: A`. Mọi câu nhập đều cần xác nhận trước khi thi. Báo các slide bị bỏ qua. Chưa hỗ trợ câu nhiều đáp án, tự sinh câu mới bằng AI hoặc giải thích bằng AI.
+Trích câu hỏi có lựa chọn A. B. C. D., A) B), (A), [A], xuống dòng hoặc cùng dòng; hỗ trợ shape, group và table, OCR cho trang dạng ảnh. Đáp án đơn lấy từ speaker notes dạng `A`, `Answer: A` hoặc `Đáp án: A` và tự sẵn sàng để luyện. Báo các slide bị bỏ qua. Chưa hỗ trợ câu nhiều đáp án, tự sinh câu mới bằng AI hoặc giải thích bằng AI.
 
 Câu hỏi, Client ID, bài đang làm và tối đa 50 kết quả được lưu bằng localStorage trong trình duyệt hiện tại. Đồng hồ dựa trên deadline tuyệt đối, tự nộp khi hết giờ kể cả sau khi tải lại trang. Không dùng cho kỳ thi có giám sát; đáp án có trong trình duyệt để tự học. Dữ liệu không đồng bộ giữa thiết bị, và dùng chung trong cùng hồ sơ trình duyệt. Có thể xóa ngân hàng hoặc dữ liệu trang để xóa nội dung đã nhập.
 

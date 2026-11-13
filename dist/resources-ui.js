@@ -1,7 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-slide-8';
+import {parseWithOcr} from './ocr.mjs?v=20261113-notes-9';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
+import {answerFromNotes} from './core.mjs?v=20261113-notes-9';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -169,5 +170,27 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
   finally{await recognizer.terminate();if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };
- return {connect,disconnect};
+ async function readAnswers(questions){
+  if(!active())throw Error('Đăng nhập Google ở ảnh đại diện để đọc ghi chú từ slide.');
+  if(busy)throw Error('Hãy đợi nhập tài liệu xong rồi lấy đáp án.');
+  const updates=[],failures=[],run=epoch;
+  const ids=[...new Set(questions.filter(q=>!q.verified).map(q=>q.sourceId||presentationIdFromLink(q.url)).filter(Boolean))];
+  for(const id of ids){
+   try{
+    const p=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(id)}`);
+    if(run!==epoch)throw Error('Tài khoản đã thay đổi. Hãy thử lại.');
+    if(p.presentationId!==id)throw Error('Nguồn trả về không khớp.');
+    for(const q of questions.filter(q=>!q.verified&&(q.sourceId||presentationIdFromLink(q.url))===id)){
+     const objectId=q.url?.match(/#slide=id\.(.+)$/)?.[1];
+     const slide=p.slides?.find(s=>s.objectId===objectId);
+     if(!slide)continue;
+     const answer=answerFromNotes(slide,q.options);
+     if(answer)updates.push({id:q.id,answer});
+    }
+   }catch(error){if(run!==epoch)throw error;failures.push(error.message)}
+  }
+  if(run!==epoch)throw Error('Tài khoản đã thay đổi. Hãy thử lại.');
+  return {updates,failures};
+ }
+ return {connect,disconnect,readAnswers};
 }
