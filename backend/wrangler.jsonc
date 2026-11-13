@@ -30,6 +30,10 @@
       {
         "name": "QUALITY_STORE",
         "class_name": "QualityStore"
+      },
+      {
+        "name": "GEMINI_RUNTIME",
+        "class_name": "RegionalGemini"
       }
     ]
   },
@@ -62,6 +66,12 @@
       "tag": "v5-quality-store",
       "new_sqlite_classes": [
         "QualityStore"
+      ]
+    },
+    {
+      "tag": "v6-regional-gemini",
+      "new_sqlite_classes": [
+        "RegionalGemini"
       ]
     }
   ]

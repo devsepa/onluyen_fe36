@@ -17,6 +17,7 @@ on:
       - 'scripts/check-explanation-cache.mjs'
       - 'scripts/configure-quality.mjs'
       - 'scripts/check-quality.mjs'
+      - 'scripts/check-regional-gemini.mjs'
       - '.github/workflows/ai-backend.yml'
 permissions:
   contents: read
@@ -72,6 +73,10 @@ jobs:
           AI_API_BASE: ${{ vars.AI_API_BASE }}
       - name: Verify anonymous explanations and shared reuse
         run: node scripts/check-explanation-cache.mjs
+        env:
+          AI_API_BASE: ${{ vars.AI_API_BASE }}
+      - name: Verify fresh generation through supported regional runtime
+        run: node scripts/check-regional-gemini.mjs
         env:
           AI_API_BASE: ${{ vars.AI_API_BASE }}
       - name: Verify quality reporting, private review and cache revision checks

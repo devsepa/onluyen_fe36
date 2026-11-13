@@ -106,6 +106,25 @@ export async function generateWithFallback(questions,env,fetcher=fetch){
   return {answers:await generateAnswers(questions,{...env,GEMINI_MODEL:fallback},fetcher),model:fallback};
  }
 }
+async function invokeRegional(path,input,env){
+ const namespace=env.GEMINI_RUNTIME.jurisdiction('us');
+ const response=await namespace.get(namespace.idFromName('gemini-runtime-v1')).fetch(new Request('https://gemini-runtime'+path,{method:'POST',body:JSON.stringify(input)}));
+ const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
+}
+export function generateInSupportedRegion(questions,env){
+ if(!env.GEMINI_RUNTIME)return generateWithFallback(questions,env);
+ return invokeRegional('/answers',{questions,...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);
+}
+async function generateTutorReply(prompt,env){
+ const model=env.GEMINI_MODEL||'gemini-3.8-flash';if(!/^[a-zA-Z0-9._-]+$/.test(model))throw new ApiError(503,'Model AI chưa được cấu hình hợp lệ.');
+ let response;try{response=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':env.GEMINI_API_KEY},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1024}}),signal:AbortSignal.timeout(90000)})}catch{throw new ApiError(504,'AI phản hồi chậm. Hãy thử lại sau.')}
+ if(!response.ok){if(response.status===400){let detail='';try{detail=String((await response.json()).error?.message||'')}catch{}const diagnosis=classifyGemini400(detail),error=new ApiError(502,diagnosis.message);error.code=diagnosis.code;throw error}if(response.status===429)throw new ApiError(429,'Gemini đã đạt hạn mức yêu cầu hoặc token. Hãy chờ hạn mức phục hồi.');throw new ApiError(502,'Gemini chưa xử lý được câu hỏi thêm. Hãy thử lại sau.')}
+ const data=await response.json(),candidate=data.candidates?.[0],text=(candidate?.content?.parts||[]).filter(p=>!p.thought).map(p=>p.text||'').join('');if(candidate?.finishReason!=='STOP'||!text.trim())throw new ApiError(502,'AI chưa trả lời đầy đủ. Hãy thử lại.');return {text:text.slice(0,8000)};
+}
+export class RegionalGemini{
+ constructor(state,env){this.env=env}
+ async fetch(request){try{const body=JSON.parse(await readLimited(request,MAX_BODY));if(new URL(request.url).pathname==='/followup'){if(typeof body.prompt!=='string'||!body.prompt.trim()||body.prompt.length>2000)throw new ApiError(400,'Câu hỏi thêm không hợp lệ.');return Response.json(await generateTutorReply(body.prompt,this.env))}return Response.json(await generateWithFallback(validateQuestions(body),this.env))}catch(error){return Response.json({error:error instanceof ApiError?error.message:'Chưa gọi được AI tại máy chủ xử lý.',...(error.code?{code:error.code}:{})},{status:error instanceof ApiError?error.status:503})}}
+}
 // One global Durable Object serializes quota reservations before billable requests.
 // Stores counts only; per-user keys expire by deleting older UTC-day records.
 export class AIQuota{
@@ -144,15 +163,8 @@ export default {async fetch(request,env){
    const fbody=JSON.parse(await readLimited(request,8192));
    if(!fbody?.prompt||typeof fbody.prompt!=='string')throw new ApiError(400,'Thiếu prompt.');
    const prompt=fbody.prompt.slice(0,2000);
-   const gemResp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${env.GEMINI_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:512,temperature:0.5}})});
-   if(!gemResp.ok){
-    const errText=await gemResp.text();
-    return reply({error:'AI lỗi: '+gemResp.status+' - '+errText},503);
-   }
-   const gdata=await gemResp.json();
-   const text=gdata?.candidates?.[0]?.content?.parts?.[0]?.text||'AI không có phản hồi.';
-   return reply({text});
-  }catch(e){return reply({error:e instanceof ApiError?e.message:'Lỗi AI.'},e instanceof ApiError?e.status:503)}
+   return reply(await (env.GEMINI_RUNTIME?invokeRegional('/followup',{prompt},env):generateTutorReply(prompt,env)));
+  }catch(e){return reply({error:e instanceof ApiError?e.message:'Lỗi AI.',...(e.code?{code:e.code}:{})},e instanceof ApiError?e.status:503)}
  }
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);
@@ -180,9 +192,9 @@ export default {async fetch(request,env){
     await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
    }catch{}
   }
-  return reply(await (body.purpose==='explanation'?explainWithSharedCache(questions,env,generateWithFallback):generateWithFallback(questions,env)));
+  return reply(await (body.purpose==='explanation'?explainWithSharedCache(questions,env,generateInSupportedRegion):generateInSupportedRegion(questions,env)));
  }catch(error){return reply({error:(error instanceof ApiError||error instanceof ExplanationCacheError)?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.',...((error instanceof ApiError||error instanceof ExplanationCacheError)&&error.code?{code:error.code}:{})},(error instanceof ApiError||error instanceof ExplanationCacheError)?error.status:503)}
 }};
 export class ExplanationCache extends StoredExplanationCache{
- constructor(state,env){super(state,env,generateWithFallback,validateResults)}
+ constructor(state,env){super(state,env,generateInSupportedRegion,validateResults)}
 }

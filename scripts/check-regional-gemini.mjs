@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+const base=process.env.AI_API_BASE;if(!base)throw Error('Missing AI_API_BASE');
+const reference=Date.now(),a=reference%30+10,b=17,total=a+b;
+const question={id:'regional-fresh',stem:`What is ${a} plus ${b}? Health-check reference ${reference}.`,options:[{id:'A',text:String(total)},{id:'B',text:String(total+1)}]};
+const response=await fetch(new URL('/v1/answers',base),{method:'POST',headers:{Origin:'https://devsepa.github.io','Content-Type':'application/json'},body:JSON.stringify({purpose:'explanation',questions:[question]}),signal:AbortSignal.timeout(110000)}),data=await response.json();if(!response.ok)throw Error(`Fresh regional generation: HTTP ${response.status} ${data.code||''}: ${data.error||'AI failed'}`);assert.equal(data.answers[0].answer,'A');assert.equal(data.answers[0].reused,false,'A unique question must exercise fresh generation rather than an existing cached explanation');console.log('Fresh anonymous Gemini generation verified through the regional runtime (not a cache hit).');

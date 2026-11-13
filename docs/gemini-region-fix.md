@@ -1,0 +1,9 @@
+# Gemini generation region and deployment configuration
+
+A fresh production request first returned Gemini quota 429. After deployment configuration was repaired, a different fresh request explicitly returned `AI_REGION_UNSUPPORTED`. These are distinct conditions; billing does not automatically correct IP geolocation, and changing keys within one project does not create more quota.
+
+The existing per-question explanation objects stay in place to preserve cached and moderated explanations. Only cache misses and other model generation are forwarded to a new `GEMINI_RUNTIME` Durable Object created via `jurisdiction('us')`. Cloudflare documents this as a compute/storage restriction, unlike a location hint. Google lists the United States as supported. The runtime does not persist prompts, images or tokens. Follow-up tutor calls use the same runtime. API keys are sent to Google in headers, not URLs, and upstream error bodies are not returned to visitors. Quota failures remain quota failures; no automatic region/key cycling is used.
+
+The previous failed backend deployment stopped on a UTF-8 BOM in `wrangler.jsonc`, before any Google request. Configuration scripts now accept a leading BOM and reject genuinely malformed JSON. Region-specific 400s are classified separately from project/billing conditions. The post-deployment smoke uses a unique synthetic arithmetic question to exercise fresh model generation, because a cache hit cannot establish whether the upstream route is working.
+
+Validation includes BOM parsing, strict US subnamespace selection, unchanged shared-cache reuse, tutor routing, header-only credentials, and quota propagation without retries. References: [Cloudflare Durable Object data locations](https://developers.cloudflare.com/durable-objects/reference/data-location/), [Google supported regions](https://ai.google.dev/gemini-api/docs/available-regions), and [Google rate limits](https://ai.google.dev/gemini-api/docs/rate-limits).
