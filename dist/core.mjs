@@ -97,10 +97,8 @@ export function parsePresentation(p){
   let resolvedParts=parts;
   if(!resolvedParts&&text.length>10){
    const detectedChoices=[...new Set([...text.matchAll(/(?:^|\n|\s)[(［\[]?([A-F])[)］\]:.]/gi)].map(m=>m[1].toUpperCase()))].sort();
-   const notesAns=answerFromNotes(s,['A','B','C','D','E','F'].map(id=>({id})));
-   if(detectedChoices.length>=2||notesAns){
-    const choiceIds=detectedChoices.length>=2?detectedChoices:['A','B','C','D'];
-    resolvedParts={stem:text,options:choiceIds.map(id=>({id,text:''}))};
+   if(detectedChoices.length>=2){
+    resolvedParts={stem:text,options:detectedChoices.map(id=>({id,text:''}))};
    }
   }
   pages.push({slide:i+1,objectId:s.objectId,textLength:text.length,images,recognized:!!resolvedParts,preview:text.slice(0,1200)});
