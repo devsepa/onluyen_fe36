@@ -1,27 +1,76 @@
 export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,autoAdvance,onAutoAdvance}){
- document.body.classList.add('quiz-active');window.scrollTo(0,0);
- const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),aside=root.querySelector('.quiz-layout>aside');
- head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
- if(study){const back=document.createElement('button');back.type='button';back.className='secondary quiz-leave';back.dataset.view='library';back.textContent='← Thư viện';back.title='Tạm rời, bài ôn luyện vẫn được giữ';head.prepend(back)}
-
- const multi=card.querySelector('.multi-hint');if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
- if(study){const label=document.createElement('label');label.className='study-auto-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=autoAdvance;input.onchange=()=>onAutoAdvance(input.checked);label.append(input,'Tự chuyển · 5 giây');head.append(label)}
- const controls=root.querySelector('.quiz-controls');if(controls&&controls.children.length>=2){controls.children[0].textContent='← Trước';controls.children[1].textContent='Tiếp →'}
- const choices=card.querySelector('.choice-pills'),nextQuestion=card.querySelector('.quiz-nav-group .next-btn');
- if(choices&&nextQuestion){
-  const row=document.createElement('div');row.className='quiz-answer-row';choices.before(row);
-  nextQuestion.classList.add('quiz-answer-next');nextQuestion.setAttribute('aria-label','Câu tiếp theo');
-  nextQuestion.innerHTML='<span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span>';
-  row.append(choices,nextQuestion);
+ document.body.classList.add('quiz-active');
+ const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),layout=root.querySelector('.quiz-layout'),aside=layout?.querySelector('aside');
+ head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';
+ head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
+ if(study&&!head.querySelector('.quiz-leave')){
+  const back=document.createElement('button');back.type='button';back.className='secondary quiz-leave';back.dataset.view='library';back.textContent='← Thư viện';back.title='Tạm rời, bài ôn luyện vẫn được giữ';
+  head.prepend(back);
  }
- function paginateMap(container){
-  const grid=container.querySelector('.quiz-navigation'),size=100,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
-  if(total>20){grid.classList.add('quiz-navigation-dense');root.querySelector('.quiz-layout').classList.add('quiz-layout-dense')}
-  const pager=document.createElement('div');pager.className='quiz-map-pager';const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');prev.className=next.className='secondary';prev.type=next.type='button';prev.textContent='←';next.textContent='→';prev.setAttribute('aria-label','Trang câu hỏi trước');next.setAttribute('aria-label','Trang câu hỏi tiếp');pager.append(prev,label,next);grid.after(pager);
-  function render(){grid.replaceChildren(...session.questions.slice(page*size,(page+1)*size).map((q,j)=>{const index=page*size+j,button=document.createElement('button');button.type='button';button.dataset.index=index;button.className=navItemClass(session,q,index,study);button.textContent=index+1;button.setAttribute('aria-label','Đến câu '+(index+1));if(index===session.current)button.setAttribute('aria-current','step');return button}));label.textContent=`${page*size+1}–${Math.min(total,(page+1)*size)} / ${total}`;prev.disabled=page===0;next.disabled=page===pages-1}
+
+ const multi=card.querySelector('.multi-hint');
+ if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
+ if(study&&!head.querySelector('.study-auto-toggle')){
+  const label=document.createElement('label');label.className='study-auto-toggle';
+  const input=document.createElement('input');input.type='checkbox';input.checked=autoAdvance;input.onchange=()=>onAutoAdvance(input.checked);
+  label.append(input,'Tự chuyển · 5 giây');head.append(label);
+ }
+
+ function paginateMap(container,onSelect){
+  const grid=container.querySelector('.quiz-navigation');
+  if(!grid)return;
+  const size=100,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
+  if(total>20){grid.classList.add('quiz-navigation-dense');}
+  const pager=document.createElement('div');pager.className='quiz-map-pager';
+  const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');
+  prev.className=next.className='secondary';prev.type=next.type='button';prev.textContent='←';next.textContent='→';
+  prev.setAttribute('aria-label','Trang câu hỏi trước');next.setAttribute('aria-label','Trang câu hỏi tiếp');
+  pager.append(prev,label,next);grid.after(pager);
+
+  function render(){
+   grid.replaceChildren(...session.questions.slice(page*size,(page+1)*size).map((q,j)=>{
+    const index=page*size+j,button=document.createElement('button');
+    button.type='button';button.dataset.index=index;button.className=navItemClass(session,q,index,study);
+    button.textContent=index+1;button.setAttribute('aria-label','Đến câu '+(index+1));
+    if(index===session.current)button.setAttribute('aria-current','step');
+    if(onSelect)button.addEventListener('click',()=>onSelect(index));
+    return button;
+   }));
+   label.textContent=`${page*size+1}–${Math.min(total,(page+1)*size)} / ${total}`;
+   prev.disabled=page===0;next.disabled=page===pages-1;
+  }
   prev.onclick=()=>{page--;render()};next.onclick=()=>{page++;render()};render();
  }
- aside.classList.add('quiz-map-card');aside.querySelector('p').textContent='Chọn số để chuyển câu.';paginateMap(aside);
+
+ if(aside){
+  aside.classList.add('quiz-map-card');
+  const p=aside.querySelector('p');if(p)p.textContent='Chọn số để chuyển câu.';
+  paginateMap(aside);
+ }
+
+ function openMapDialog(){
+  root.querySelector('.quiz-map-dialog')?.remove();
+  const dialog=document.createElement('dialog');dialog.className='quiz-map-dialog';
+  dialog.innerHTML=`<div class="modal-heading"><h2>Danh sách câu hỏi (${session.questions.length} câu)</h2><button type="button" class="secondary close-map-btn" autofocus>Đóng ✕</button></div><div class="quiz-map-card"><p>Chọn số để chuyển câu.</p><div class="quiz-navigation"></div><div class="quiz-legend-custom">${aside?.querySelector('.quiz-legend-custom')?.innerHTML||''}</div></div>`;
+  dialog.querySelector('.close-map-btn').onclick=()=>dialog.close();
+  paginateMap(dialog.querySelector('.quiz-map-card'),()=>dialog.close());
+  root.append(dialog);
+  dialog.showModal();
+ }
+
+ const toggleBtn=head.querySelector('#toggleMapBtn');
+ if(toggleBtn){
+  const isSavedCollapsed=localStorage.getItem('sot-quiz-map-collapsed')==='1';
+  if(window.innerWidth>860&&isSavedCollapsed&&layout){layout.classList.add('quiz-map-collapsed');}
+  toggleBtn.onclick=()=>{
+   if(window.innerWidth<=860){
+    openMapDialog();
+   }else if(layout){
+    const isCollapsed=layout.classList.toggle('quiz-map-collapsed');
+    localStorage.setItem('sot-quiz-map-collapsed',isCollapsed?'1':'0');
+   }
+  };
+ }
 
  const feedback=card.querySelector('.feedback');
  if(feedback){
