@@ -19,7 +19,11 @@ for(const theme of ['light','dark'])for(const [width,height] of [[1440,900],[390
  const bounds=await run(`({w:innerWidth,h:innerHeight,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,buttons:[...document.querySelectorAll('.choice-pill,#submit,.next-btn')].map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom}))})`);
  assert.ok(bounds.sw<=width+1&&bounds.sh<=height+1,JSON.stringify({width,height,bounds}));
  for(const b of bounds.buttons)assert.ok(b.top>=0&&b.bottom<=height+1,JSON.stringify({width,height,b}));
- await run(`document.querySelector('.feedback-toggle-btn').click()`);assert.ok(await run(`!!document.querySelector('dialog[open]')`));await run(`document.querySelector('dialog[open]').close()`);
+ assert.equal(await run(`document.querySelector('.feedback-toggle-btn')`),null);
+ assert.equal(await run(`document.querySelector('.feedback-inline-exp span').textContent`),questions[1].explanation.trimEnd());
+ assert.equal(await run(`getComputedStyle(document.querySelector('.feedback-inline-exp')).overflowY`),'auto');
+ await run(`document.querySelector('.feedback-inline-exp').scrollTop=100000`);
+ assert.ok(await run(`document.querySelector('.feedback-inline-exp').scrollTop>0`));
  const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/study-flow/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
  if(width===1440){await run(`document.querySelector('.study-auto-toggle input').click()`);await pause(5200);assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).current`),4)}
 }
@@ -37,4 +41,4 @@ for(const mode of ['study','exam']){
   assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).answers.q1`),'AC');
  }
 }
-ws.close();console.log('8 viewport/theme combinations passed; correct/incorrect auto advance, multi-answer confirmation and exam secrecy passed.');
+ws.close();console.log('8 viewport/theme combinations passed; full inline explanation, correct/incorrect auto advance, multi-answer confirmation and exam secrecy passed.');

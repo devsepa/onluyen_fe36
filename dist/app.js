@@ -29,7 +29,7 @@ import {
   deckRequest,
   sharedImagePath,
 } from "./shared-decks.mjs?v=20261113-background-publish-1";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=question-map-100-1";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=inline-explanation-2";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
 
@@ -1395,10 +1395,10 @@ window.addEventListener("keydown", (e) => {
     return;
   }
   if (key === "E") {
-    const expBtn = document.querySelector(".feedback-toggle-btn");
+    const expBtn = document.querySelector(".feedback-inline-exp");
     if (expBtn) {
       e.preventDefault();
-      expBtn.click();
+      expBtn.focus();
     }
     return;
   }

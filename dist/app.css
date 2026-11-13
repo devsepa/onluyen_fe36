@@ -153,10 +153,11 @@ body.quiz-active .quiz-read-text{flex:none;padding:3px;font-size:11px}
 .quiz-copy-pager{flex:none}
 .quiz-copy-pager button{min-height:40px}
 .study-auto-toggle{display:flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;cursor:pointer}.study-auto-toggle input{width:auto;margin:0;accent-color:var(--accent)}
-body.quiz-active .feedback-inline-exp{max-height:64px;overflow:hidden;margin-top:4px;padding-top:4px;line-height:1.45;color:var(--text)}
+body.quiz-active .feedback-inline-exp{max-height:min(240px,28dvh);overflow-y:auto;overscroll-behavior:contain;margin-top:4px;padding-top:4px;line-height:1.6;color:var(--text)}
 .study-explanation-status{font-size:11px;line-height:1.4;color:var(--text);max-height:44px;overflow:auto}
 @media(max-width:540px){.study-auto-toggle{font-size:9px}.quiz-head{flex-wrap:wrap}.study-auto-toggle{margin-left:auto}body.quiz-active .feedback-inline-exp{max-height:44px;font-size:11px}.feedback-main-row{gap:4px}.feedback-toggle-btn{font-size:10px!important;padding:2px 4px!important}}
-@media(max-height:540px){body.quiz-active .feedback-inline-exp{max-height:30px}.study-auto-toggle{font-size:9px}}
+@media(max-height:540px){body.quiz-active .feedback-inline-exp{max-height:22dvh}.study-auto-toggle{font-size:9px}}
+@media(max-width:540px){body.quiz-active .feedback-inline-exp{max-height:min(180px,26dvh)}}
 @media(max-width:900px){body.quiz-active .quiz-layout{display:flex;flex-direction:column}body.quiz-active .quiz-layout>div{flex:1}body.quiz-active .quiz-layout>aside{display:none}body.quiz-active .page-content{padding:10px!important}body.quiz-active .quiz-question{padding:14px}}
 @media(max-width:540px){body.quiz-active .quiz-head{gap:8px}body.quiz-active .quiz-head button{padding:6px 10px;font-size:11px}body.quiz-active .quiz-head .quiz-leave{width:36px;padding:0;font-size:0}body.quiz-active .quiz-leave:before{content:'\2190';font-size:18px}body.quiz-active #progress{max-width:125px;font-size:9px}body.quiz-active .timer{font-size:20px}body.quiz-active .feedback{font-size:12px}body.quiz-active .source-location{gap:6px}body.quiz-active .quiz-question .choice-pills{gap:8px}body.quiz-active .quiz-question .choice-pill{min-width:56px;height:44px;font-size:16px;padding:0 14px}}
 @media(max-height:540px){body.quiz-active .quiz-head small,body.quiz-active .multi-hint{display:none}body.quiz-active #practice{gap:5px}body.quiz-active .quiz-question{padding:10px;gap:5px}body.quiz-active .quiz-head{padding-bottom:4px;min-height:36px}body.quiz-active .quiz-question .choice-pill{height:38px;min-height:38px}body.quiz-active .quiz-question .question-top{min-height:24px}body.quiz-active .slide-load-error p{display:none}}

@@ -23,13 +23,12 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   const result=document.createElement('strong');result.textContent=(isCorrect(question,session.answers[question.id])?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer;
   mainRow.append(result);
   if(question.explanation){
-   const button=document.createElement('button');button.type='button';button.className='text-button feedback-toggle-btn';button.textContent='Đọc toàn bộ';
    const expBox=document.createElement('div');expBox.className='feedback-inline-exp';expBox.hidden=false;
+   expBox.tabIndex=0;expBox.setAttribute('role','region');expBox.setAttribute('aria-label','Giải thích đáp án');
+   for(const event of ['pointerdown','wheel','focus','touchstart'])expBox.addEventListener(event,()=>clearTimeout(window._autoAdvanceTimer),{passive:true});
    const expTitle=document.createElement('b');expTitle.textContent=(question.explanationSource==='gemini'||question.answerSource==='gemini')?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:';
    const expText=document.createElement('span');expText.textContent=question.explanation;
    expBox.append(expTitle,expText);
-   button.onclick=()=>{clearTimeout(window._autoAdvanceTimer);openPagedText(root,expTitle.textContent,question.explanation)};
-   mainRow.append(button);
    feedback.append(mainRow,expBox);
   }else{
    feedback.append(mainRow);
