@@ -1,4 +1,4 @@
-export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,autoAdvance,onAutoAdvance}){
+export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,autoAdvance,onAutoAdvance,prefetchEnabled,onPrefetchChange}){
  document.body.classList.add('quiz-active');
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),layout=root.querySelector('.quiz-layout'),aside=layout?.querySelector('aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';
@@ -46,6 +46,7 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   aside.classList.add('quiz-map-card');
   const p=aside.querySelector('p');if(p)p.textContent='Chọn số để chuyển câu.';
   paginateMap(aside);
+  if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=prefetchEnabled;input.onchange=()=>onPrefetchChange(input.checked);label.append(input,'Chuẩn bị trước giải thích AI');aside.append(label)}
  }
 
  function openMapDialog(){
@@ -54,6 +55,7 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   dialog.innerHTML=`<div class="modal-heading"><h2>Danh sách câu hỏi (${session.questions.length} câu)</h2><button type="button" class="secondary close-map-btn" autofocus>Đóng ✕</button></div><div class="quiz-map-card"><p>Chọn số để chuyển câu.</p><div class="quiz-navigation"></div><div class="quiz-legend-custom">${aside?.querySelector('.quiz-legend-custom')?.innerHTML||''}</div></div>`;
   dialog.querySelector('.close-map-btn').onclick=()=>dialog.close();
   paginateMap(dialog.querySelector('.quiz-map-card'),()=>dialog.close());
+  if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=prefetchEnabled;input.onchange=()=>onPrefetchChange(input.checked);label.append(input,'Chuẩn bị trước giải thích AI');dialog.append(label)}
   root.append(dialog);
   dialog.showModal();
  }
@@ -72,24 +74,6 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   };
  }
 
- const feedback=card.querySelector('.feedback');
- if(feedback){
-  feedback.replaceChildren();
-  const mainRow=document.createElement('div');mainRow.className='feedback-main-row';
-  const result=document.createElement('strong');result.textContent=(isCorrect(question,session.answers[question.id])?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer;
-  mainRow.append(result);
-  if(question.explanation){
-   const expBox=document.createElement('div');expBox.className='feedback-inline-exp';expBox.hidden=false;
-   expBox.tabIndex=0;expBox.setAttribute('role','region');expBox.setAttribute('aria-label','Giải thích đáp án');
-   for(const event of ['pointerdown','wheel','focus','touchstart'])expBox.addEventListener(event,()=>clearTimeout(window._autoAdvanceTimer),{passive:true});
-   const expTitle=document.createElement('b');expTitle.textContent=(question.explanationSource==='gemini'||question.answerSource==='gemini')?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:';
-   const expText=document.createElement('span');expText.textContent=question.explanation;
-   expBox.append(expTitle,expText);
-   feedback.append(mainRow,expBox);
-  }else{
-   feedback.append(mainRow);
-  }
- }
  if(!question.url&&!question.sharedDeck){card.querySelector('.slide-media-container')?.remove();const text=card.querySelector('.question-title'),button=document.createElement('button');button.type='button';button.className='text-button quiz-read-text';button.textContent='Đọc toàn bộ nội dung';button.onclick=()=>openPagedText(root,'Nội dung câu hỏi',text.textContent);text.after(button)}
 }
 function openPagedText(root,title,text){

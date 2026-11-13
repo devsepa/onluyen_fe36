@@ -1,3 +1,7 @@
+import {createExplanationQueue} from './explanation-queue.mjs';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs';
+import {renderQuizFeedback} from './quiz-feedback.mjs';
+import {setupVersionUpdates} from './version-updates.mjs';
 import { askConfirm } from "./confirm-dialog.mjs";
 import { practiceSubjects, subjectKey } from "./subjects.mjs";
 import { nextUnanswered, explanationFromResult } from "./study-flow.mjs";
@@ -267,7 +271,7 @@ function switchView(next, mode) {
   if (next === "result" && !lastResult) next = "history";
   view = next;
   renderNotice();
-  if (view !== "practice") preloadingSession = null;
+  if (view !== "practice") {preloadingSession = null;explanationQueue.cancel();}
   document.body.classList.toggle(
     "quiz-active",
     view === "practice" && !!session && !session.done,
@@ -312,6 +316,7 @@ const account = setupAccount({
   onDisconnect: () => {
     aiController?.abort();
     shared.pause();
+    explanationQueue.cancel();
     slideImages.clear();
     resources.disconnect();
   },
@@ -321,7 +326,7 @@ const resources = setupResources({
     account.update(profile);
     $("sourceAccessNotice").hidden = !!profile;
     $("sourceControls").hidden = !profile;
-    if (profile) setTimeout(scheduleAutoAi, 0);
+    setTimeout(()=>{if(profile){scheduleAutoAi();explanationQueue.resume();primeStudyExplanations()}else explanationQueue.cancel()},0);
   },
   onAccountError: (text) => message(text),
   message: (text) => message(text, "sources"),
@@ -1061,7 +1066,8 @@ function renderPractice() {
   const eligible = bank.filter(readyForPractice),
     n = eligible.length;
   $("practice").innerHTML =
-    `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
+    `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><label class="check-label practice-prefetch-setting"><input id="prefetchExplanations" type="checkbox" ${prefetchEnabled?'checked':''}> Chuẩn bị trước giải thích AI cho tối đa 3 câu sắp làm, lưu để dùng lại. Bạn có thể tắt trong danh sách câu.</label><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
+  $('prefetchExplanations').onchange=e=>setExplanationPrefetch(e.target.checked);
   const pool = () =>
     eligible.filter(
       (q) =>
@@ -1149,92 +1155,65 @@ function navItemClass(session, item, index, study) {
   }
   return classes.join(" ");
 }
-const explanationJobs = new Map();
-let autoAdvance = read("sot-auto-advance", true);
-function scheduleStudyAdvance() {
-  clearTimeout(window._autoAdvanceTimer);
-  const active = session,
-    current = active?.current,
-    q = active?.questions[current];
-  if (
-    !autoAdvance ||
-    active?.done ||
-    active?.mode !== "study" ||
-    !active.answers[q.id] ||
-    nextUnanswered(active) < 0
-  )
-    return;
-  window._autoAdvanceTimer = setTimeout(() => {
-    if (
-      session !== active ||
-      session.done ||
-      view !== "practice" ||
-      session.current !== current ||
-      !autoAdvance ||
-      document.querySelector("dialog[open]")
-    )
-      return;
-    const next = nextUnanswered(session);
-    if (next < 0) return;
-    session.current = next;
-    write("sot-session", session);
-    renderQuiz();
-  }, 5000);
+let autoAdvance=read('sot-auto-advance',true),prefetchEnabled=read('sot-explanation-prefetch',true),readingExplanation=null;
+const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},load:async(q,{signal})=>{
+ if(!AI_API_BASE)throw Error('Giải thích AI đang được chuẩn bị. Hãy thử lại sau.');
+ let token;try{token=resources.apiToken()}catch(error){error.status=401;throw error}
+ const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(95000)]),submitted=structuredClone(q);
+ try{
+  if(q.url||q.sharedDeck){const blob=await questionBlob(q,{signal:requestSignal});if(blob.size>2100000)throw Error('Ảnh slide quá lớn để gửi AI.');submitted.image={mimeType:blob.type,data:await blobToBase64(blob)}}
+  const result=await solveBatch(AI_API_BASE,[submitted],token,{signal:requestSignal,purpose:'explanation'});
+  return normalizeExplanation(q,result.answers[0]);
+ }catch(error){if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
+},onChange:(question,state)=>{
+ if(state.status==='ready'){
+  const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key||hasNoteExplanation(q))return false;if(q.explanation===state.details.reason&&q.explanationSource==='gemini')return false;q.explanation=state.details.reason;q.explanationSource='gemini';return true};
+  let bankChanged=false;for(const q of bank)bankChanged=apply(q)||bankChanged;if(bankChanged)write('sot-bank',bank);
+  let sessionChanged=false;for(const q of session?.questions||[])sessionChanged=apply(q)||sessionChanged;if(sessionChanged)write('sot-session',session);
+ }
+ if(view==='practice'&&session&&!session.done&&session.mode==='study'&&explanationKey(session.questions[session.current])===explanationKey(question)){
+  refreshQuizState();if(state.status==='ready')scheduleStudyAdvance();
+ }
+}});
+function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
+function feedbackState(q){return hasNoteExplanation(q)?{status:'note'}:explanationQueue.state(q)}
+function drawStudyFeedback(){
+ if(!session||session.done||view!=='practice')return;
+ const q=session.questions[session.current];
+ renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:feedbackState(q),onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});
 }
-async function ensureStudyExplanation(q) {
-  if (q.explanation || explanationJobs.has(q.id)) return;
-  clearTimeout(window._autoAdvanceTimer);
-  const active = session,
-    key = JSON.stringify([q.stem, q.options, q.answer, q.url]);
-  explanationJobs.set(q.id, "Đang tạo giải thích AI…");
-  renderQuiz();
-  try {
-    if (!AI_API_BASE)
-      throw Error(
-        "Giải thích AI đang được chuẩn bị. Ghi chú có sẵn vẫn hiển thị bình thường.",
-      );
-    const token = resources.apiToken(),
-      submitted = structuredClone(q);
-    if (q.url || q.sharedDeck) {
-      const blob = await questionBlob(q);
-      if (blob.size > 2100000) throw Error("Ảnh slide quá lớn để gửi AI.");
-      submitted.image = { mimeType: blob.type, data: await blobToBase64(blob) };
-    }
-    const result = await solveBatch(AI_API_BASE, [submitted], token, {
-      signal: AbortSignal.timeout(100000),
-    });
-    const explanation = explanationFromResult(q, result.answers[0]);
-    if (JSON.stringify([q.stem, q.options, q.answer, q.url]) !== key) return;
-    q.explanation = explanation;
-    q.explanationSource = "gemini";
-    const saved = bank.find((item) => item.id === q.id);
-    if (
-      saved &&
-      !saved.explanation &&
-      JSON.stringify([saved.stem, saved.options, saved.answer, saved.url]) ===
-        key
-    ) {
-      saved.explanation = explanation;
-      saved.explanationSource = "gemini";
-      write("sot-bank", bank);
-    }
-    if (session === active) write("sot-session", session);
-    explanationJobs.set(q.id, "");
-  } catch (error) {
-    explanationJobs.set(q.id, error.message);
-  } finally {
-    if (
-      session === active &&
-      !session.done &&
-      view === "practice" &&
-      session.questions[session.current].id === q.id
-    ) {
-      renderQuiz();
-      scheduleStudyAdvance();
-    }
-  }
+function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
+function primeStudyExplanations(){
+ if(!session||session.done||session.mode!=='study'||view!=='practice')return;
+ const q=session.questions[session.current];let connected=false;try{connected=!!resources.apiToken()}catch{}
+ const targets=prefetchEnabled&&connected?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];
+ const needed=targets.filter(q=>!hasNoteExplanation(q));explanationQueue.retain(needed);
+ for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});
+}
+function refreshQuizState(){
+ if(!session||session.done||view!=='practice')return;
+ const root=$('practice'),q=session.questions[session.current],study=session.mode==='study',answer=session.answers[q.id];
+ if(root.dataset.questionId!==q.id)return;
+ for(const button of root.querySelectorAll('.choice-pill[data-o]')){button.className='choice-pill '+optionState(session,q,button.dataset.o);button.setAttribute('aria-pressed',String((answer||session.drafts?.[q.id]||'').includes(button.dataset.o)));button.disabled=study&&!!answer}
+ let check=$('checkMultiple');
+ if(study&&q.answer.length>1&&!answer){if(!check){check=document.createElement('button');check.id='checkMultiple';check.className='multi-check';check.textContent='Kiểm tra đáp án (Enter)';root.querySelector('.quiz-answer-row').after(check)}check.disabled=!session.drafts?.[q.id]}
+ else check?.remove();
+ for(const button of root.querySelectorAll('.quiz-navigation [data-index]')){const index=Number(button.dataset.index),question=session.questions[index];button.className=navItemClass(session,question,index,study);if(index===session.current)button.setAttribute('aria-current','step');else button.removeAttribute('aria-current')}
+ const count=Object.keys(session.answers).length,pct=Math.round(count/session.questions.length*100),track=root.querySelector('.quiz-progress-track');track.title='Tiến độ: '+count+'/'+session.questions.length+' ('+pct+'%)';track.firstElementChild.style.width=pct+'%';
+ drawStudyFeedback();updateTimer();
+}
+function scheduleStudyAdvance(){
+ clearTimeout(window._autoAdvanceTimer);
+ const active=session,current=active?.current,q=active?.questions[current];
+ if(!autoAdvance||!active||active.done||active.mode!=='study'||!active.answers[q.id]||nextUnanswered(active)<0||readingExplanation===explanationKey(q))return;
+ if(['queued','loading','error'].includes(feedbackState(q).status))return;
+ window._autoAdvanceTimer=setTimeout(()=>{
+  if(session!==active||session.done||view!=='practice'||session.current!==current||!autoAdvance||document.querySelector('dialog[open]')||readingExplanation===explanationKey(q))return;
+  const next=nextUnanswered(session);if(next<0)return;session.current=next;write('sot-session',session);renderQuiz();
+ },5000);
 }
 function renderQuiz() {
+  readingExplanation=null;
   const study = session.mode === "study",
     qs = session.questions;
   session.current = Math.max(0, Math.min(session.current || 0, qs.length - 1));
@@ -1256,6 +1235,7 @@ function renderQuiz() {
       : "";
   $("practice").innerHTML =
     `<div class="quiz-head"><div><span class="overline">${study ? "ÔN LUYỆN" : "THI THỬ"} · ${qs.length} CÂU HỎI</span><h2>${study ? "Ôn luyện" : "Thi thử"}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study ? "Thời gian đã học" : "Thời gian còn lại"}</small><div class="timer" id="timer"></div></div><div class="quiz-head-actions"><button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button><button id="submit">${study ? "Kết thúc" : "Nộp bài"} ↗</button></div></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới">Mở slide ↗</a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}> Đánh dấu xem lại</label></div></div>${multiple ? '<p class="multi-hint">Chọn tất cả đáp án đúng.' + (study ? " Bấm Kiểm tra sau khi chọn xong." : " Có thể thay đổi lựa chọn trước khi nộp bài.") + "</p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}<div class="quiz-shortcuts-hint"><span><kbd>A</kbd><kbd>B</kbd><kbd>C</kbd><kbd>D</kbd> Chọn</span><span><kbd>←</kbd><kbd>→</kbd> Chuyển câu</span><span><kbd>F</kbd> Đánh dấu</span>${q.explanation ? "<span><kbd>E</kbd> Giải thích</span>" : ""}<span><kbd>Z</kbd> Phóng to ảnh</span></div></article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
+  $('practice').dataset.questionId=q.id;
   fitQuizScreen({
     root: $("practice"),
     session,
@@ -1264,6 +1244,7 @@ function renderQuiz() {
     navItemClass,
     sound: quizSound,
     autoAdvance,
+    prefetchEnabled,onPrefetchChange:setExplanationPrefetch,
     onAutoAdvance: (value) => {
       autoAdvance = value;
       write("sot-auto-advance", value);
@@ -1271,30 +1252,15 @@ function renderQuiz() {
       else clearTimeout(window._autoAdvanceTimer);
     },
   });
-  if (study && answered && !q.explanation) {
-    const status = document.createElement("div");
-    status.className = "study-explanation-status";
-    status.textContent =
-      explanationJobs.get(q.id) || "Đang chuẩn bị giải thích…";
-    document.querySelector(".feedback").append(status);
-    if (!explanationJobs.has(q.id))
-      queueMicrotask(() => ensureStudyExplanation(q));
-  }
-  if ($("checkMultiple"))
-    $("checkMultiple").onclick = () => {
-      if (confirmQuestion(session, q.id)) {
-        quizSound.play(isCorrect(q, session.answers[q.id]));
-        write("sot-session", session);
-        renderQuiz();
-        scheduleStudyAdvance();
-      }
-    };
+  drawStudyFeedback();
+  primeStudyExplanations();
+  versionUpdates.mount($('practice').querySelector('.quiz-head-actions'),{compact:true});
   $("flagCurrent").onchange = (e) => {
     session.flags = e.target.checked
       ? [...new Set([...session.flags, q.id])]
       : session.flags.filter((id) => id !== q.id);
     write("sot-session", session);
-    switchView("practice");
+    refreshQuizState();
   };
   $("submit").onclick = async () => {
     if (
@@ -1314,7 +1280,9 @@ function renderQuiz() {
     if (session.current > 0) preloadSlideImage(qs[session.current - 1]);
   }, 0);
 }
-$("practice").onclick = (e) => {
+$('practice').onclick = (e) => {
+ if(e.target.closest('#checkMultiple')&&session&&!session.done){const q=session.questions[session.current];if(confirmQuestion(session,q.id)){quizSound.play(isCorrect(q,session.answers[q.id]));write('sot-session',session);refreshQuizState();primeStudyExplanations();scheduleStudyAdvance()}return}
+
   const toggleBtn = e.target.closest("[data-toggle-text]");
   if (toggleBtn) {
     const t = toggleBtn
@@ -1342,7 +1310,8 @@ $("practice").onclick = (e) => {
       if (session.mode === "study" && session.answers[answer.dataset.q])
         quizSound.play(correct);
       write("sot-session", session);
-      renderQuiz();
+      refreshQuizState();
+      primeStudyExplanations();
       if (session.mode === "study" && session.answers[currentQ.id])
         scheduleStudyAdvance();
     } else updateTimer();
@@ -1499,6 +1468,7 @@ function updateTimer() {
 }
 function finish() {
   if (!session || session.done) return;
+  explanationQueue.cancel();
   session.done = true;
   lastResult = {
     ...session,
@@ -1612,6 +1582,7 @@ for (const [key, value] of [
   ["sot-session", session],
 ])
   if (originalStorage.get(key) !== JSON.stringify(value)) write(key, value);
+const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
 document.addEventListener("visibilitychange", updateTimer);

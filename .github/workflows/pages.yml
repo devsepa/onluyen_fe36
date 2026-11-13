@@ -10,6 +10,7 @@ on:
       - 'package.json'
       - 'scripts/check-static.mjs'
       - 'scripts/configure-ai.mjs'
+      - 'scripts/configure-version.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -54,6 +55,8 @@ jobs:
         env:
           AI_API_BASE: ${{ vars.AI_API_BASE }}
         run: node scripts/configure-ai.mjs
+      - name: Stamp public release version
+        run: node scripts/configure-version.mjs
       - name: Upload website artifact
         uses: actions/upload-pages-artifact@v4
         with:
