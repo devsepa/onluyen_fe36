@@ -1,9 +1,9 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-auto-20';
+import {parseWithOcr} from './ocr.mjs?v=20261113-cluster-2';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-auto-20';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-auto-20';
+import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-cluster-2';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-cluster-2';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -16,8 +16,8 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  function expireConnection(){token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
- try{const previous=localStorage.getItem('sot-ocr-language');if(OCR_LANGUAGES.includes(previous))$('ocrLanguage').value=previous}catch{}
- $('ocrLanguage').onchange=()=>{try{localStorage.setItem('sot-ocr-language',$('ocrLanguage').value)}catch{}};
+ try{const previous=localStorage.getItem('sot-ocr-language');if($('ocrLanguage')&&OCR_LANGUAGES.includes(previous))$('ocrLanguage').value=previous}catch{}
+ if($('ocrLanguage'))$('ocrLanguage').onchange=()=>{try{localStorage.setItem('sot-ocr-language',$('ocrLanguage').value)}catch{}};
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
  const stopButton=document.createElement('button');stopButton.className='secondary';stopButton.type='button';stopButton.textContent='Dừng nhập';stopButton.hidden=true;$('resourceStatus').after(stopButton);
@@ -50,7 +50,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }
  }
  function active(){return token&&Date.now()<expires}
- function reset(){clearTimeout(expiryTimer);profileController?.abort();expireConnection();stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])$(id).disabled=false;epoch++;controller?.abort();controller=null;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
+ function reset(){clearTimeout(expiryTimer);profileController?.abort();expireConnection();stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])if($(id))$(id).disabled=false;epoch++;controller?.abort();controller=null;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
  let nextThumbnailAt=0;
  function delay(ms,signal){return new Promise((resolve,reject)=>{
   if(signal?.aborted)return reject(new DOMException('Đã dừng.','AbortError'));
@@ -152,7 +152,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(!Number.isInteger(startSlide)||startSlide<1||(Number.isFinite(endSlide)&&(!Number.isInteger(endSlide)||endSlide<startSlide)))return message('Khoảng slide không hợp lệ. Trang bắt đầu phải từ 1 và không lớn hơn trang kết thúc.');
   // Ask about replacement only when an existing bank would actually be replaced.
   if(document.getElementById('total').textContent!=='0'&&!confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.'))return;
-  const maxQuestions=Number($('ocrLimit').value)||Infinity,languageChoice=$('ocrLanguage').value;
+  const maxQuestions=Number($('ocrLimit').value)||Infinity,languageChoice=$('ocrLanguage')?.value||'auto';
   const concurrency=(navigator.hardwareConcurrency||4)>=4&&(navigator.deviceMemory||4)>=4?2:1;
   const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;
   $('useReady').hidden=true;$('useReady').disabled=false;$('ocrBar').value=0;$('ocrPercent').textContent='0%';

@@ -94,6 +94,10 @@ test('keeps meaningful source terminology and content following a watermark',()=
  assert.equal(cleanSlideContent('What is an open source database?'),'What is an open source database?');
  assert.equal(cleanSlideContent('Hoàng Hoàng Buôn Source\nWhich clause filters groups?'),'Which clause filters groups?');
  assert.equal(cleanSlideContent('A source table has rows.'),'A source table has rows.');
+ assert.equal(cleanSlideContent('Beomuiowmsmesor Ti ĂNỐÑÑŨ)\nHãy chọn cách viết kanji đúng cho từ trong ngoặc (_) trong câu sau đây.\n私 は (は た ち) です。'),'Hãy chọn cách viết kanji đúng cho từ trong ngoặc (_) trong câu sau đây.\n私 は (は た ち) です。');
+ assert.equal(cleanSlideContent('NINH\nHãy lựa chọn cách đọc đúng cho từ kanji trong ngoặc ( ) trong câu sau đây.\n(本) は わたしの じゃありません。'),'Hãy lựa chọn cách đọc đúng cho từ kanji trong ngoặc ( ) trong câu sau đây.\n(本) は わたしの じゃありません。');
+ assert.equal(cleanSlideContent('20才\nMO |'),'20才');
+ assert.equal(cleanSlideContent('ほん MO |'),'ほん');
 });
 test('existing shuffled questions return to source choice order without changing grading or source references',()=>{
  const old={id:'q',stem:'Question?',answer:'B',verified:true,slide:320,url:'original',options:[{id:'D',text:'Fourth\n© Hoàng Hoàng Buôn Source'},{id:'B',text:'Second'},{id:'A',text:'First'},{id:'C',text:'Third'}]};
