@@ -30,7 +30,7 @@ export function validateResults(data,questions){
 }
 export async function generateAnswers(questions,env,fetcher=fetch){
  const schema={type:'OBJECT',properties:{answers:{type:'ARRAY',items:{type:'OBJECT',properties:{id:{type:'STRING'},status:{type:'STRING',enum:['answered','uncertain']},answer:{type:'STRING'},explanation:{type:'STRING'}},required:['id','status','answer','explanation']}}},required:['answers']};
- const model=env.GEMINI_MODEL||'gemini-2.5-flash';
+ const model=env.GEMINI_MODEL||'gemini-3.8-flash';
  if(!/^[a-zA-Z0-9._-]+$/.test(model))throw new ApiError(503,'Dịch vụ AI chưa sẵn sàng.');
  let response;
  try{response=await fetcher(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{
@@ -88,6 +88,6 @@ export default {async fetch(request,env){
   const reservation=await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
   if(!reservation.ok)throw new ApiError(429,'Đã đạt giới hạn AI. Kết quả đã có vẫn được giữ; hãy tiếp tục sau.');
   const answers=await generateAnswers(questions,env);
-  return reply({answers,model:env.GEMINI_MODEL||'gemini-2.5-flash'});
+  return reply({answers,model:env.GEMINI_MODEL||'gemini-3.8-flash'});
  }catch(error){return reply({error:error instanceof ApiError?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.'},error instanceof ApiError?error.status:503)}
 }};

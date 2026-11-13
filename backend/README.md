@@ -16,7 +16,7 @@ Until the URL is configured, AI controls explain that the feature is being prepa
 ## Owner settings
 
 - `GEMINI_API_KEY`: secret; never returned to clients, sent as an HTTP header to Gemini.
-- `GEMINI_MODEL`: defaults to `gemini-2.5-flash`; change to a model supported by your project if necessary. Real availability must be checked with your key.
+- `GEMINI_MODEL`: defaults to `gemini-3.8-flash`; change to a model supported by your project if necessary. Real availability must be checked with your key.
 - `ALLOWED_ORIGINS`: exact comma-separated frontend origins. Production: `https://devsepa.github.io`. Local testing may add `http://localhost:8080` temporarily.
 - `USER_DAILY_QUESTIONS`: default 150 per Google subject per UTC day.
 - `GLOBAL_DAILY_QUESTIONS`: default 1000 across all users per UTC day.
