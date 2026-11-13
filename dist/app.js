@@ -181,7 +181,8 @@ function sourceReference(q, compact = false) {
 function refreshStats() {
   $("total").textContent = bank.length;
   $("ready").textContent = bank.filter(readyForPractice).length;
-  $("navQuestionCount").textContent = bank.length;
+  if ($("navQuestionCount")) $("navQuestionCount").textContent = bank.length;
+  if ($("accountQuestionCount")) $("accountQuestionCount").textContent = bank.length;
 }
 function aiBadge(q) {
   return q.answerSource === "gemini"
@@ -348,8 +349,6 @@ const resources = setupResources({
     libraryProfile=profile;setTimeout(()=>libraryManager?.account(profile),0);
     $("sourceAccessNotice").hidden = !!profile;
     $("sourceControls").hidden = !profile;
-    const adminNav = $("navAdminGroup");
-    if (adminNav) adminNav.hidden = !profile;
     if (!profile && (view === "sources" || view === "library")) {
       switchView("shared");
     }
@@ -1968,7 +1967,6 @@ setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
 document.addEventListener("visibilitychange", updateTimer);
 refreshStats();
-if ($("navAdminGroup")) $("navAdminGroup").hidden = !resources.active();
 switchView(session && !session.done ? "practice" : view);
 if (session && !session.done) startSessionPreload(session.questions);
 // Theme toggle

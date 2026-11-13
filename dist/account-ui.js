@@ -7,7 +7,10 @@ export function setupAccount({onConnect,onDisconnect}){
  button.onclick=()=>menu.hidden?open():close();
  button.onkeydown=event=>{if(event.key==='ArrowDown'){event.preventDefault();open()}};
  menu.setAttribute('role','menu');menu.setAttribute('aria-label','Tài khoản Google');
- menu.querySelectorAll(':scope>button').forEach(item=>item.setAttribute('role','menuitem'));
+ menu.querySelectorAll(':scope>button, :scope .account-menu-item').forEach(item=>item.setAttribute('role','menuitem'));
+ menu.querySelectorAll('.account-menu-item').forEach(item=>{
+  item.onclick=()=>close();
+ });
  menu.onkeydown=event=>{
   if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
   event.preventDefault();const items=[...menu.querySelectorAll('button:not([hidden])')],index=items.indexOf(document.activeElement);
@@ -21,6 +24,8 @@ export function setupAccount({onConnect,onDisconnect}){
  $('accountLogout').onclick=()=>{close();onDisconnect()};
  function update(profile){
   const connected=!!profile;
+  const manageGroup=$('accountManageGroup');
+  if(manageGroup)manageGroup.hidden=!connected;
   button.replaceChildren();button.classList.toggle('connected',connected);
   button.setAttribute('aria-label',connected?`Tài khoản ${profile.name||profile.email||'Google'}`:'Tài khoản: đăng nhập Google');
   button.title=connected?(profile.email||profile.name||'Tài khoản Google'):'Đăng nhập Google';
