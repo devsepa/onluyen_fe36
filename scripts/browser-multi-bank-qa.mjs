@@ -58,11 +58,11 @@ try{
   await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<900});
   await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};document.querySelector('[data-view="practice"]').click();window.scrollTo(0,0)`);
   const options=await run(`[...document.querySelector('#practiceSource').options].map(o=>o.value)`);assert.deepEqual(options,['','DBI202','JPD113','PRN212','WED201C']);
-  await run(`document.querySelector('#practiceSource').value='DBI202';document.querySelector('#practiceSource').dispatchEvent(new Event('change'))`);assert.equal(await run(`document.querySelector('#poolCount').textContent`),'2');
+  await run(`document.querySelector('#practiceSource').value='DBI202';document.querySelector('#practiceSource').dispatchEvent(new Event('change'))`);assert.equal(await run(`document.querySelector('#count').max`),'2');
   assert.ok(await run(`document.documentElement.scrollWidth<=innerWidth+1`));
   const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/multi-bank/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
  }
- await run(`(()=>{window.qaExportBlob=null;const original=URL.createObjectURL;URL.createObjectURL=blob=>{qaExportBlob=blob;return original(blob)};document.addEventListener('click',e=>{if(e.target.closest('a[download]'))e.preventDefault()},true);document.querySelector('[data-view="library"]').click();document.querySelector('#exportBank').click()})()`);
+ await run(`(()=>{window.qaExportBlob=null;const original=URL.createObjectURL;URL.createObjectURL=blob=>{qaExportBlob=blob;return original(blob)};document.addEventListener('click',e=>{if(e.target.closest('a[download]'))e.preventDefault()},true);document.querySelector('[data-view="library"]').click();document.querySelector('#exportJsonBank').click()})()`);
  const backup=JSON.parse(await run(`qaExportBlob.text()`));assert.equal(backup.questions.length,6);assert.equal(backup.questions.find(q=>q.sharedDeck).sharedIndex,0);
  await run(`localStorage.setItem('sot-bank','[]');location.reload()`);await pause(250);await wait(`!!document.querySelector('#publishDeck')`);await importFile(backup.questions);assert.equal((await saved()).length,6,'export restores all subjects, including shared-image references');
  assert.deepEqual(errors,[]);console.log('Multi-bank QA passed: JSON + Google Slides + shared deck accumulation, duplicate prevention, persistence, backup round trip, correct course pools and 6 PC/mobile theme layouts.');

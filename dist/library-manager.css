@@ -1,0 +1,21 @@
+.library-manager{margin:16px 0 24px;padding:20px}
+.library-manager-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.library-manager-heading h2{font-size:20px;margin:0}
+.library-manager p{font-size:12px;line-height:1.7;overflow-wrap:anywhere}
+.library-manager .row{gap:8px;flex-wrap:wrap}
+.library-manager button{font-size:11px;min-height:40px;padding:8px 12px}
+.subject-library-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin-top:16px}
+.subject-library-card{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel2);min-width:0}
+.subject-library-card h3{margin:0 0 6px;font-size:16px;overflow-wrap:anywhere}
+.subject-library-card p{margin:6px 0}.subject-library-card small{display:block;margin-bottom:12px;color:var(--muted);line-height:1.6}
+.library-sync-panel{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--bg);margin-top:14px}
+.library-sync-panel strong{font-size:13px;overflow-wrap:anywhere}
+.library-sync-panel .check-label{white-space:normal;align-items:flex-start;line-height:1.6;max-width:520px}
+.library-sync-panel input{width:auto;flex:none;margin-top:3px}
+.library-operation-status{padding:10px 12px;background:var(--soft);color:var(--text);border-radius:8px;margin:12px 0}
+.library-stop{margin:0 0 10px}
+.library-conflict-dialog{width:min(680px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:22px}
+.library-conflict-dialog h2{font-size:20px}.library-conflict-dialog p,.library-conflict-dialog li{font-size:13px;line-height:1.8;overflow-wrap:anywhere}
+.library-conflict-versions{display:grid;grid-template-columns:1fr 1fr;gap:12px}.library-conflict-versions details{min-width:0}.library-conflict-versions pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;background:var(--panel2);padding:10px;border-radius:8px;font-size:12px;line-height:1.65;font-family:inherit}.library-conflict-versions img{width:100%;max-height:180px;object-fit:contain}
+@media(max-width:540px){.library-conflict-versions{grid-template-columns:1fr}}
+@media(max-width:540px){.library-manager{padding:14px}.library-manager-heading{align-items:stretch}.library-manager-heading .row{display:grid;grid-template-columns:1fr;width:100%}.library-sync-panel .row{align-items:flex-start;flex-direction:column}.library-sync-panel button{width:100%}.library-manager button{min-height:44px}.subject-library-card .row{display:grid;grid-template-columns:1fr 1fr}.subject-library-card .row .danger{grid-column:1/-1}}

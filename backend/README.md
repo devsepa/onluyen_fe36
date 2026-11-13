@@ -21,7 +21,7 @@ Until the URL is configured, AI controls explain that the feature is being prepa
 - `USER_DAILY_QUESTIONS`: default 150 per Google subject per UTC day.
 - `GLOBAL_DAILY_QUESTIONS`: default 1000 across all users per UTC day.
 - At most 5 questions per call, 12 calls per user per minute. Failed Gemini attempts still consume the reserved quota, limiting billable retries. These are application ceilings, not a dollar budget or provider billing cap.
-- Durable Object stores quota counts and SHA-256 user identifiers only, clears older days by alarm. No question bank or Google tokens are stored server-side. Answers remain local to each browser and exported banks; this is not a shared question repository.
+- AI quota storage contains counts and hashed user identifiers and expires old quota days. Separate public-deck and private-library Durable Objects store explicitly published or synchronized content. Private libraries are isolated by verified Google identity; Google access tokens are never persisted. See [backup and sync behavior](../docs/library-backup-sync-qa.md).
 - CORS is not authentication. Backend checks the Google access token with Google's userinfo endpoint, then reserves account/global quota. The access token is never forwarded to Gemini. Do not open the endpoint for anonymous callers.
 
 ## Local development

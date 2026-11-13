@@ -13,10 +13,13 @@ export function mergeQuestionBanks(existing,incoming){
   const key=bankQuestionKey(candidate),index=indices.get(key);
   if(index!==undefined){
    const saved=questions[index];
+   const sameSource=(saved.sourceVersion||null)===(candidate.sourceVersion||null)&&saved.stem===candidate.stem&&JSON.stringify(saved.options)===JSON.stringify(candidate.options);
+   if(sameSource&&!saved.mediaId&&candidate.mediaId)questions[index]={...saved,mediaId:candidate.mediaId};
+   if(sameSource&&!saved.explanationDetails&&candidate.explanationDetails&&saved.answer===candidate.answer)questions[index]={...questions[index],explanationDetails:candidate.explanationDetails};
    if(!saved.answer&&saved.answerSource!=='manual'&&candidate.answer){
     questions[index]={...candidate,id:saved.id};
    }else if(!saved.explanation&&candidate.explanation&&saved.answer===candidate.answer){
-    questions[index]={...saved,explanation:candidate.explanation,explanationSource:candidate.explanationSource||(candidate.answerSource==='gemini'?'gemini':null)};
+    questions[index]={...questions[index],explanation:candidate.explanation,explanationSource:candidate.explanationSource||(candidate.answerSource==='gemini'?'gemini':null)};
    }
    continue;
   }

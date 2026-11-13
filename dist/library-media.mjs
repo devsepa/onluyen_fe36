@@ -1,0 +1,12 @@
+import {sha256,imageMime,MAX_IMAGE_BYTES,validMediaId} from './library-data.mjs';
+import {bankQuestionKey} from './bank-merge.mjs';
+export function createLibraryMedia({indexedDB=globalThis.indexedDB}={}){
+ let opened,persistence;
+ const open=()=>opened??=new Promise((resolve,reject)=>{if(!indexedDB)return reject(Error('Trình duyệt chưa cho phép lưu ảnh.'));const request=indexedDB.open('sot-library-media-v1',2);request.onupgradeneeded=()=>{for(const name of ['images','links'])if(!request.result.objectStoreNames.contains(name))request.result.createObjectStore(name)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(Error('Không mở được bộ nhớ ảnh trên thiết bị.'));request.onblocked=()=>reject(Error('Hãy đóng tab ôn luyện cũ rồi thử lại.'))});
+ async function get(id){if(!validMediaId(id))return null;const db=await open();return new Promise((resolve,reject)=>{const request=db.transaction('images').objectStore('images').get(id);request.onsuccess=()=>resolve(request.result?.blob||null);request.onerror=()=>reject(Error('Không đọc được ảnh đã lưu.'))})}
+ async function put(blob,expected){const bytes=new Uint8Array(await blob.arrayBuffer());if(!bytes.length||bytes.length>MAX_IMAGE_BYTES)throw Error('Ảnh vượt 2 MB; hãy lấy lại ảnh slide rồi thử lại.');const type=imageMime(bytes),id=await sha256(bytes);if(expected&&expected!==id)throw Error('Ảnh sao lưu bị hỏng hoặc không khớp mã kiểm tra.');const db=await open();await new Promise((resolve,reject)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').put({blob:new Blob([bytes],{type}),savedAt:Date.now()},id);tx.oncomplete=resolve;tx.onabort=tx.onerror=()=>reject(Error('Không đủ bộ nhớ để lưu ảnh. Dữ liệu cũ vẫn được giữ.'))});return id}
+ const linkKey=q=>JSON.stringify([bankQuestionKey(q),q.sourceVersion||null]);
+ async function link(q,id){const db=await open();await new Promise((resolve,reject)=>{const tx=db.transaction('links','readwrite');tx.objectStore('links').put(id,linkKey(q));tx.oncomplete=resolve;tx.onerror=tx.onabort=()=>reject(Error('Không lưu được liên kết ảnh.'))})}
+ async function forQuestion(q){if(q.mediaId){const blob=await get(q.mediaId);if(blob)return blob}const db=await open(),id=await new Promise((resolve,reject)=>{const r=db.transaction('links').objectStore('links').get(linkKey(q));r.onsuccess=()=>resolve(r.result);r.onerror=reject});return id?get(id):null}
+ return {get,put,link,forQuestion,persist(){return persistence??=(async()=>{try{return await navigator.storage?.persist()}catch{return false}})()}};
+}

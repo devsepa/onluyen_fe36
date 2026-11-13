@@ -6,7 +6,12 @@ on:
     paths:
       - 'backend/**'
       - 'dist/explanation-data.mjs'
+      - 'dist/library-data.mjs'
+      - 'dist/bank-merge.mjs'
+      - 'dist/resources.mjs'
+      - 'dist/site-config.mjs'
       - 'scripts/check-gemini.mjs'
+      - 'scripts/check-private-library.mjs'
       - '.github/workflows/ai-backend.yml'
 permissions:
   contents: read
@@ -51,3 +56,7 @@ jobs:
             GEMINI_API_KEY
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Verify private-library authentication and public catalog
+        run: node scripts/check-private-library.mjs
+        env:
+          AI_API_BASE: ${{ vars.AI_API_BASE }}

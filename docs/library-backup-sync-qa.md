@@ -1,0 +1,11 @@
+# Complete backups and private libraries
+
+The library offers complete ZIP backups for all subjects or one subject. These contain original image bytes, ordered choices, answers, notes, and saved AI explanations. JSON export remains available but does not contain images. Restore validates every ZIP entry and image hash before merging questions; existing subjects are retained. Keep an independent ZIP outside the browser for long-term archival.
+
+Subject cards show question counts and update dates, with study, backup, and subject-only deletion controls. Private Google-account sync is separate from the public deck catalog. It requires explicit consent, supports optional automatic synchronization, and synchronizes the library only, not active sessions or history. Account switching disables automatic uploads to the new account. Concurrent edits use a three-way merge and explicit conflict resolution.
+
+The Worker verifies Google token audience and identity, isolates storage by hashed Google subject, and never persists access tokens. Private responses use no-store caching. Limits are 5,000 questions, 200 MB of images, 2.1 MB per image, and an 8 MB cloud manifest. Committed libraries have no automatic expiration. Browser storage can still be removed by the browser or user; cloud service availability is not a replacement for an independent backup.
+
+Quiz slide fitting detects conservative uniform dark bands adjoining a mostly white slide. It hides these bands without changing original image bytes, zoom images, or backup files. White margins and dark slides are preserved; unreadable image pixels retain the original framing.
+
+Validation: 139 Node tests, plus isolated Chrome browser checks with synthetic libraries and identities. Browser scenarios cover ZIP restoration with original sources unavailable, original-byte preservation, subject deletion, two-device merge/deletion, account switching, invalid archives, and desktop/mobile light/dark layouts. Authentication and storage behavior are exercised through the actual Worker implementation with mocked Google responses; no real user library or browser profile is modified. Production smoke checks cover unauthenticated/invalid-token rejection and public catalog availability.

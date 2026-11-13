@@ -1278,26 +1278,7 @@ function renderPractice() {
     </div>
   </div>
 </div>`;
-          ` : `
-            <li><span class="chk-icon">⏱️</span> <span>Đồng hồ đếm ngược chính xác theo thời gian thực</span></li>
-            <li><span class="chk-icon">🔒</span> <span>Tự động thu bài và khóa đáp án khi hết giờ</span></li>
-            <li><span class="chk-icon">📊</span> <span>Bảng tổng kết điểm số, tỷ lệ đúng/sai và phân tích</span></li>
-            <li><span class="chk-icon">💾</span> <span>Lưu kết quả vào Lịch sử để xem lại bất cứ lúc nào</span></li>
-          `}
-        </ul>
-      </div>
 
-      <!-- Tip card -->
-      <div class="preview-tip-card">
-        <div class="tip-icon">💡</div>
-        <div class="tip-body">
-          <strong class="tip-title">Mẹo học tập hiệu quả</strong>
-          <p id="previewTipText">${preferredMode === "study" ? "Nên ôn theo từng nhóm 20 câu để nắm vững kiến thức từ slide trước khi thử sức thi thử tính giờ." : "Phân bổ thời gian hợp lý: hãy đánh dấu cờ các câu khó để quay lại sau và không bỏ sót câu nào."}</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>`;
 
   const updateDashboard = () => {
     const questions = pool();

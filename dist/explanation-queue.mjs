@@ -5,7 +5,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
   if(typeof key!=='string'||typeof value?.answer!=='string'||typeof value.reason!=='string'||value.reason.length>3000||!Array.isArray(value.options))continue;
   validateOptionReasons(value.options,value.options.map(o=>o.id));cache.set(key,value);
  }}catch{cache.clear()}
- const state=q=>cache.has(explanationKey(q))?{status:'ready',details:cache.get(explanationKey(q))}:states.get(explanationKey(q))||{status:'idle'};
+ const state=q=>{const key=explanationKey(q);if(cache.has(key))return {status:'ready',details:cache.get(key)};const saved=q.explanationDetails;if(saved?.key===key&&saved.answer===q.answer&&typeof saved.reason==='string')try{validateOptionReasons(saved.options,saved.options.map(o=>o.id));return {status:'ready',details:saved}}catch{}return states.get(key)||{status:'idle'}};
  function emit(job,value){states.set(job.key,value);try{onChange(job.q,value)}catch{}}
  function persist(){try{while(cache.size>limit){const key=cache.keys().next().value;cache.delete(key);states.delete(key)}let entries=[...cache];while(entries.length>1&&JSON.stringify(entries).length>600000){states.delete(entries[0][0]);cache.delete(entries[0][0]);entries=entries.slice(1)}storage?.setItem('sot-explanation-cache-v1',JSON.stringify(entries))}catch{/* Cache denial must never block practice. */}}
  function drop(job){jobs.delete(job.key);states.delete(job.key);job.resolve(null)}
@@ -23,6 +23,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
   }finally{if(jobs.get(job.key)===job)jobs.delete(job.key);if(!states.has(job.key))job.resolve(null);running=null;pump()}
  }
  function request(q,{retry=false,priority=false}={}){
+  const embedded=state(q);if(embedded.status==='ready')return Promise.resolve(embedded.details);
   const key=explanationKey(q);if(cache.has(key))return Promise.resolve(cache.get(key));
   if(retry){blocked=null;states.delete(key)}
   if(jobs.has(key)){const job=jobs.get(key);if(job.controller?.signal.aborted){jobs.delete(key);states.delete(key)}else{const index=queue.indexOf(job);if(priority&&index>0){queue.splice(index,1);queue.unshift(job)}return job.promise}}

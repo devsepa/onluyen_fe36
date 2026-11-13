@@ -1,4 +1,6 @@
 import {sharedDeckRoute} from './shared-decks.mjs';
+import {privateLibraryRoute} from './private-library.mjs';
+export {PrivateLibrary} from './private-library.mjs';
 import {validateOptionReasons} from '../dist/explanation-data.mjs';
 export {SharedDecks} from './shared-decks.mjs';
 // AI calls do not persist question text or tokens. Explicitly published decks use separate storage.
@@ -125,6 +127,7 @@ export default {async fetch(request,env){
  const reply=(body,status=200)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'60'}:{})}});
  if(!allowed.includes(origin))return reply({error:'Nguồn truy cập không được phép.'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+ if(new URL(request.url).pathname.startsWith('/v1/library/'))return privateLibraryRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/decks'))return sharedDeckRoute(request,env,cors);
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);

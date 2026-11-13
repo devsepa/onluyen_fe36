@@ -4,7 +4,7 @@ export function createSlideImageStore(load,{limit=100,revoke=url=>URL.revokeObje
  function clear(){epoch++;for(const entry of entries.values())if(entry.url)revoke(entry.url);entries.clear()}
  function invalidate(key){const entry=entries.get(key);if(entry?.url)revoke(entry.url);entries.delete(key)}
  async function get(q){
-  const key=q.sharedDeck?`shared:${q.sharedDeck}:${q.sharedIndex}`:q.url;if(entries.has(key)){const entry=entries.get(key);entries.delete(key);entries.set(key,entry);return entry.promise}
+  const key=q.mediaId?`local:${q.mediaId}`:q.sharedDeck?`shared:${q.sharedDeck}:${q.sharedIndex}`:q.url;if(entries.has(key)){const entry=entries.get(key);entries.delete(key);entries.set(key,entry);return entry.promise}
   const run=epoch,entry={url:null,promise:null};
   entry.promise=Promise.resolve().then(()=>load(q)).then(url=>{
    if(run!==epoch||entries.get(key)!==entry){revoke(url);throw Error('Ảnh đã được giải phóng.')}
