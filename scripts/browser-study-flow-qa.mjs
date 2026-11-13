@@ -19,13 +19,15 @@ for(const theme of ['light','dark'])for(const [width,height] of [[1440,900],[390
  const bounds=await run(`({w:innerWidth,h:innerHeight,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,buttons:[...document.querySelectorAll('.choice-pill,#submit,.next-btn')].map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom}))})`);
  assert.ok(bounds.sw<=width+1&&bounds.sh<=height+1,JSON.stringify({width,height,bounds}));
  for(const b of bounds.buttons)assert.ok(b.top>=0&&b.bottom<=height+1,JSON.stringify({width,height,b}));
+ assert.ok(await run(`(()=>{const choices=document.querySelector('.quiz-answer-row .choice-pills').getBoundingClientRect(),next=document.querySelector('.quiz-answer-next').getBoundingClientRect();return next.left>=choices.right&&Math.abs((next.top+next.bottom)/2-(choices.top+choices.bottom)/2)<2})()`),'next button sits right of the choices on the same row');
  assert.equal(await run(`document.querySelector('.feedback-toggle-btn')`),null);
  assert.equal(await run(`document.querySelector('.feedback-inline-exp span').textContent`),questions[1].explanation.trimEnd());
  assert.equal(await run(`getComputedStyle(document.querySelector('.feedback-inline-exp')).overflowY`),'auto');
  await run(`document.querySelector('.feedback-inline-exp').scrollTop=100000`);
  assert.ok(await run(`document.querySelector('.feedback-inline-exp').scrollTop>0`));
  const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/study-flow/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
- if(width===1440){await run(`document.querySelector('.study-auto-toggle input').click()`);await pause(5200);assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).current`),4)}
+ if(width===1440){await run(`document.querySelector('.study-auto-toggle input').click()`);await pause(5200);assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).current`),4);assert.equal(await run(`document.querySelector('.quiz-answer-next').disabled`),true)}
+ else{await run(`document.querySelector('.quiz-answer-next').click()`);assert.equal(await run(`JSON.parse(localStorage.getItem('sot-session')).current`),2)}
 }
 for(const mode of ['study','exam']){
  const multi=structuredClone(questions);multi[1].answer='AC';

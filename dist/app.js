@@ -29,7 +29,7 @@ import {
   deckRequest,
   sharedImagePath,
 } from "./shared-decks.mjs?v=20261113-background-publish-1";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=inline-explanation-2";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=answer-row-next-1";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
 

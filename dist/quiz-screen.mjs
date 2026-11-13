@@ -7,6 +7,13 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
  const multi=card.querySelector('.multi-hint');if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
  if(study){const label=document.createElement('label');label.className='study-auto-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=autoAdvance;input.onchange=()=>onAutoAdvance(input.checked);label.append(input,'Tự chuyển · 5 giây');head.append(label)}
  const controls=root.querySelector('.quiz-controls');if(controls&&controls.children.length>=2){controls.children[0].textContent='← Trước';controls.children[1].textContent='Tiếp →'}
+ const choices=card.querySelector('.choice-pills'),nextQuestion=card.querySelector('.quiz-nav-group .next-btn');
+ if(choices&&nextQuestion){
+  const row=document.createElement('div');row.className='quiz-answer-row';choices.before(row);
+  nextQuestion.classList.add('quiz-answer-next');nextQuestion.setAttribute('aria-label','Câu tiếp theo');
+  nextQuestion.innerHTML='<span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span>';
+  row.append(choices,nextQuestion);
+ }
  function paginateMap(container){
   const grid=container.querySelector('.quiz-navigation'),size=100,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
   if(total>20){grid.classList.add('quiz-navigation-dense');root.querySelector('.quiz-layout').classList.add('quiz-layout-dense')}
