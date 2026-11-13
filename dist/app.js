@@ -1,4 +1,4 @@
-import {setupLibraryManager} from './library-manager.mjs';
+﻿import {setupLibraryManager} from './library-manager.mjs';
 import {createLibraryMedia} from './library-media.mjs';
 import {createBankTracker} from './library-data.mjs';
 import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
@@ -1524,7 +1524,7 @@ function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
- renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:feedbackState(q),onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});
+ const _fb=renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:feedbackState(q),onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});if(_fb&&session.answers[q.id])renderAiTutor(_fb,q,()=>typeof token!=='undefined'?token:null);
 }
 function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
 function primeStudyExplanations(){if(!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];const targets=prefetchEnabled?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasSpeakerNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
@@ -1575,7 +1575,7 @@ function renderQuiz() {
       ? `<button type="button" class="secondary source-image-check" data-preview-slide="${esc(q.id)}" title="Phóng to ảnh gốc (Z)">Phóng to ảnh gốc 🔍</button>`
       : "";
   $("practice").innerHTML =
-    `<div class="quiz-head"><div><span class="overline">${study ? "ÔN LUYỆN" : "THI THỬ"} · ${qs.length} CÂU HỎI</span><h2>${study ? "Ôn luyện" : "Thi thử"}</h2><small id="progress"></small></div><div class="quiz-clock" ${study ? 'hidden style="display:none !important;"' : ""}><small>${study ? "Thời gian đã học" : "Thời gian còn lại"}</small><div class="timer" id="timer"></div></div><div class="quiz-head-actions"><button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button><button id="submit">${study ? "Kết thúc" : "Nộp bài"} ↗</button></div></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới">Mở slide ↗</a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}> Đánh dấu xem lại</label></div></div>${multiple ? '<p class="multi-hint">Chọn tất cả đáp án đúng.' + (study ? " Bấm Kiểm tra sau khi chọn xong." : " Có thể thay đổi lựa chọn trước khi nộp bài.") + "</p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}</article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
+    `<div class="quiz-head"><div><span class="overline">${study ? "ÔN LUYỆN" : "THI THỬ"} · ${qs.length} CÂU HỎI</span><h2>${study ? "Ôn luyện" : "Thi thử"}</h2><small id="progress"></small></div><div class="quiz-clock" ${study ? 'hidden style="display:none !important;"' : ""}><small>${study ? "Thời gian đã học" : "Thời gian còn lại"}</small><div class="timer" id="timer"></div></div><div class="quiz-head-actions"><button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button><button id="submit">${study ? "Kết thúc" : "Nộp bài"} ↗</button></div></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div><span class="quiz-progress-pct" style="opacity:${pct>5?1:0}">${pct}%</span></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới">Mở slide ↗</a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}> Đánh dấu xem lại</label></div></div>${multiple ? '<p class="multi-hint">Chọn tất cả đáp án đúng.' + (study ? " Bấm Kiểm tra sau khi chọn xong." : " Có thể thay đổi lựa chọn trước khi nộp bài.") + "</p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}</article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
   $('practice').dataset.questionId=q.id;
   fitQuizScreen({
     root: $("practice"),
@@ -1596,6 +1596,9 @@ function renderQuiz() {
   drawStudyFeedback();
   primeStudyExplanations();
   versionUpdates.mount($('practice').querySelector('.quiz-head-actions'),{compact:true});
+  // Fade-slide transition
+  const _fadeCard=$('practice').querySelector('.quiz-question');
+  if(_fadeCard){_fadeCard.classList.remove('quiz-question-fade');void _fadeCard.offsetWidth;_fadeCard.classList.add('quiz-question-fade');}
   if(study)$('practice').querySelector('.quiz-head-actions').append(quizAccountControl);
   $("flagCurrent").onchange = (e) => {
     session.flags = e.target.checked
@@ -1783,11 +1786,13 @@ window.addEventListener(
         clearTimeout(window._autoAdvanceTimer);
         session.current++;
         write("sot-session", session);
+        quizSound.nav();
         renderQuiz();
       } else if (dx > 0 && session.current > 0) {
         clearTimeout(window._autoAdvanceTimer);
         session.current--;
         write("sot-session", session);
+        quizSound.nav();
         renderQuiz();
       }
     }
@@ -1998,6 +2003,88 @@ themeToggle?.addEventListener('click',()=>{
  const current=document.documentElement.getAttribute('data-theme')||'light';
  applyThemeMode(current==='dark'?'light':'dark');
 });
+// Sound toggle
+(function(){
+ const btn=document.getElementById('soundToggle');
+ if(!btn)return;
+ btn.textContent=quizSound.enabled?'🔊':'🔇';
+ btn.addEventListener('click',()=>{
+  const on=quizSound.toggleSound();
+  btn.textContent=on?'🔊':'🔇';
+  btn.title=on?'Tắt âm thanh':'Bật âm thanh';
+ });
+})();
+
+
+// Mini AI Tutor - Hoi them AI
+async function askAiFollowup(question, userQuery, token) {
+ const context = [
+  question.text || '',
+  question.options ? question.options.map(o => o.id + ': ' + (o.text||'')).join('; ') : '',
+  'Đáp án đúng: ' + question.answer,
+  question.explanation ? 'Giải thích: ' + question.explanation : ''
+ ].filter(Boolean).join('\n');
+ const prompt = `Câu hỏi: ${context}\n\nHọc viên hỏi: ${userQuery}\n\nHãy trả lời ngắn gọn, dễ hiểu bằng tiếng Việt như một gia sư thân thiện.`;
+ const headers = {'Content-Type':'application/json'};
+ if(token) headers['Authorization'] = 'Bearer ' + token;
+ const base = (typeof AI_API_BASE !== 'undefined') ? AI_API_BASE : '';
+ if(!base) return 'Chưa cấu hình AI API.';
+ try {
+  const resp = await fetch(base + '/followup', {
+   method: 'POST',
+   headers,
+   body: JSON.stringify({prompt, model:'gemini-2.0-flash-lite'})
+  });
+  if(!resp.ok) throw new Error('API lỗi ' + resp.status);
+  const data = await resp.json();
+  return data.text || data.answer || data.response || JSON.stringify(data);
+ } catch(e) {
+  return 'Lỗi kết nối AI: ' + e.message;
+ }
+}
+
+function renderAiTutor(feedbackEl, question, getToken) {
+ if(!feedbackEl) return;
+ if(feedbackEl.querySelector('.ai-tutor-widget')) return; // already added
+ const widget = document.createElement('div');
+ widget.className = 'ai-tutor-widget';
+ widget.innerHTML = `<button type="button" class="ai-tutor-toggle-btn">💬 Hỏi thêm AI về câu này</button><div class="ai-tutor-panel" hidden><div class="ai-tutor-chat"></div><div class="ai-tutor-input-row"><input type="text" class="ai-tutor-input" placeholder="Nhập câu hỏi của bạn..." maxlength="200"><button type="button" class="ai-tutor-send">Gửi</button></div></div>`;
+ feedbackEl.append(widget);
+ const toggleBtn = widget.querySelector('.ai-tutor-toggle-btn');
+ const panel = widget.querySelector('.ai-tutor-panel');
+ const chat = widget.querySelector('.ai-tutor-chat');
+ const input = widget.querySelector('.ai-tutor-input');
+ const sendBtn = widget.querySelector('.ai-tutor-send');
+ toggleBtn.addEventListener('click', () => {
+  panel.hidden = !panel.hidden;
+  if(!panel.hidden) { input.focus(); quizSound.pop(); }
+ });
+ async function sendMsg() {
+  const q = input.value.trim();
+  if(!q) return;
+  input.value = '';
+  sendBtn.disabled = true;
+  const userBubble = document.createElement('div');
+  userBubble.className = 'ai-tutor-bubble user';
+  userBubble.textContent = q;
+  chat.append(userBubble);
+  const aiBubble = document.createElement('div');
+  aiBubble.className = 'ai-tutor-bubble ai loading';
+  aiBubble.textContent = '⏳ Đang hỏi AI…';
+  chat.append(aiBubble);
+  chat.scrollTop = chat.scrollHeight;
+  const token = getToken ? getToken() : null;
+  const ans = await askAiFollowup(question, q, token);
+  aiBubble.className = 'ai-tutor-bubble ai';
+  aiBubble.textContent = ans;
+  chat.scrollTop = chat.scrollHeight;
+  sendBtn.disabled = false;
+  input.focus();
+  quizSound.pop();
+ }
+ sendBtn.addEventListener('click', sendMsg);
+ input.addEventListener('keydown', e => { if(e.key === 'Enter') sendMsg(); });
+}
 
 window.addEventListener("beforeunload", (e) => {
   if (session && !session.done) {

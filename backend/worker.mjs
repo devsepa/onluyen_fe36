@@ -1,4 +1,7 @@
-import {sharedDeckRoute} from './shared-decks.mjs';
+﻿import {sharedDeckRoute} from './shared-decks.mjs';
+import {qualityRoute} from './quality.mjs';
+import {cacheModerationRoute} from './cache-moderation.mjs';
+export {QualityStore} from './quality.mjs';
 import {StoredExplanationCache,explainWithSharedCache,ExplanationCacheError} from './explanation-cache.mjs';
 import {privateLibraryRoute} from './private-library.mjs';
 export {PrivateLibrary} from './private-library.mjs';
@@ -129,8 +132,24 @@ export default {async fetch(request,env){
  const reply=(body,status=200)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'60'}:{})}});
  if(!allowed.includes(origin))return reply({error:'Nguồn truy cập không được phép.'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+ if(new URL(request.url).pathname.startsWith('/v1/quality/'))return qualityRoute(request,env,cors);
+ if(new URL(request.url).pathname.startsWith('/v1/explanations/'))return cacheModerationRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/library/'))return privateLibraryRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/decks'))return sharedDeckRoute(request,env,cors);
+ if(new URL(request.url).pathname==='/followup'){
+  if(request.method!=='POST')return reply({error:'Method not allowed.'},405);
+  if(!env.GEMINI_API_KEY)return reply({error:'AI chưa sẵn sàng.'},503);
+  try{
+   const fbody=JSON.parse(await readLimited(request,8192));
+   if(!fbody?.prompt||typeof fbody.prompt!=='string')throw new ApiError(400,'Thiếu prompt.');
+   const prompt=fbody.prompt.slice(0,2000);
+   const gemResp=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${env.GEMINI_API_KEY}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:512,temperature:0.5}})});
+   if(!gemResp.ok)return reply({error:'AI lỗi: '+gemResp.status},503);
+   const gdata=await gemResp.json();
+   const text=gdata?.candidates?.[0]?.content?.parts?.[0]?.text||'AI không có phản hồi.';
+   return reply({text});
+  }catch(e){return reply({error:e instanceof ApiError?e.message:'Lỗi AI.'},e instanceof ApiError?e.status:503)}
+ }
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);
  if(!env.GEMINI_API_KEY)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);
