@@ -1087,40 +1087,300 @@ function renderPractice() {
   if (session && !session.done) return renderQuiz();
   const eligible = bank.filter(readyForPractice),
     n = eligible.length;
-  $("practice").innerHTML =
-    `<div class="mode-layout"><div class="card setup-hero-card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>🎯 Ôn luyện tự do</b><small>Chọn đáp án và biết đúng/sai kèm giải thích ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>⏱️ Thi thử tính giờ</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm chi tiết sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><div class="field-count-wrap"><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><div class="count-presets"><button type="button" class="preset-pill" data-preset="10">10 câu</button><button type="button" class="preset-pill" data-preset="20">20 câu</button><button type="button" class="preset-pill" data-preset="50">50 câu</button><button type="button" class="preset-pill" data-preset="max">Tất cả (${n})</button></div></div><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án sẵn sàng ôn luyện.</p><label class="check-label practice-prefetch-setting"><input id="prefetchExplanations" type="checkbox" ${prefetchEnabled?'checked':''}> Chuẩn bị trước giải thích AI cho tối đa 3 câu sắp làm để tải siêu nhanh.</label><button id="start" class="wide-button primary-hero-btn" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
-  $('practice').querySelectorAll('.preset-pill').forEach(btn => {
-    btn.onclick = () => {
-      const poolCount = pool().length;
-      const val = btn.dataset.preset === 'max' ? poolCount : Math.min(Number(btn.dataset.preset), poolCount);
-      $('count').value = Math.max(1, val);
-    };
-  });
-  $('prefetchExplanations').onchange=e=>setExplanationPrefetch(e.target.checked);
-  $('prefetchExplanations').closest('label').hidden=preferredMode!=='study';
+
   const pool = () =>
     eligible.filter(
       (q) =>
-        !$("practiceSource").value || subjectKey(q) === $("practiceSource").value,
+        !$("practiceSource")?.value || subjectKey(q) === $("practiceSource").value,
     );
+
+  const initialCount = Math.min(20, n) || 1;
+  const subjects = practiceSubjects(eligible);
+
+  $("practice").innerHTML = `
+<div class="setup-container-v2">
+  <div class="setup-grid-v2">
+    <!-- LEFT COLUMN: Controller Card -->
+    <div class="setup-card-v2 controller-card">
+      <div class="setup-card-header">
+        <span class="setup-badge">⚡ THIẾT LẬP BUỔI HỌC</span>
+        <h2 class="setup-title">Cấu hình chế độ</h2>
+        <p class="setup-subtitle">Chọn phương thức học và số lượng câu hỏi phù hợp với mục tiêu hôm nay.</p>
+      </div>
+
+      <!-- Segmented Mode Switcher -->
+      <div class="segmented-mode-picker" role="radiogroup" aria-label="Chế độ học">
+        <label class="mode-segment ${preferredMode === "study" ? "active" : ""}">
+          <input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""} class="sr-only">
+          <span class="segment-icon">🎯</span>
+          <span class="segment-body">
+            <b class="segment-title">Ôn luyện tự do</b>
+            <small class="segment-desc">Biết đúng/sai & lời giải ngay, không giới hạn giờ</small>
+          </span>
+        </label>
+        <label class="mode-segment ${preferredMode === "exam" ? "active" : ""}">
+          <input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""} class="sr-only">
+          <span class="segment-icon">⏱️</span>
+          <span class="segment-body">
+            <b class="segment-title">Thi thử tính giờ</b>
+            <small class="segment-desc">Đếm ngược, tự nộp khi hết giờ & chấm điểm</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="setup-form-body">
+        <!-- Subject Selection -->
+        <div class="form-group-v2">
+          <div class="form-label-row">
+            <label class="form-label-v2" for="practiceSource">Mã môn / Nguồn đề</label>
+            <span class="label-hint" id="availableQuestionsCount">${n} câu sẵn sàng</span>
+          </div>
+          <div class="select-wrapper-v2">
+            <select id="practiceSource" class="select-control-v2">
+              <option value="">Tất cả môn (${n} câu sẵn sàng)</option>
+              ${subjects.map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}
+            </select>
+          </div>
+        </div>
+
+        <!-- Question Count Selection with Range Slider & Presets -->
+        <div class="form-group-v2">
+          <div class="form-label-row">
+            <label class="form-label-v2" for="count">Số câu làm bài</label>
+            <span class="count-display-badge"><span id="countDisplayVal">${initialCount}</span> câu</span>
+          </div>
+          <div class="slider-row-v2">
+            <input type="range" id="countSlider" class="range-slider-v2" min="1" max="${n || 1}" value="${initialCount}">
+            <input id="count" type="number" class="number-input-v2" min="1" max="${n || 1}" value="${initialCount}">
+          </div>
+          <div class="count-presets-v2">
+            <button type="button" class="preset-pill-v2" data-preset="10">10 câu</button>
+            <button type="button" class="preset-pill-v2" data-preset="20">20 câu</button>
+            <button type="button" class="preset-pill-v2" data-preset="50">50 câu</button>
+            <button type="button" class="preset-pill-v2" data-preset="max">Tất cả (${n})</button>
+          </div>
+        </div>
+
+        <!-- Exam Minutes Selection -->
+        <div id="timeSetting" class="form-group-v2" ${preferredMode === "study" ? "hidden" : ""}>
+          <div class="form-label-row">
+            <label class="form-label-v2" for="minutes">Thời gian làm bài</label>
+            <span class="count-display-badge"><span id="minutesDisplayVal">20</span> phút</span>
+          </div>
+          <div class="slider-row-v2">
+            <input type="range" id="minutesSlider" class="range-slider-v2" min="5" max="120" step="5" value="20">
+            <input id="minutes" type="number" class="number-input-v2" min="1" max="180" value="20">
+          </div>
+          <div class="time-presets-v2">
+            <button type="button" class="preset-pill-v2 time-pill" data-minutes="15">15 phút</button>
+            <button type="button" class="preset-pill-v2 time-pill" data-minutes="30">30 phút</button>
+            <button type="button" class="preset-pill-v2 time-pill" data-minutes="45">45 phút</button>
+            <button type="button" class="preset-pill-v2 time-pill" data-minutes="60">60 phút</button>
+          </div>
+        </div>
+
+        <!-- Prefetch toggle -->
+        <div class="prefetch-toggle-card-v2" id="prefetchWrapper" ${preferredMode !== "study" ? "hidden" : ""}>
+          <div class="toggle-card-content">
+            <span class="toggle-card-title">⚡ Tải trước giải thích AI</span>
+            <span class="toggle-card-desc">Tự động nạp trước đáp án & lời giải 3 câu tiếp theo để chuyển câu siêu mượt không độ trễ.</span>
+          </div>
+          <label class="switch-toggle-v2">
+            <input id="prefetchExplanations" type="checkbox" ${prefetchEnabled ? "checked" : ""}>
+            <span class="slider-toggle-v2"></span>
+          </label>
+        </div>
+
+        <!-- Action Button -->
+        <button id="start" class="hero-start-btn" ${!n ? "disabled" : ""}>
+          <span class="btn-text">${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"}</span>
+          <span class="btn-arrow">→</span>
+        </button>
+        ${!n ? '<p class="no-questions-notice">Chưa có câu hỏi có đáp án trong ngân hàng. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: Session Preview Dashboard -->
+    <div class="setup-card-v2 preview-card">
+      <div class="preview-card-header">
+        <span class="setup-badge secondary">📊 TỔNG QUAN PHIÊN HỌC</span>
+        <h3 class="preview-subject-name" id="previewSubjectName">Tất cả môn học</h3>
+        <p class="preview-subject-desc" id="previewSubjectDesc">Sử dụng kho câu hỏi tổng hợp từ các slide đã nhập.</p>
+      </div>
+
+      <!-- Quick Metrics Grid -->
+      <div class="preview-metrics-grid">
+        <div class="preview-metric-box">
+          <span class="metric-icon">📝</span>
+          <span class="metric-val" id="previewQuestionsCount">${initialCount}</span>
+          <span class="metric-lbl">Số câu làm</span>
+        </div>
+        <div class="preview-metric-box">
+          <span class="metric-icon">⏱️</span>
+          <span class="metric-val" id="previewEstimatedTime">~${initialCount} phút</span>
+          <span class="metric-lbl">Thời lượng</span>
+        </div>
+        <div class="preview-metric-box">
+          <span class="metric-icon">📦</span>
+          <span class="metric-val" id="previewPoolCount">${n}</span>
+          <span class="metric-lbl">Kho câu sẵn</span>
+        </div>
+      </div>
+
+      <!-- Mode Features Checklist -->
+      <div class="preview-features-box">
+        <h4 class="features-box-title" id="previewFeaturesTitle">${preferredMode === "study" ? "Đặc quyền chế độ Ôn luyện" : "Quy chế phòng Thi thử"}</h4>
+        <ul class="features-list" id="previewFeaturesList">
+          ${preferredMode === "study" ? `
+            <li><span class="chk-icon">✓</span> <span>Biết kết quả đúng/sai ngay lập tức khi bấm chọn</span></li>
+            <li><span class="chk-icon">✓</span> <span>Kèm slide bài giảng gốc đối chiếu trực quan</span></li>
+            <li><span class="chk-icon">✓</span> <span>Xem giải thích chi tiết có sẵn không cần chờ</span></li>
+            <li><span class="chk-icon">✓</span> <span>Không giới hạn thời gian, tự do lướt qua lại các câu</span></li>
+          ` : `
+            <li><span class="chk-icon">⏱️</span> <span>Đồng hồ đếm ngược chính xác theo thời gian thực</span></li>
+            <li><span class="chk-icon">🔒</span> <span>Tự động thu bài và khóa đáp án khi hết giờ</span></li>
+            <li><span class="chk-icon">📊</span> <span>Bảng tổng kết điểm số, tỷ lệ đúng/sai và phân tích</span></li>
+            <li><span class="chk-icon">💾</span> <span>Lưu kết quả vào Lịch sử để xem lại bất cứ lúc nào</span></li>
+          `}
+        </ul>
+      </div>
+
+      <!-- Tip card -->
+      <div class="preview-tip-card">
+        <div class="tip-icon">💡</div>
+        <div class="tip-body">
+          <strong class="tip-title">Mẹo học tập hiệu quả</strong>
+          <p id="previewTipText">${preferredMode === "study" ? "Nên ôn theo từng nhóm 20 câu để nắm vững kiến thức từ slide trước khi thử sức thi thử tính giờ." : "Phân bổ thời gian hợp lý: hãy đánh dấu cờ các câu khó để quay lại sau và không bỏ sót câu nào."}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>`;
+
+  const updateDashboard = () => {
+    const questions = pool();
+    const count = Math.min(Number($("count").value) || 1, questions.length || 1);
+    const mins = Number($("minutes")?.value) || 20;
+
+    if ($("countDisplayVal")) $("countDisplayVal").textContent = count;
+    if ($("previewQuestionsCount")) $("previewQuestionsCount").textContent = count;
+    if ($("previewPoolCount")) $("previewPoolCount").textContent = questions.length;
+    if ($("availableQuestionsCount")) $("availableQuestionsCount").textContent = `${questions.length} câu sẵn sàng`;
+
+    if ($("previewEstimatedTime")) {
+      $("previewEstimatedTime").textContent = preferredMode === "study" ? `~${Math.ceil(count * 1)} phút` : `${mins} phút`;
+    }
+    if ($("minutesDisplayVal")) $("minutesDisplayVal").textContent = mins;
+
+    const sourceEl = $("practiceSource");
+    const selectedOpt = sourceEl.options[sourceEl.selectedIndex];
+    if ($("previewSubjectName")) $("previewSubjectName").textContent = sourceEl.value ? selectedOpt.text.replace(/\s*\(\d+\s*câu\)$/, "") : "Tất cả môn học";
+    if ($("previewSubjectDesc")) {
+      $("previewSubjectDesc").textContent = sourceEl.value ? `Kho câu hỏi dành riêng cho môn ${selectedOpt.text}.` : "Sử dụng kho câu hỏi tổng hợp từ các slide đã nhập.";
+    }
+
+    if ($("previewFeaturesTitle")) $("previewFeaturesTitle").textContent = preferredMode === "study" ? "Đặc quyền chế độ Ôn luyện" : "Quy chế phòng Thi thử";
+    if ($("previewFeaturesList")) {
+      $("previewFeaturesList").innerHTML = preferredMode === "study" ? `
+        <li><span class="chk-icon">✓</span> <span>Biết kết quả đúng/sai ngay lập tức khi bấm chọn</span></li>
+        <li><span class="chk-icon">✓</span> <span>Kèm slide bài giảng gốc đối chiếu trực quan</span></li>
+        <li><span class="chk-icon">✓</span> <span>Xem giải thích chi tiết có sẵn không cần chờ</span></li>
+        <li><span class="chk-icon">✓</span> <span>Không giới hạn thời gian, tự do lướt qua lại các câu</span></li>
+      ` : `
+        <li><span class="chk-icon">⏱️</span> <span>Đồng hồ đếm ngược chính xác theo thời gian thực</span></li>
+        <li><span class="chk-icon">🔒</span> <span>Tự động thu bài và khóa đáp án khi hết giờ</span></li>
+        <li><span class="chk-icon">📊</span> <span>Bảng tổng kết điểm số, tỷ lệ đúng/sai và phân tích</span></li>
+        <li><span class="chk-icon">💾</span> <span>Lưu kết quả vào Lịch sử để xem lại bất cứ lúc nào</span></li>
+      `;
+    }
+    if ($("previewTipText")) {
+      $("previewTipText").textContent = preferredMode === "study" ? "Nên ôn theo từng nhóm 20 câu để nắm vững kiến thức từ slide trước khi thử sức thi thử tính giờ." : "Phân bổ thời gian hợp lý: hãy đánh dấu cờ các câu khó để quay lại sau và không bỏ sót câu nào.";
+    }
+  };
+
+  // Slider & Number input sync
+  $("countSlider").oninput = (e) => {
+    $("count").value = e.target.value;
+    updateDashboard();
+  };
+  $("count").oninput = (e) => {
+    const questions = pool();
+    const val = Math.min(Math.max(1, Number(e.target.value) || 1), questions.length || 1);
+    $("countSlider").value = val;
+    updateDashboard();
+  };
+  if ($("minutesSlider")) {
+    $("minutesSlider").oninput = (e) => {
+      $("minutes").value = e.target.value;
+      updateDashboard();
+    };
+  }
+  if ($("minutes")) {
+    $("minutes").oninput = (e) => {
+      if ($("minutesSlider")) $("minutesSlider").value = e.target.value;
+      updateDashboard();
+    };
+  }
+
+  // Count Preset Pills
+  $("practice").querySelectorAll(".count-presets-v2 .preset-pill-v2").forEach(btn => {
+    btn.onclick = () => {
+      const poolCount = pool().length;
+      const val = btn.dataset.preset === "max" ? poolCount : Math.min(Number(btn.dataset.preset), poolCount);
+      const safeVal = Math.max(1, val || 1);
+      $("count").value = safeVal;
+      $("countSlider").value = safeVal;
+      updateDashboard();
+    };
+  });
+
+  // Time Preset Pills
+  $("practice").querySelectorAll(".time-presets-v2 .time-pill").forEach(btn => {
+    btn.onclick = () => {
+      const val = Number(btn.dataset.minutes) || 20;
+      if ($("minutes")) $("minutes").value = val;
+      if ($("minutesSlider")) $("minutesSlider").value = val;
+      updateDashboard();
+    };
+  });
+
+  // Prefetch Toggle
+  const prefetchEl = $("prefetchExplanations");
+  if (prefetchEl) {
+    prefetchEl.onchange = e => setExplanationPrefetch(e.target.checked);
+  }
+
+  // Subject change
   $("practiceSource").onchange = () => {
     const count = pool().length;
-    $("poolCount").textContent = count;
-    $("count").max = count;
-    $("count").value = Math.min(20, count) || 1;
+    $("count").max = count || 1;
+    $("countSlider").max = count || 1;
+    const currentVal = Number($("count").value);
+    const newVal = Math.min(currentVal || 20, count) || 1;
+    $("count").value = newVal;
+    $("countSlider").value = newVal;
     $("start").disabled = !count;
+    updateDashboard();
   };
-  document.querySelectorAll("[name=mode]").forEach(
-    (input) =>
-      (input.onchange = () => {
-        preferredMode = input.value;
-        $('prefetchExplanations').closest('label').hidden=preferredMode!=='study';
-        $("timeSetting").hidden = preferredMode === "study";
-        $("start").textContent =
-          (preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử") +
-          " →";
-      }),
-  );
+
+  // Mode radio change
+  document.querySelectorAll("[name=mode]").forEach(input => {
+    input.onchange = () => {
+      preferredMode = input.value;
+      document.querySelectorAll(".mode-segment").forEach(seg => {
+        const inp = seg.querySelector("input[name=mode]");
+        if (inp.checked) seg.classList.add("active");
+        else seg.classList.remove("active");
+      });
+      $("prefetchWrapper").hidden = preferredMode !== "study";
+      $("timeSetting").hidden = preferredMode === "study";
+      const startBtn = $("start");
+      const btnText = startBtn.querySelector(".btn-text");
+      if (btnText) btnText.textContent = preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử";
+      updateDashboard();
+    };
+  });
+
   $("start").onclick = () => {
     const questions = pool(),
       count = Number($("count").value),
@@ -1597,9 +1857,15 @@ function renderHistory() {
       ) / history.length
     : 0;
   $("history").innerHTML =
-    `<div class="section-heading"><div><span class="overline">HÀNH TRÌNH CỦA BẠN</span><h2>${history.length} bài đã hoàn thành</h2><p>${history.length ? `Điểm trung bình ${average.toFixed(1)}/10 · Lưu tối đa 50 bài gần nhất trên thiết bị này.` : "Những bài bạn hoàn thành sẽ được lưu tại đây."}</p></div><div class="row">${history.length ? `<button type="button" class="text-button danger" id="clearAllHistory">🗑️ Xóa toàn bộ lịch sử</button>` : ""}<button data-view="practice">Luyện một đề mới →</button></div></div>` +
+    `<div class="section-heading"><div><span class="overline">HÀNH TRÌNH CỦA BẠN</span><h2>${history.length} bài đã hoàn thành</h2><p>${history.length ? `Điểm trung bình ${average.toFixed(1)}/10 · Lưu tối đa 50 bài gần nhất trên thiết bị này.` : "Những bài bạn hoàn thành sẽ được lưu tại đây."}</p></div><div class="row history-top-actions">${history.length ? `<button type="button" class="btn-clear-history-all" id="clearAllHistory">🗑️ Xóa toàn bộ lịch sử</button>` : ""}<button class="btn-new-quiz-action" data-view="practice">Luyện một đề mới →</button></div></div>` +
     (history.length
-      ? `<div class="history-list">${history.map((r) => `<article class="card history-item"><div class="history-score">${((r.correct / r.questions.length) * 10).toFixed(1)}</div><div class="history-info"><span class="tag ${r.mode === "study" ? "ok" : ""}">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"}</span><h3>Đúng ${r.correct}/${r.questions.length} câu hỏi</h3><p>${new Date(r.finished).toLocaleString("vi-VN")}</p></div><div class="row history-actions"><button class="secondary" data-result="${esc(r.id)}">Xem bài làm ↗</button><button class="icon-button text-button danger history-delete-btn" data-delete-result="${esc(r.id)}" title="Xóa kết quả này" aria-label="Xóa kết quả này">🗑️</button></div></article>`).join("")}</div>`
+      ? `<div class="history-list">${history.map((r) => {
+          const scoreNum = (r.correct / r.questions.length) * 10;
+          const scoreStr = scoreNum.toFixed(1);
+          const scoreClass = scoreNum >= 8 ? "score-high" : (scoreNum >= 5 ? "score-mid" : "score-low");
+          const percent = Math.round((r.correct / r.questions.length) * 100);
+          return `<article class="card history-item"><div class="history-score ${scoreClass}"><span class="score-val">${scoreStr}</span><span class="score-scale">/10</span></div><div class="history-info"><div class="history-info-header"><span class="tag ${r.mode === "study" ? "ok" : ""}">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"}</span><span class="history-time-stamp">${new Date(r.finished).toLocaleString("vi-VN")}</span></div><h3 class="history-item-title">Đúng ${r.correct}/${r.questions.length} câu hỏi <span class="history-percent">(${percent}%)</span></h3></div><div class="row history-actions"><button class="btn-review-result" data-result="${esc(r.id)}">Xem bài làm ↗</button><button class="history-delete-btn" data-delete-result="${esc(r.id)}" title="Xóa kết quả này" aria-label="Xóa kết quả này">🗑️</button></div></article>`;
+        }).join("")}</div>`
       : empty(
           "Buổi học đầu tiên đang chờ bạn",
           "Hãy bắt đầu với một đề ngắn. Kết quả sẽ giúp bạn biết mình đã vững phần nào.",
