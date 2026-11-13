@@ -503,7 +503,7 @@ async function showQuestionImage(container, q) {
 function showSlideError(container, q) {
   container.innerHTML = q.sharedDeck
     ? "<p>Chưa tải được ảnh từ kho chung. Kiểm tra kết nối rồi thử lại; bộ đề có thể đã được người đăng gỡ.</p>"
-    : "<p>Chưa tải được ảnh slide gốc. Kiểm tra kết nối và đăng nhập Google ở góc phải nếu phiên đã hết hạn.</p>";
+    : "<p>Chưa tải được ảnh slide gốc. Bạn cần đăng nhập tài khoản Google để tải ảnh từ tài liệu này (phiên đăng nhập có thể đã hết hạn).</p>";
   container.classList.add("slide-load-error");
   const retry = document.createElement("button");
   retry.className = "secondary";
@@ -513,12 +513,20 @@ function showSlideError(container, q) {
     container.classList.remove("slide-load-error");
     showQuestionImage(container, q);
   };
+  container.append(retry);
+  if (!q.sharedDeck) {
+    const loginBtn = document.createElement("button");
+    loginBtn.className = "primary";
+    loginBtn.type = "button";
+    loginBtn.textContent = "Đăng nhập Google";
+    loginBtn.onclick = () => $("accountButton")?.click();
+    container.append(loginBtn);
+  }
   const link = document.createElement("a");
   link.href = q.url;
   link.target = "_blank";
   link.rel = "noopener";
   link.textContent = "Mở slide gốc ↗";
-  container.append(retry);
   if (q.url) container.append(link);
 }
 async function loadLibrarySlideImages(qs) {
