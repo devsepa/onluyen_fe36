@@ -15,13 +15,8 @@ body.quiz-active main,body.quiz-active .page-content{height:100dvh;min-height:0}
 body.quiz-active main{margin:0}
 body.quiz-active #practice,body.quiz-active .quiz-layout,body.quiz-active .quiz-layout>div{min-height:0}
 body.quiz-active .quiz-head{flex:none}
-body.quiz-active .quiz-layout{flex:1;align-items:stretch}
-body.quiz-active .quiz-layout>div{height:100%}
-body.quiz-active .quiz-question{flex:1;min-height:0;overflow:hidden;animation:none}
-body.quiz-active .slide-media-container{flex:1;min-height:0;height:auto;max-height:none;margin:0}
-body.quiz-active .question-title:not(.collapsed-text){flex:1;min-height:0;overflow:auto}
-body.quiz-active .quiz-map-card{position:static;max-height:100%;overflow:auto}
-body.quiz-active .feedback{flex:none}
+/* Natural height for slide media and cards */
+body.quiz-active .quiz-question{overflow:visible;animation:none}
 body.quiz-active .quiz-head .account-control{position:relative;flex:none}
 body.quiz-active .quiz-head .avatar{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-radius:50%}
 body.quiz-active .quiz-head .account-menu{z-index:100;right:0;max-width:min(300px,calc(100vw - 24px))}

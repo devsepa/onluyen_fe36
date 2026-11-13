@@ -1594,3 +1594,17 @@ document.addEventListener("visibilitychange", updateTimer);
 refreshStats();
 switchView(session && !session.done ? "practice" : view);
 if (session && !session.done) startSessionPreload(session.questions);
+// Theme toggle
+const themeToggle = document.getElementById('themeToggle');
+function applyThemeMode(mode){
+ document.documentElement.setAttribute('data-theme',mode);
+ localStorage.setItem('sot-theme',mode);
+ const icon=document.getElementById('themeIcon');
+ if(icon)icon.textContent=mode==='dark'?'☀️':'🌙';
+}
+const initialTheme=localStorage.getItem('sot-theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+applyThemeMode(initialTheme);
+themeToggle?.addEventListener('click',()=>{
+ const current=document.documentElement.getAttribute('data-theme')||'light';
+ applyThemeMode(current==='dark'?'light':'dark');
+});
