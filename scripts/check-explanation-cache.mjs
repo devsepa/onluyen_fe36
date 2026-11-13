@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+const base=process.env.AI_API_BASE;if(!base)throw Error('Missing AI_API_BASE');
+const questions=id=>[{id,stem:'Which SQL clause filters groups after aggregation?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}]}];
+async function request(id){const response=await fetch(new URL('/v1/answers',base),{method:'POST',headers:{Origin:'https://devsepa.github.io','Content-Type':'application/json'},body:JSON.stringify({purpose:'explanation',questions:questions(id)}),signal:AbortSignal.timeout(120000)});const data=await response.json();if(!response.ok)throw Error(`Anonymous explanation: HTTP ${response.status}: ${data.error||'unknown error'}`);assert.equal(data.answers[0].id,id);assert.equal(data.answers[0].answer,'B');assert.equal(data.answers[0].optionReasons.length,2);return data.answers[0]}
+await request('guest-first');const reused=await request('guest-next');assert.equal(reused.reused,true,'The second anonymous visitor must reuse the server explanation');console.log('Live anonymous AI and persistent shared explanation reuse verified.');

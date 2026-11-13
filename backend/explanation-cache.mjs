@@ -1,5 +1,6 @@
 // Stored server-generated explanations only; clients cannot publish cache entries.
 export const EXPLANATION_REVISION='study-explanation-2';
+export class ExplanationCacheError extends Error{constructor(status,message,code){super(message);this.status=status;this.code=code}}
 export async function explanationCacheKey(question,env={}){
  const content=question.image?['image',question.image.mimeType,question.image.data]:['text',question.stem,question.options.map(o=>[o.id,o.text])];
  const bytes=new TextEncoder().encode(JSON.stringify([EXPLANATION_REVISION,env.GEMINI_MODEL||'gemini-3.8-flash',content]));
@@ -16,6 +17,7 @@ export class StoredExplanationCache{
    if(stored?.revision===EXPLANATION_REVISION){try{this.validate(stored.result,[input]);return Response.json({...stored.result,reused:true})}catch{/* Discard entries that no longer satisfy the response contract. */}}
    if(!this.pending)this.pending=(async()=>{
     const result=await this.generate([input],this.env);
+    this.validate(result,[input]);
     const answer=result.answers[0];
     if(answer.status==='answered'&&answer.explanation.trim()&&answer.optionReasons?.length>=2){
      await this.storage.put('result',{revision:EXPLANATION_REVISION,createdAt:Date.now(),result});
@@ -31,7 +33,7 @@ export async function explainWithSharedCache(questions,env,generate){
  const responses=await Promise.all(questions.map(async question=>{
   const key=await explanationCacheKey(question,env),object=env.EXPLANATION_CACHE.get(env.EXPLANATION_CACHE.idFromName(key));
   const response=await object.fetch(new Request('https://explanation-cache/',{method:'POST',body:JSON.stringify(question)}));
-  const data=await response.json();if(!response.ok){const error=Error(data.error||'Chưa tải được giải thích.');error.status=response.status;error.code=data.code;throw error}
+  const data=await response.json();if(!response.ok)throw new ExplanationCacheError(response.status,data.error||'Chưa tải được giải thích.',data.code);
   return {answer:{...data.answers[0],id:question.id,reused:!!data.reused},model:data.model};
  }));
  return {answers:responses.map(r=>r.answer),model:[...new Set(responses.map(r=>r.model))].join(', ')};

@@ -3,6 +3,7 @@
 .study-prefetch-toggle{display:flex!important;white-space:normal!important;align-items:flex-start!important;line-height:1.5;margin-top:12px!important;font-size:11px!important}
 .study-prefetch-toggle input{flex:none;margin-top:3px}
 .explanation-answer,.explanation-chosen{margin:6px 0;white-space:pre-wrap}
+.explanation-storage-note{display:block;margin:3px 0 7px;color:var(--muted);font-size:11px;line-height:1.5}
 .explanation-heading{margin-top:8px!important}
 .explanation-choice-reason{margin:5px 0;white-space:pre-wrap}
 .study-explanation-status{display:flex;align-items:center;flex-wrap:wrap;gap:5px}

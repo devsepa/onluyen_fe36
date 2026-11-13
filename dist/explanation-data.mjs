@@ -16,8 +16,9 @@ export function normalizeExplanation(q,result){
  if(typeof result.answer!=='string'||[...result.answer].sort().join('')!==[...q.answer].sort().join(''))throw Error(`AI đề xuất đáp án ${result.answer||'chưa rõ'}, khác đáp án gốc ${q.answer}. Hãy đối chiếu slide; đáp án gốc vẫn được giữ.`);
  const labels=result.kind==='question'?result.labels:q.options.map(o=>o.id);
  const options=validateOptionReasons(result.optionReasons,labels);
+ if(!q.image&&q.options.every(o=>o.text?.trim())&&options.some(o=>q.options.find(original=>original.id===o.id)?.text.trim()!==o.text))throw Error('AI đã thay đổi nội dung lựa chọn. Hãy đối chiếu câu hỏi và thử lại.');
  if([...q.answer].some(id=>!options.some(o=>o.id===id)))throw Error('AI chưa đọc đủ nội dung đáp án đúng.');
- return {answer:q.answer,reason:result.explanation.trim(),options};
+ return {answer:q.answer,reason:result.explanation.trim(),options,...(result.reused?{reused:true}:{})};
 }
 export function hasNoteExplanation(q){return typeof q?.explanation==='string'&&q.explanation.trim().length>0}
 export function hasSpeakerNoteExplanation(q){return !!q?.explanation&&q.explanationSource!=='gemini'&&q.answerSource!=='gemini'}
