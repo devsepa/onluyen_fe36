@@ -1,15 +1,18 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-filter-2';
-import {setupResources} from './resources-ui.js?v=20261113-filter-2';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-quiz-fit-1';
+import {setupResources} from './resources-ui.js?v=20261113-quiz-fit-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-filter-2';
-import {setupAccount} from './account-ui.js?v=20261113-filter-2';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-filter-2';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-filter-2';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-filter-2';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-filter-2';
+import {validateBank} from './banks.mjs?v=20261113-quiz-fit-1';
+import {setupAccount} from './account-ui.js?v=20261113-quiz-fit-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-quiz-fit-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-quiz-fit-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-quiz-fit-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-quiz-fit-1';
 import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs';
+import {fitQuizScreen} from './quiz-screen.mjs';
+import {createQuizSound} from './quiz-sound.mjs';
 
 const $=id=>document.getElementById(id);
+const quizSound=createQuizSound();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key))??fallback}catch{return fallback}};
 let bank=read('sot-bank',[]),history=read('sot-history',[]),session=read('sot-session',null),sourceSummary=read('sot-source','');
@@ -89,6 +92,7 @@ function switchView(next,mode){
  if(mode)preferredMode=mode;
  if(next==='result'&&!lastResult)next='history';
  view=next;renderNotice();
+ document.body.classList.toggle('quiz-active',view==='practice'&&!!session&&!session.done);
  for(const id of Object.keys(pageInfo))$(id).hidden=id!==view;
  const activeNav=view==='result'?'history':view;
  document.querySelectorAll('[data-view].nav').forEach(button=>{button.classList.toggle('active',button.dataset.view===activeNav);if(button.dataset.view===activeNav)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});
@@ -305,7 +309,8 @@ function renderQuiz(){
  const legendContent=study?`<span><i class="legend-box correct"></i> Đúng</span><span><i class="legend-box wrong"></i> Sai</span><span><i class="legend-box flagged"></i> Xem lại</span><span><i class="legend-box empty"></i> Chưa làm</span>`:`<span><i class="legend-box answered"></i> Đã làm</span><span><i class="legend-box flagged"></i> Xem lại</span><span><i class="legend-box empty"></i> Chưa làm</span>`;
  document.body.classList.toggle('exam-active',!study);pageHeading.hidden=true;
  $('practice').innerHTML=`<div class="quiz-head"><div><span class="overline">${study?'ÔN LUYỆN':'THI THỬ'} · ${qs.length} CÂU HỎI</span><h2>${study?'Ôn luyện':'Thi thử'}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study?'Thời gian đã học':'Thời gian còn lại'}</small><div class="timer" id="timer"></div></div><button id="submit">${study?'Kết thúc buổi học':'Nộp bài'} ↗</button></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="question-top"><div class="quiz-nav-group"><button type="button" class="secondary nav-btn" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><span class="question-counter">CÂU ${session.current+1} / ${qs.length}</span><button type="button" class="nav-btn next-btn" data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div><label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id)?'checked':''}> Đánh dấu xem lại</label></div>${sourceReference(q,true)}${aiBadge(q)}${multiple?'<p class="multi-hint">Chọn tất cả đáp án đúng.'+(study?' Bấm Kiểm tra sau khi chọn xong.':' Có thể thay đổi lựa chọn trước khi nộp bài.')+'</p>':''}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${(q.url||q.sharedDeck)?'collapsed-text':''}">${esc(displayContent(q))}</div><div class="choice-pills">${q.options.map((o,i)=>`<button class="choice-pill ${optionState(session,q,o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered||session.drafts?.[q.id]||'').includes(o.id)}" ${study&&answered?'disabled':''}>${esc(o.id)}</button>`).join('')}</div>${study&&multiple&&!answered?`<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id]?'disabled':''}>Kiểm tra đáp án</button>`:''}${study&&answered?`<div class="feedback ${isCorrect(q,answered)?'right':'incorrect'}" role="status">${isCorrect(q,answered)?'✓ Chính xác. Bạn đã nắm được câu này!':'✕ Chưa đúng. Cùng ghi nhớ đáp án nhé.'}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>`:''}</article><div class="quiz-controls"><button class="secondary" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><button data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study?'Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra.':'Bạn có thể quay lại và thay đổi đáp án.'}</p><div class="quiz-navigation">${qs.map((item,i)=>`<button data-index="${i}" class="${navItemClass(session,item,i,study)}" aria-label="Đến câu ${i+1}" ${session.current===i?'aria-current="step"':''}>${i+1}</button>`).join('')}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
- if($('checkMultiple'))$('checkMultiple').onclick=()=>{if(confirmQuestion(session,q.id)){write('sot-session',session);renderQuiz()}};
+ fitQuizScreen({root:$('practice'),session,question:q,isCorrect,navItemClass,sound:quizSound});
+ if($('checkMultiple'))$('checkMultiple').onclick=()=>{if(confirmQuestion(session,q.id)){quizSound.play(isCorrect(q,session.answers[q.id]));write('sot-session',session);renderQuiz()}};
  $('flagCurrent').onchange=e=>{session.flags=e.target.checked?[...new Set([...session.flags,q.id])]:session.flags.filter(id=>id!==q.id);write('sot-session',session);switchView('practice')};
  $('submit').onclick=()=>{if(confirm(`${study?'Kết thúc buổi học':'Nộp bài thi'}? Bạn đã trả lời ${Object.keys(session.answers).length}/${qs.length} câu.`))finish()};updateTimer();
  setTimeout(()=>{
@@ -316,7 +321,7 @@ function renderQuiz(){
   if(session.current>0)preloadSlideImage(qs[session.current-1]);
  },0);
 }
-$('practice').onclick=e=>{const toggleBtn=e.target.closest('[data-toggle-text]');if(toggleBtn){const t=toggleBtn.closest('.quiz-question')?.querySelector('.question-title');if(t)t.classList.toggle('collapsed-text');return}const indexButton=e.target.closest('[data-index]');if(indexButton&&session&&!session.done){if(session.mode!=='study'&&Date.now()>=session.deadline)return finish();session.current=Number(indexButton.dataset.index);write('sot-session',session);renderQuiz();return}const answer=e.target.closest('[data-q]');if(answer&&session&&!session.done){if(answerQuestion(session,answer.dataset.q,answer.dataset.o)){write('sot-session',session);renderQuiz()}else updateTimer()}};
+$('practice').onclick=e=>{const toggleBtn=e.target.closest('[data-toggle-text]');if(toggleBtn){const t=toggleBtn.closest('.quiz-question')?.querySelector('.question-title');if(t)t.classList.toggle('collapsed-text');return}const indexButton=e.target.closest('[data-index]');if(indexButton&&session&&!session.done){if(session.mode!=='study'&&Date.now()>=session.deadline)return finish();session.current=Number(indexButton.dataset.index);write('sot-session',session);renderQuiz();return}const answer=e.target.closest('[data-q]');if(answer&&session&&!session.done){if(answerQuestion(session,answer.dataset.q,answer.dataset.o)){if(session.mode==='study'&&session.answers[answer.dataset.q])quizSound.play(isCorrect(session.questions.find(q=>q.id===answer.dataset.q),session.answers[answer.dataset.q]));write('sot-session',session);renderQuiz()}else updateTimer()}};
 function updateTimer(){if(!session||session.done)return;const study=session.mode==='study',seconds=study?Math.max(0,Math.floor((Date.now()-session.started)/1000)):Math.max(0,Math.ceil((session.deadline-Date.now())/1000));if($('timer'))$('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;if($('progress'))$('progress').textContent=`${Object.keys(session.answers).length}/${session.questions.length} câu đã trả lời${study?' · Đúng '+grade(session.questions,session.answers)+' câu':''}`;if(!study&&!seconds)finish()}
 function finish(){if(!session||session.done)return;session.done=true;lastResult={...session,id:crypto.randomUUID(),finished:Date.now(),correct:grade(session.questions,session.answers)};history.unshift(lastResult);history=history.slice(0,50);write('sot-history',history);write('sot-session',null);session=null;resultFilter='all';switchView('result');message('Đã lưu kết quả buổi học trên thiết bị này.')}
 function renderResult(r){
