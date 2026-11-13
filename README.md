@@ -43,7 +43,7 @@ Google Identity Services token model; token chỉ tồn tại trong bộ nhớ v
 ## Hai chế độ làm bài
 
 - **Ôn luyện:** chấm ngay sau khi chọn mỗi câu, hiện đúng/sai và đáp án đúng. Khóa đáp án sau lần chọn đầu để giữ điểm thực tế. Không giới hạn thời gian; hiển thị thời gian đã học và số câu đúng. Có thể kết thúc bất cứ lúc nào và luyện lại câu sai.
-- **Thi thử:** chọn số câu, thời gian thi và đảo đáp án. Được thay đổi lựa chọn, đánh dấu câu cần xem lại. Không hiện đúng/sai hoặc điểm trong khi làm. Tự nộp khi hết giờ, chỉ xem điểm và đáp án sau khi nộp. Ẩn ngân hàng câu hỏi trong khi thi.
+- **Thi thử:** chọn số câu và thời gian thi. Các lựa chọn giữ nguyên thứ tự A/B/C/D theo slide, hiển thị một cột dọc. Được thay đổi lựa chọn, đánh dấu câu cần xem lại. Không hiện đúng/sai hoặc điểm trong khi làm. Tự nộp khi hết giờ, chỉ xem điểm và đáp án sau khi nộp. Ẩn ngân hàng câu hỏi trong khi thi.
 
 Cả hai chế độ giữ bài đang làm sau khi tải lại trang; lịch sử ghi rõ chế độ. Bài đang làm từ phiên bản trước được coi là Thi thử.
 
@@ -70,3 +70,5 @@ Câu hỏi, Client ID, bài đang làm và tối đa 50 kết quả được lư
 `npm test` hoặc `node --test tests/*.test.mjs`
 
 Tài liệu: https://developers.google.com/identity/oauth2/web/guides/use-token-model và https://developers.google.com/workspace/slides/api/guides/notes
+
+Nội dung câu hỏi lọc riêng watermark “Hoàng Hoàng Buôn Source” (kể cả một số biến thể OCR có/không dấu). Áp dụng khi đọc slide, dùng lại cache OCR, nhập bộ JSON và tải lại ngân hàng/bài làm cũ; giữ nguyên nguồn slide, đáp án theo ID và kết quả chấm. Các từ “source” khác trong kiến thức vẫn được giữ.

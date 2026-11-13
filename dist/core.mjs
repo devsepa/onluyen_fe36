@@ -1,4 +1,24 @@
 export function normalizeSlideText(text){return String(text).normalize('NFKC').replace(/\r\n?|\v|\f|\u2028|\u2029/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200b\ufeff]/g,'').trim();}
+export function cleanSlideContent(value){
+ const text=normalizeSlideText(value);let folded='',position=0;const starts=[],ends=[];
+ for(const char of text){
+  const ascii=char.normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/gi,'d').toLowerCase();
+  for(let i=0;i<ascii.length;i++){starts.push(position);ends.push(position+char.length)}
+  folded+=ascii;position+=char.length;
+ }
+ const matches=[...folded.matchAll(/\bhoang[\s_-]+hoang[\s_-]+bu[oeu]?n[\s_-]+s[o0]urce\b/g)];
+ let result=text;
+ for(const match of matches.reverse()){
+  let start=starts[match.index];const end=ends[match.index+match[0].length-1];
+  const lineStart=text.lastIndexOf('\n',start-1)+1,before=text.slice(lineStart,start);
+  const prefix=before.match(/[ \t]*[©®@•📍][ \t]*$/u);if(prefix)start-=prefix[0].length;
+  result=result.slice(0,start)+result.slice(end);
+ }
+ return result.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+export function cleanQuestion(q){
+ return {...q,stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
+}
 export function textOf(elements=[]){
  const ordered=[...elements].sort((a,b)=>(a.transform?.translateY??0)-(b.transform?.translateY??0)||(a.transform?.translateX??0)-(b.transform?.translateX??0));
  return ordered.flatMap(e=>e.elementGroup?textOf(e.elementGroup.children):e.shape?[(e.shape.text?.textElements||[]).map(t=>t.textRun?.content||'').join('')]:e.table?e.table.tableRows.flatMap(r=>r.tableCells.map(c=>(c.text?.textElements||[]).map(t=>t.textRun?.content||'').join(''))):e.wordArt?[e.wordArt.renderedText||'']:[]).join('\n');
@@ -19,7 +39,7 @@ function imageCount(elements=[]){return elements.reduce((n,e)=>n+(e.image?1:0)+(
 export function parsePresentation(p){
  const questions=[],skipped=[],pages=[];
  for(const [i,s] of (p.slides||[]).entries()){
-  const text=normalizeSlideText(textOf(s.pageElements)),parts=optionParts(text);
+  const text=cleanSlideContent(textOf(s.pageElements)),parts=optionParts(text);
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   pages.push({slide:i+1,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parsePresentation,grade,shuffle,answerQuestion,optionState} from '../dist/core.mjs';
+import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
 test('reads grouped questions and speaker notes, leaves imported answer unverified',()=>{const p={presentationId:'abc',slides:[{objectId:'s1',pageElements:[{elementGroup:{children:[shape('q','What is an index?\nA. Fast lookup\nB. Alias')]}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[shape('number','1'),shape('note','Answer: A\n')]}}},{objectId:'s2',pageElements:[{image:{}}]}]};const r=parsePresentation(p);assert.equal(r.questions.length,1);assert.equal(r.questions[0].answer,'A');assert.equal(r.questions[0].verified,false);assert.equal(r.questions[0].options[1].text,'Alias');assert.deepEqual(r.skipped,[2]);});
 test('ambiguous notes never create a guessed answer',()=>{const r=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n','A or B')]}}}]});assert.equal(r.questions[0].answer,'')});
@@ -21,4 +21,19 @@ test('orders separate text boxes by slide position instead of stacking order',()
 test('reports image-only slides and unrecognized text without inventing questions',()=>{
  const r=parsePresentation({slides:[{pageElements:[{elementGroup:{children:[{image:{}}]}}]},{pageElements:[shape('title','Introduction')]},{pageProperties:{pageBackgroundFill:{stretchedPictureFill:{}}}}]});
  assert.equal(r.questions.length,0);assert.equal(r.diagnostics.totalSlides,3);assert.equal(r.diagnostics.textSlides,1);assert.equal(r.diagnostics.imageSlides,2);assert.equal(r.diagnostics.pages[1].preview,'Introduction');
+});
+test('removes the source watermark and its icon from an option without altering the answer text',()=>{
+ for(const footer of ['© Hoàng Hoàng Buôn Source','@ Hoang Hoang Buon Source','Hoàng Hoàng Buén Source','📍 Hoàng Hoàng Buôn Source']){
+  const r=parsePresentation({slides:[{pageElements:[shape('q',`Question?\nA. First\nB. Second\nC. Third\nD. Enhanced data security\n${footer}`)]}]});
+  assert.equal(r.questions[0].options[3].text,'Enhanced data security',footer);assert.equal(r.questions[0].options.length,4);
+ }
+});
+test('keeps meaningful source terminology and content following a watermark',()=>{
+ assert.equal(cleanSlideContent('What is an open source database?'),'What is an open source database?');
+ assert.equal(cleanSlideContent('Hoàng Hoàng Buôn Source\nWhich clause filters groups?'),'Which clause filters groups?');
+ assert.equal(cleanSlideContent('A source table has rows.'),'A source table has rows.');
+});
+test('existing shuffled questions return to source choice order without changing grading or source references',()=>{
+ const old={id:'q',stem:'Question?',answer:'B',verified:true,slide:320,url:'original',options:[{id:'D',text:'Fourth\n© Hoàng Hoàng Buôn Source'},{id:'B',text:'Second'},{id:'A',text:'First'},{id:'C',text:'Third'}]};
+ const q=cleanQuestion(old);assert.deepEqual(q.options.map(o=>o.id),['A','B','C','D']);assert.equal(q.options[3].text,'Fourth');assert.equal(q.answer,'B');assert.equal(q.verified,true);assert.equal(q.slide,320);assert.equal(q.url,'original');assert.equal(grade([q],{q:'B'}),1);assert.equal(old.options[0].id,'D');
 });
