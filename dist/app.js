@@ -1,11 +1,11 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-notes-18';
-import {setupResources} from './resources-ui.js?v=20261113-notes-18';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-jpn-19';
+import {setupResources} from './resources-ui.js?v=20261113-jpn-19';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-notes-18';
-import {setupAccount} from './account-ui.js?v=20261113-notes-18';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-notes-18';
-import {solveBatch,applyAiResults} from './ai.mjs?v=20261113-notes-18';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-notes-18';
+import {validateBank} from './banks.mjs?v=20261113-jpn-19';
+import {setupAccount} from './account-ui.js?v=20261113-jpn-19';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-jpn-19';
+import {solveBatch,applyAiResults} from './ai.mjs?v=20261113-jpn-19';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-jpn-19';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

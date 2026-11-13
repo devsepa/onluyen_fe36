@@ -81,7 +81,7 @@ test('removes standalone logo OCR without touching SQL or English question conte
  const text='Which SQL statement returns matching records?\nFORU\nA. SELECT * FROM source_table INNER JOIN sales ON id = custID;\nLEARN TO KNOW\nB. SELECT * FROM source_table;\n© Hoàng Hoàng Buén Sourge';
  const q=parsePresentation({slides:[{pageElements:[shape('q',text)]}]}).questions[0];
  assert.equal(q.stem,'Which SQL statement returns matching records?');assert.equal(q.options[0].text,'SELECT * FROM source_table INNER JOIN sales ON id = custID;');assert.equal(q.options[1].text,'SELECT * FROM source_table;');
- const old=cleanQuestion({...q,answerSource:'speaker-notes',explanation:'Tùy chọn này có nghĩa là…'});assert.equal(old.explanation,'Tùy chọn này có nghĩa là...');assert.equal(old.options[1].text,q.options[1].text);
+ const old=cleanQuestion({...q,answerSource:'speaker-notes',explanation:'Tùy chọn này có nghĩa là…'});assert.equal(old.explanation,'Tùy chọn này có nghĩa là…');assert.equal(old.options[1].text,q.options[1].text);
  assert.equal(cleanSlideContent("SELECT * FROM source WHERE name = 'Việt Nam';"),"SELECT * FROM source WHERE name = 'Việt Nam';");
 });
 test('keeps meaningful source terminology and content following a watermark',()=>{

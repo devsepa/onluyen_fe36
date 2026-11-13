@@ -1,12 +1,12 @@
-import {parsePresentation,textOf} from './core.mjs?v=20261113-notes-18';
+import {parsePresentation,textOf} from './core.mjs?v=20261113-jpn-19';
 
 export function checkAbort(signal){if(signal?.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError')}
-export async function cacheKey(p,slide,resource={}){
+export async function cacheKey(p,slide,resource={},language='eng'){
  // A revision/modified time is required for persistent reuse, so edited slides are not stale.
  const version=resource.modifiedTime||p.revisionId;if(!version)return null;
  const stable=JSON.stringify(slide,(key,value)=>key==='contentUrl'?undefined:value);
  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(stable));
- return `ocr-v1:${p.presentationId}:${slide.objectId}:${version}:`+[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+ return `ocr-v2:${language}:${p.presentationId}:${slide.objectId}:${version}:`+[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 export function directImageUrl(slide){
  const elements=slide.pageElements||[];
@@ -21,7 +21,7 @@ export function directImageUrl(slide){
  if(!elements.length)return background||null;
  return null;
 }
-export async function parseWithOcr(p,resource,{request,recognize,cache,signal,onProgress=()=>{},concurrency=1,maxQuestions=Infinity,startSlide=1,endSlide=Infinity,shouldStop=()=>false}){
+export async function parseWithOcr(p,resource,{request,recognize,cache,signal,language='eng',onProgress=()=>{},concurrency=1,maxQuestions=Infinity,startSlide=1,endSlide=Infinity,shouldStop=()=>false}){
  const original=parsePresentation(p),pages=original.diagnostics.pages;
  const inRange=page=>page.slide>=startSlide&&page.slide<=endSlide;
  const questions=[],native=new Map(original.questions.map(q=>[q.slide,q]));
@@ -35,7 +35,7 @@ export async function parseWithOcr(p,resource,{request,recognize,cache,signal,on
   if(native.has(page.slide))return native.get(page.slide);
   if(!page.images)return null;
   try{
-   const key=await cacheKey(p,slide,resource);checkAbort(signal);
+   const key=await cacheKey(p,slide,resource,language);checkAbort(signal);
    let result=key?await cache?.get(key):null;
    if(result&&typeof result.text==='string')cached++;
    else{
@@ -54,7 +54,7 @@ export async function parseWithOcr(p,resource,{request,recognize,cache,signal,on
    const parsed=parsePresentation({...p,slides:[{...slide,pageElements:[{shape:{text:{textElements:[{textRun:{content:result.text}}]}}}]}]});
    const q=parsed.questions[0];
    page.ocr=true;page.ocrConfidence=result.confidence;page.preview=result.text.slice(0,1200);
-   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrConfidence=result.confidence;page.recognized=true;return q;}
+   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrLanguage=language;q.ocrConfidence=result.confidence;page.recognized=true;return q;}
   }catch(error){checkAbort(signal);if(error.ocrFatal)throw error;page.ocrError=error.message;}
   return null;
  }

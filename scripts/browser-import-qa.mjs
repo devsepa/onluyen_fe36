@@ -13,6 +13,10 @@ await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Wrong 
 assert.equal(await evaluate(`document.querySelector('#connect,#disconnect')===null`),true,'login controls must exist only in the avatar');
 assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),true);
 assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidden`),false);
+assert.deepEqual(await evaluate(`[...document.querySelector('#ocrLanguage').options].map(o=>o.value)`),['auto','eng','eng+vie','jpn+eng','jpn+vie+eng']);
+await evaluate(`document.querySelector('#ocrLanguage').value='jpn+vie+eng';document.querySelector('#ocrLanguage').dispatchEvent(new Event('change'))`);
+assert.equal(await evaluate(`localStorage.getItem('sot-ocr-language')`),'jpn+vie+eng');
+await evaluate(`document.querySelector('#ocrLanguage').value='auto';document.querySelector('#ocrLanguage').dispatchEvent(new Event('change'))`);
 await evaluate(`(()=>{
  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=700;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,1400,700);c.fillStyle='black';c.font='34px Arial';['Which clause filters groups after aggregation?','A. WHERE','B. HAVING','C. ORDER BY','D. SELECT'].forEach((t,i)=>c.fillText(t,60,100+i*90));
  const image=canvas.toDataURL();const originalFetch=window.fetch;window.qaCalls=[];

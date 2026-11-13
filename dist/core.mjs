@@ -1,4 +1,4 @@
-export function normalizeSlideText(text){return String(text).normalize('NFKC').replace(/\r\n?|\v|\f|\u2028|\u2029/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200b\ufeff]/g,'').trim();}
+export function normalizeSlideText(text){return String(text).normalize('NFC').replace(/\r\n?|\v|\f|\u2028|\u2029/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200b\ufeff]/g,'').trim();}
 export function cleanSlideContent(value){
  const text=normalizeSlideText(value);let folded='',position=0;const starts=[],ends=[];
  for(const char of text){
@@ -30,6 +30,7 @@ export function cleanQuestion(q){
  return {...q,answer,verified:!!answer&&q.verified===true,explanation:typeof q.explanation==='string'?cleanSlideContent(q.explanation):'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
 }
 export function normalizeAnswer(value,options){
+ if(typeof value==='string')value=value.normalize('NFKC');
  if(typeof value!=='string'||! /^[A-H](?:[A-H]|[\s,;/&+]+[A-H])*$/i.test(value.trim()))return '';
  const ids=[...new Set(value.toUpperCase().match(/[A-H]/g))].sort();
  return ids.every(id=>options.some(o=>o.id===id))?ids.join(''):'';
@@ -41,9 +42,9 @@ export function textOf(elements=[]){
 }
 function optionParts(text){
  // Prefer line starts; use inline labels only when the slide has no complete line-based set.
- const patterns=[/(?:^|\n)[ \t]*(?:[•●▪][ \t]*)?(?:\(([A-Ha-h])\)|\[([A-Ha-h])\]|([A-Ha-h])[.)：:])[ \t]*/g,/(?:^|\s)(?:\(([A-Ha-h])\)|\[([A-Ha-h])\]|([A-Ha-h])[.)：:])[ \t]+/g];
+ const patterns=[/(?:^|\n)[ \t\u3000]*(?:[•●▪][ \t\u3000]*)?(?:[（(]([A-Ha-hＡ-Ｈａ-ｈ])[）)]|[［\[]([A-Ha-hＡ-Ｈａ-ｈ])[］\]]|([A-Ha-hＡ-Ｈａ-ｈ])[.)．）：:])[ \t\u3000]*/g,/(?:^|\s)(?:[（(]([A-Ha-hＡ-Ｈａ-ｈ])[）)]|[［\[]([A-Ha-hＡ-Ｈａ-ｈ])[］\]]|([A-Ha-hＡ-Ｈａ-ｈ])[.)．）：:])[ \t\u3000]+/g];
  for(const pattern of patterns){
-  const matches=[...text.matchAll(pattern)].map(m=>({index:m.index,end:m.index+m[0].length,id:(m[1]||m[2]||m[3]).toUpperCase()}));
+  const matches=[...text.matchAll(pattern)].map(m=>({index:m.index,end:m.index+m[0].length,id:(m[1]||m[2]||m[3]).normalize('NFKC').toUpperCase()}));
   if(matches.length<2||matches[0].id!=='A'||matches.some((m,j)=>m.id!==String.fromCharCode(65+j)))continue;
   const stem=text.slice(0,matches[0].index).trim();
   const options=matches.map((m,j)=>({id:m.id,text:text.slice(m.end,matches[j+1]?.index??text.length).trim()}));
@@ -64,9 +65,9 @@ export function speakerNotesText(slide){
 export function detailsFromNotes(slide,options){
  const lines=speakerNotesText(slide).split('\n').map(line=>line.trim()).filter(Boolean);
  const pattern=/^(?:(?:answers?|correct answers?|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H](?:[A-H]|[ ,;/&+]+[A-H])*)\)?[.)]?\s*$/i;
- const match=lines[0]?.match(pattern);
+ const match=lines[0]?.normalize('NFKC').match(pattern);
  const answer=normalizeAnswer(match?.[1],options);
- if(!answer||lines.slice(1).some(line=>{const other=line.match(pattern);return other&&normalizeAnswer(other[1],options)!==answer}))return {answer:'',explanation:''};
+ if(!answer||lines.slice(1).some(line=>{const other=line.normalize('NFKC').match(pattern);return other&&normalizeAnswer(other[1],options)!==answer}))return {answer:'',explanation:''};
  return {answer,explanation:cleanSlideContent(lines.slice(1).join('\n'))};
 }
 export function answerFromNotes(slide,options){
