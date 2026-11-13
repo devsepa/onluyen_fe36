@@ -672,17 +672,3 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
 
 @keyframes quizFadeSlide{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}.quiz-question-fade{animation:quizFadeSlide .15s ease}
 .sound-toggle-btn{width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,transform .1s}.sound-toggle-btn:hover{background:var(--panel);transform:scale(1.07)}
-.ai-tutor-widget{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
-.ai-tutor-toggle-btn{background:transparent;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:5px 12px;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s,color .15s}
-.ai-tutor-toggle-btn:hover{background:var(--accent);color:var(--accent-text)}
-.ai-tutor-panel{margin-top:8px}
-.ai-tutor-chat{max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:4px 0;scroll-behavior:smooth}
-.ai-tutor-bubble{border-radius:10px;padding:7px 11px;font-size:13px;line-height:1.5;max-width:92%;word-break:break-word}
-.ai-tutor-bubble.user{background:var(--accent);color:var(--accent-text);align-self:flex-end;border-bottom-right-radius:3px}
-.ai-tutor-bubble.ai{background:var(--panel2);color:var(--text);align-self:flex-start;border-bottom-left-radius:3px}
-.ai-tutor-bubble.ai.loading{opacity:.7;font-style:italic}
-.ai-tutor-input-row{display:flex;gap:6px;margin-top:8px}
-.ai-tutor-input{flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:8px;padding:6px 10px;font-size:13px;outline:none;transition:border-color .15s}
-.ai-tutor-input:focus{border-color:var(--accent)}
-.ai-tutor-send{background:var(--accent);color:var(--accent-text);border:0;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:opacity .15s}
-.ai-tutor-send:disabled{opacity:.5;cursor:not-allowed}

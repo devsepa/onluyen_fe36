@@ -1,5 +1,7 @@
-﻿import {setupLibraryManager} from './library-manager.mjs';
+import {setupLibraryManager} from './library-manager.mjs';
 import {createLibraryMedia} from './library-media.mjs';
+import {createSlideBlobCache} from './slide-blob-cache.mjs';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs';
 import {createStudySelection} from './study-selection.mjs';
 import {createTelemetry} from './telemetry.mjs';
 import {setupQuality} from './quality-ui.mjs';
@@ -72,6 +74,8 @@ let bank = read("sot-bank", []),
   sourceSummary = read("sot-source", "");
 let libraryManager=null,libraryProfile=null,libraryGeneration=0;
 let quality=null;
+const resourcePolicy=createResourcePolicy({storage:localStorage});
+let quizClockTimer=null;
 const telemetry=createTelemetry({base:AI_API_BASE});
 const studySelection=createStudySelection(localStorage,history,session);
 let selectionStrategy=read('sot-selection-strategy','unseen');
@@ -207,16 +211,13 @@ function hasAiText(q) {
     q.options.every((o) => typeof o.text === "string" && o.text.trim())
   );
 }
+const publicSlideBlobs=createSlideBlobCache({owner:()=> 'public-shared',cacheName:'sot-public-slide-images-v1',maxBytes:()=>resourcePolicy.publicCacheBytes,ttl:7*86400000,load:async(q,options)=>(await deckRequest(AI_API_BASE,sharedImagePath(q),{signal:options.signal})).blob()});
 async function questionBlob(q, options = {}) {
   const started=performance.now();try{
   try{const local=await libraryMedia.forQuestion(q);if(local)return local}catch{}
 
   return await (q.sharedDeck
-    ? (
-        await deckRequest(AI_API_BASE, sharedImagePath(q), {
-          signal: options.signal,
-        })
-      ).blob()
+    ? publicSlideBlobs.get({...q,url:sharedImagePath(q)},options)
     : resources.slideBlob(q, options));
   }catch(error){if(error.name!=='AbortError'){telemetry.record('image_error');error.imageReported=true}throw error}finally{telemetry.record('image_ms',performance.now()-started)}
 }
@@ -224,31 +225,15 @@ async function questionBlob(q, options = {}) {
 async function questionImage(q) {
   return URL.createObjectURL(await questionBlob(q));
 }
-const slideImages = createSlideImageStore(questionImage, { limit: 300 });
+const slideImages = createSlideImageStore(questionImage, { limit: ()=>resourcePolicy.memoryImages });
 window.addEventListener("pagehide", () => slideImages.clear());
-async function preloadSlideImage(q) {
-  if (!q?.url && !q?.sharedDeck) return;
-  try {
-    const url = await slideImages.get(q);
-    if (!url) return;
-    const img = new Image();
-    img.src = url;
-    if (img.decode) await img.decode().catch(() => {});
-  } catch {}
-}
-let preloadingSession = null;
-function startSessionPreload(questions) {
-  if (!Array.isArray(questions) || !questions.length) return;
-  preloadingSession = questions;
-  let idx = 0;
-  async function next() {
-    if (preloadingSession !== questions || idx >= Math.min(6, questions.length))
-      return;
-    const q = questions[idx++];
-    await preloadSlideImage(q);
-    setTimeout(next, 40);
-  }
-  next();
+async function preloadSlideImage(q){if(!q?.url&&!q?.sharedDeck)return;try{await slideImages.get(q)}catch{}}
+let preloadingSession=null,imagePrefetchTimer=null,imagePrefetchEpoch=0;
+function startSessionPreload(questions){preloadingSession=questions}
+function scheduleNeighborImages(questions,current){
+ clearTimeout(imagePrefetchTimer);const epoch=++imagePrefetchEpoch;preloadingSession=questions;
+ if(document.hidden)return;
+ imagePrefetchTimer=setTimeout(async()=>{for(let offset=1;offset<=resourcePolicy.aheadImages;offset++){if(document.hidden||epoch!==imagePrefetchEpoch||preloadingSession!==questions||!session||session.current!==current)return;await preloadSlideImage(questions[current+offset])}},resourcePolicy.economy?700:250);
 }
 function displayContent(q) {
   if (q.content) return q.content;
@@ -1560,7 +1545,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
   let bankChanged=false;for(const q of bank)bankChanged=apply(q)||bankChanged;if(bankChanged)write('sot-bank',bank);
   let sessionChanged=false;for(const q of session?.questions||[])sessionChanged=apply(q)||sessionChanged;if(sessionChanged)write('sot-session',session);
  }
- if(view==='practice'&&session&&!session.done&&session.mode==='study'&&explanationKey(session.questions[session.current])===explanationKey(question)){
+ if(!document.hidden&&view==='practice'&&session&&!session.done&&session.mode==='study'&&explanationKey(session.questions[session.current])===explanationKey(question)){
   refreshQuizState();
  }
 }});
@@ -1570,10 +1555,10 @@ function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
- const _fb=renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:session.mode==='study'&&session.answers[q.id]?feedbackState(q):{status:'idle'},onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});if(_fb&&session.answers[q.id])renderAiTutor(_fb,q,()=>typeof token!=='undefined'?token:null);
+ renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:session.mode==='study'&&session.answers[q.id]?feedbackState(q):{status:'idle'},onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});
 }
 function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
-function primeStudyExplanations(){if(!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];const targets=prefetchEnabled?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasSpeakerNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
+function primeStudyExplanations(){if(document.hidden||!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];const targets=prefetchEnabled?upcomingExplanationQuestions(session,resourcePolicy.aheadExplanations):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasSpeakerNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
 
 function refreshQuizState(){
  if(!session||session.done||view!=='practice')return;
@@ -1647,11 +1632,7 @@ function renderQuiz() {
   };
   updateTimer();
   setTimeout(() => {
-    loadQuizSlideImage(q);
-    preloadSlideImage(qs[session.current + 1]);
-    preloadSlideImage(qs[session.current + 2]);
-    preloadSlideImage(qs[session.current + 3]);
-    if (session.current > 0) preloadSlideImage(qs[session.current - 1]);
+    loadQuizSlideImage(q).then(()=>{if(session?.questions===qs&&session.questions[session.current]?.id===q.id)scheduleNeighborImages(qs,session.current)});
   }, 0);
 }
 $('practice').onclick = (e) => {
@@ -1827,6 +1808,7 @@ window.addEventListener(
   { passive: true },
 );
 function updateTimer() {
+  clearTimeout(quizClockTimer);
   if (!session || session.done) return;
   const study = session.mode === "study",
     seconds = study
@@ -1838,11 +1820,12 @@ function updateTimer() {
   if ($("progress"))
     $("progress").textContent =
       `${Object.keys(session.answers).length}/${session.questions.length} câu đã trả lời${study ? " · Đúng " + grade(session.questions, session.answers) + " câu" : ""}`;
-  if (!study && !seconds) finish();
+  if (!study && !seconds){finish();return}
+  if(!study)quizClockTimer=setTimeout(updateTimer,document.hidden?Math.max(1,session.deadline-Date.now()):1000);
 }
 function finish() {
   if (!session || session.done) return;
-  explanationQueue.cancel();
+  explanationQueue.cancel();clearTimeout(quizClockTimer);
   if(session.mode==='study')for(const q of session.questions){const last=session.wrongAttempts?.[q.id]?.at(-1);if(last&&!session.answers[q.id])session.answers[q.id]=last}
   session.done = true;
   lastResult = {
@@ -2015,7 +1998,8 @@ quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQues
 window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
-setInterval(updateTimer, 1000);
+document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
+mountResourceControl(resourcePolicy);resourcePolicy.subscribe(()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 document.addEventListener("visibilitychange", updateTimer);
 refreshStats();
 switchView(session && !session.done ? "practice" : view);
@@ -2046,76 +2030,6 @@ themeToggle?.addEventListener('click',()=>{
  });
 })();
 
-
-// Mini AI Tutor - Hoi them AI
-async function askAiFollowup(question, userQuery, token) {
- const context = [
-  question.text || '',
-  question.options ? question.options.map(o => o.id + ': ' + (o.text||'')).join('; ') : '',
-  'Đáp án đúng: ' + question.answer,
-  question.explanation ? 'Giải thích: ' + question.explanation : ''
- ].filter(Boolean).join('\n');
- const prompt = `Câu hỏi: ${context}\n\nHọc viên hỏi: ${userQuery}\n\nHãy trả lời ngắn gọn, dễ hiểu bằng tiếng Việt như một gia sư thân thiện.`;
- const headers = {'Content-Type':'application/json'};
- if(token) headers['Authorization'] = 'Bearer ' + token;
- const base = (typeof AI_API_BASE !== 'undefined') ? AI_API_BASE : '';
- if(!base) return 'Chưa cấu hình AI API.';
- try {
-  const resp = await fetch(base + '/followup', {
-   method: 'POST',
-   headers,
-   body: JSON.stringify({prompt, model:'gemini-2.5-flash'})
-  });
-  if(!resp.ok) throw new Error('API lỗi ' + resp.status);
-  const data = await resp.json();
-  return data.text || data.answer || data.response || JSON.stringify(data);
- } catch(e) {
-  return 'Lỗi kết nối AI: ' + e.message;
- }
-}
-
-function renderAiTutor(feedbackEl, question, getToken) {
- if(!feedbackEl) return;
- if(feedbackEl.querySelector('.ai-tutor-widget')) return; // already added
- const widget = document.createElement('div');
- widget.className = 'ai-tutor-widget';
- widget.innerHTML = `<button type="button" class="ai-tutor-toggle-btn">💬 Hỏi thêm AI về câu này</button><div class="ai-tutor-panel" hidden><div class="ai-tutor-chat"></div><div class="ai-tutor-input-row"><input type="text" class="ai-tutor-input" placeholder="Nhập câu hỏi của bạn..." maxlength="200"><button type="button" class="ai-tutor-send">Gửi</button></div></div>`;
- feedbackEl.append(widget);
- const toggleBtn = widget.querySelector('.ai-tutor-toggle-btn');
- const panel = widget.querySelector('.ai-tutor-panel');
- const chat = widget.querySelector('.ai-tutor-chat');
- const input = widget.querySelector('.ai-tutor-input');
- const sendBtn = widget.querySelector('.ai-tutor-send');
- toggleBtn.addEventListener('click', () => {
-  panel.hidden = !panel.hidden;
-  if(!panel.hidden) { input.focus(); quizSound.pop(); }
- });
- async function sendMsg() {
-  const q = input.value.trim();
-  if(!q) return;
-  input.value = '';
-  sendBtn.disabled = true;
-  const userBubble = document.createElement('div');
-  userBubble.className = 'ai-tutor-bubble user';
-  userBubble.textContent = q;
-  chat.append(userBubble);
-  const aiBubble = document.createElement('div');
-  aiBubble.className = 'ai-tutor-bubble ai loading';
-  aiBubble.textContent = '⏳ Đang hỏi AI…';
-  chat.append(aiBubble);
-  chat.scrollTop = chat.scrollHeight;
-  const token = getToken ? getToken() : null;
-  const ans = await askAiFollowup(question, q, token);
-  aiBubble.className = 'ai-tutor-bubble ai';
-  aiBubble.textContent = ans;
-  chat.scrollTop = chat.scrollHeight;
-  sendBtn.disabled = false;
-  input.focus();
-  quizSound.pop();
- }
- sendBtn.addEventListener('click', sendMsg);
- input.addEventListener('keydown', e => { if(e.key === 'Enter') sendMsg(); });
-}
 
 window.addEventListener("beforeunload", (e) => {
   if (session && !session.done) {
