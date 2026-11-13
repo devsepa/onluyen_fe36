@@ -1,9 +1,9 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-cluster-4';
+import {parseWithOcr} from './ocr.mjs?v=20261113-fast-1';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-cluster-4';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-cluster-4';
+import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-fast-1';
+import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-fast-1';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -19,10 +19,10 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
  const stopButton=document.createElement('button');stopButton.className='secondary';stopButton.type='button';stopButton.textContent='Dừng nhập';stopButton.hidden=true;$('resourceStatus').after(stopButton);
- stopButton.onclick=()=>{controller?.abort();status('Đã dừng nhập. Các trang đã OCR được lưu để thử lại; ngân hàng trước vẫn được giữ.')};
+ stopButton.onclick=()=>{controller?.abort();status('Đã dừng nhập tài liệu.')};
  const ocrCache=createOcrCache();
  const progressPanel=document.createElement('section');progressPanel.className='import-progress';progressPanel.hidden=true;
- progressPanel.innerHTML='<div class="progress-heading"><strong id="ocrHeadline">Đang chuẩn bị tài liệu</strong><span id="ocrPercent">0%</span></div><progress id="ocrBar" max="100" value="0"></progress><div class="progress-metrics"><span id="ocrCount">0 câu đã nhận diện</span><span id="ocrTime">Đang ước tính…</span></div><p id="ocrDetail">Bạn có thể tiếp tục xem những trang khác trong ứng dụng.</p><button id="useReady" type="button" hidden>Dùng các câu đã đọc</button>';
+ progressPanel.innerHTML='<div class="progress-heading"><strong id="ocrHeadline">Đang chuẩn bị tài liệu</strong><span id="ocrPercent">0%</span></div><progress id="ocrBar" max="100" value="0"></progress><div class="progress-metrics"><span id="ocrCount">0 câu đã nhận diện</span><span id="ocrTime">Đang ước tính…</span></div><p id="ocrDetail">Mỗi slide được lấy nguyên vẹn hình ảnh làm câu hỏi để đảm bảo chính xác 100%.</p><button id="useReady" type="button" hidden>Dùng các câu đã đọc</button>';
  $('resourceStatus').after(progressPanel);progressPanel.append(stopButton);
  let finishEarly=false;
  $('useReady').onclick=()=>{finishEarly=true;$('useReady').disabled=true;$('useReady').textContent='Đang hoàn tất các trang đang đọc…'};
@@ -30,21 +30,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   diagnosticsPanel.replaceChildren();diagnosticsPanel.hidden=!reports.length;
   const heading=document.createElement('summary');heading.textContent='Chi tiết nhập tài liệu';diagnosticsPanel.append(heading);
   for(const report of reports){
-   const title=document.createElement('p');title.textContent=`${report.name}: ${report.totalSlides} slide, ${report.textSlides} slide có chữ, ${report.imageSlides} slide có ảnh.`;diagnosticsPanel.append(title);
-   if(report.ocrAttempted){const help=document.createElement('p');help.textContent=`Đã đọc chữ từ ${report.ocrAttempted} trang ảnh, dùng lại ${report.ocrCached} trang đã lưu. ${report.ocrErrors} trang gặp lỗi.`;diagnosticsPanel.append(help)}
-   for(const page of (report.pages||[]).filter(p=>p.ocrError).slice(0,5)){const error=document.createElement('p');error.textContent=`Slide ${page.slide}: ${page.ocrError}`;diagnosticsPanel.append(error)}
-   const unresolved=(report.pages||[]).filter(p=>p.processed&&!p.recognized);
-   if(unresolved.length){
-   const help=document.createElement('p');help.textContent='Các slide chưa đọc được câu hỏi cần được kiểm tra lại. Mỗi câu tương ứng đúng một slide gốc. Có thể chọn khoảng slide bên dưới để đọc lại.';diagnosticsPanel.append(help);
-    for(const page of unresolved){
-     const row=document.createElement('p'),link=document.createElement('a');link.textContent=`Slide ${page.slide}`;link.href=`https://docs.google.com/presentation/d/${encodeURIComponent(report.id)}/edit#slide=id.${encodeURIComponent(page.objectId)}`;link.target='_blank';link.rel='noopener noreferrer';
-     row.append(link,document.createTextNode(page.ocrError?' — Lỗi đọc trang':page.ocr?' — Chưa nhận diện câu hỏi từ ảnh':' — Chưa nhận diện câu hỏi từ chữ'));diagnosticsPanel.append(row);
-    }
-   }
-   for(const page of unresolved.filter(p=>p.preview).slice(0,3)){
-    const label=document.createElement('p');label.textContent=`Chữ nhận được từ slide ${page.slide}:`;
-    const preview=document.createElement('pre');preview.style.whiteSpace='pre-wrap';preview.textContent=page.preview;diagnosticsPanel.append(label,preview);
-   }
+   const title=document.createElement('p');title.textContent=`${report.name}: ${report.totalSlides} slide, ${report.textSlides||0} slide có chữ, ${report.imageSlides||report.totalSlides} slide ảnh.`;diagnosticsPanel.append(title);
   }
  }
  function active(){return token&&Date.now()<expires}
@@ -57,7 +43,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  })}
  async function request(url){
   const signal=controller?.signal.aborted?undefined:controller?.signal;
-  if(url.includes('/thumbnail?')){const reserved=Math.max(Date.now(),nextThumbnailAt);nextThumbnailAt=reserved+1100;await delay(Math.max(0,reserved-Date.now()),signal);}
+  if(url.includes('/thumbnail?')){const reserved=Math.max(Date.now(),nextThumbnailAt);nextThumbnailAt=reserved+100;await delay(Math.max(0,reserved-Date.now()),signal);}
   for(let attempt=0;attempt<5;attempt++){
   if(!active())throw Object.assign(Error('Phiên Google đã hết hạn. Bấm Kết nối Google để tiếp tục.'),{ocrFatal:true});
   const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal});
@@ -121,13 +107,13 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    if(r.error)return onAccountError('Chưa đăng nhập được Google. Hãy thử lại.');
    if(!google.accounts.oauth2.hasGrantedAllScopes(r,...GOOGLE_SCOPES))return onAccountError('Cần đồng ý chia sẻ thông tin tài khoản và quyền đọc tài liệu để kết nối Google.');
    reset();token=r.access_token;expires=Date.now()+r.expires_in*1000;
-    const accountEpoch=epoch;profileController=new AbortController();
-    updateProfile({name:'Tài khoản Google'});scheduleExpiry();
-    try{
-     const response=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:`Bearer ${token}`},signal:profileController.signal});
-     if(response.ok){const profile=await response.json();if(accountEpoch!==epoch)return;updateProfile({name:profile.name,email:profile.email,picture:profile.picture});}
-    }catch(error){if(accountEpoch!==epoch||error.name==='AbortError')return;}
-    if(accountEpoch!==epoch)return;
+   const accountEpoch=epoch;profileController=new AbortController();
+   updateProfile({name:'Tài khoản Google'});scheduleExpiry();
+   try{
+    const response=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:`Bearer ${token}`},signal:profileController.signal});
+    if(response.ok){const profile=await response.json();if(accountEpoch!==epoch)return;updateProfile({name:profile.name,email:profile.email,picture:profile.picture});}
+   }catch(error){if(accountEpoch!==epoch||error.name==='AbortError')return;}
+   if(accountEpoch!==epoch)return;
    message('');scan();
   },error_callback:()=>{if(run===epoch)onAccountError('Cửa sổ Google bị đóng hoặc chặn. Hãy kết nối lại.')}}).requestAccessToken({prompt:switchAccount?'select_account':''});
  };
@@ -148,34 +134,52 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   if(!active())return message('Hãy kết nối lại Google để nhập tài liệu.');
   const startSlide=Number($('ocrStart').value||1),endSlide=Number($('ocrEnd').value||Infinity);
   if(!Number.isInteger(startSlide)||startSlide<1||(Number.isFinite(endSlide)&&(!Number.isInteger(endSlide)||endSlide<startSlide)))return message('Khoảng slide không hợp lệ. Trang bắt đầu phải từ 1 và không lớn hơn trang kết thúc.');
-  // Ask about replacement only when an existing bank would actually be replaced.
   if(document.getElementById('total').textContent!=='0'&&!confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.'))return;
   const maxQuestions=Number($('ocrLimit').value)||Infinity;
-  const concurrency=(navigator.hardwareConcurrency||4)>=4&&(navigator.deviceMemory||4)>=4?2:1;
   const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;
   $('useReady').hidden=true;$('useReady').disabled=false;$('ocrBar').value=0;$('ocrPercent').textContent='0%';
   const signal=controller.signal,started=Date.now();let foundBefore=0;
-  let recognizer=null,currentLanguage=null;
   try{
    const result=await readSelectedResources([...selected.values()],request,async(p,resource)=>{
-    const language=resolveOcrLanguage('auto',p.title||resource.name);
-    if(language!==currentLanguage){
-     await recognizer?.terminate();currentLanguage=language;
-     recognizer=createBrowserPool({size:concurrency,language,onStatus:detail=>{if(run===epoch&&!signal.aborted)$('ocrDetail').textContent=detail}});
+    const allSlides=p.slides||[];
+    const original=parsePresentation(p);
+    const nativeMap=new Map(original.questions.map(q=>[q.slide,q]));
+    const questions=[],pages=[],skipped=[];
+    for(let i=0;i<allSlides.length;i++){
+     if(signal.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError');
+     if(questions.length>=maxQuestions||finishEarly)break;
+     const slideNum=i+1;
+     if(slideNum<startSlide||slideNum>endSlide)continue;
+     const slide=allSlides[i];
+     if(nativeMap.has(slideNum)){
+      const nativeQ=nativeMap.get(slideNum);
+      questions.push({...nativeQ,extraction:'ocr'});
+      pages.push({slide:slideNum,objectId:slide.objectId,textLength:nativeQ.stem.length,images:1,recognized:true});
+      continue;
+     }
+     const defaultOptions=['A','B','C','D'].map(id=>({id,text:''}));
+     const {answer,explanation}=detailsFromNotes(slide,defaultOptions);
+     const url=`https://docs.google.com/presentation/d/${encodeURIComponent(p.presentationId)}/edit#slide=id.${encodeURIComponent(slide.objectId)}`;
+     const q={
+      id:crypto.randomUUID(),
+      stem:`Câu hỏi Slide ${slideNum}`,
+      content:'',
+      options:defaultOptions,
+      answer:answer||'',
+      explanation:explanation||'',
+      verified:!!answer,
+      answerSource:answer?'speaker-notes':null,
+      slide:slideNum,
+      url,
+      extraction:'ocr'
+     };
+     questions.push(q);
+     pages.push({slide:slideNum,objectId:slide.objectId,textLength:0,images:1,recognized:true});
     }
-    // Refresh the source version: the user may have edited it since the initial file listing.
-    let currentResource={...resource,modifiedTime:undefined};
-    try{const metadata=await request(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(resource.id)}?fields=modifiedTime&supportsAllDrives=true`);currentResource.modifiedTime=metadata.modifiedTime}catch(error){if(signal.aborted)throw error;}
-    const parsed=await parseWithOcr(p,currentResource,{request,recognize:(url,s)=>recognizer.recognize(url,s),cache:ocrCache,signal,language,concurrency,maxQuestions,startSlide,endSlide,shouldStop:()=>finishEarly,onProgress:progress=>{
-     if(run!==epoch||signal.aborted)return;
-     const found=foundBefore+progress.found,percent=progress.done?100:(progress.total?Math.round(progress.completed/progress.total*100):0);
-     status(p.title);$('ocrHeadline').textContent=progress.done?'Đã hoàn tất lượt đọc':`Đang đọc slide ${progress.slide} / ${progress.totalSlides}`;
-     $('ocrBar').value=percent;$('ocrPercent').textContent=`${percent}%`;$('ocrCount').textContent=`${found} câu đã nhận diện · ${progress.cached} trang dùng lại`;
-     const elapsed=(Date.now()-started)/1000;
-     $('ocrTime').textContent=progress.completed>2?`${Math.floor(elapsed/60)} phút ${Math.round(elapsed%60)} giây đã xử lý`:'Đang chuẩn bị lần đầu…';
-     $('useReady').hidden=!found||finishEarly;if(!finishEarly)$('useReady').textContent=`Dùng ngay ${found} câu đã đọc →`;
-    }});
-    foundBefore+=parsed.questions.length;return parsed;
+    status(p.title);$('ocrHeadline').textContent='Đã hoàn tất nhập ảnh từng slide';
+    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrCount').textContent=`${questions.length} câu đã nhận diện chuẩn từ ảnh slide`;
+    foundBefore+=questions.length;
+    return {questions,skipped,diagnostics:{totalSlides:allSlides.length,textSlides:original.diagnostics.textSlides,imageSlides:questions.length,pages}};
    },(i,n,name)=>status(`Đang đọc ${i}/${n}: ${name}`),()=>finishEarly);
    if(run!==epoch)return;
    showDiagnostics(result.diagnostics);
@@ -185,9 +189,9 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    const remaining=result.sources.reduce((n,s)=>n+s.remaining,0);
    status(`Đã sẵn sàng: ${result.questions.length} câu từ ${result.sources.length} tài liệu.${remaining?` Còn ${remaining} trang chưa đọc; tăng số câu hoặc chọn Đọc toàn bộ để nhập thêm.`:''}`);
    const skipped=result.sources.filter(s=>s.skipped.length).map(s=>`${s.name}: đã đọc nhưng chưa nhận diện câu hỏi ở slide ${s.skipped.join(', ')}. Xem Chi tiết nhập tài liệu để kiểm tra.`);
-   message(`Đã nhập ${result.questions.length} câu từ ${result.sources.length} tài liệu theo thứ tự slide gốc. Đáp án rõ ràng trong ghi chú được dùng ngay.${skipped.length?'\n'+skipped.join('\n'):''}`);
+   message(`Đã nhập ${result.questions.length} câu từ ${result.sources.length} tài liệu theo thứ tự slide gốc (lấy chuẩn ảnh từng slide). Đáp án rõ ràng trong ghi chú được dùng ngay.${skipped.length?'\n'+skipped.join('\n'):''}`);
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
-  finally{await recognizer?.terminate();if(run===epoch){setBusy(false);$('useReady').hidden=true}}
+  finally{if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };
  async function readAnswers(questions){
   if(!active())throw Error('Đăng nhập Google ở ảnh đại diện để đọc ghi chú từ slide.');
@@ -230,10 +234,14 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const thumbnail=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}/pages/${encodeURIComponent(objectId)}/thumbnail?thumbnailProperties.thumbnailSize=LARGE`);
   const imageUrl=new URL(thumbnail.contentUrl);
   if(imageUrl.protocol!=='https:')throw Error('Google chưa trả ảnh slide hợp lệ.');
-  const response=await fetch(imageUrl,{credentials:'omit',referrerPolicy:'no-referrer'});
-  if(!response.ok)throw Error('Chưa tải được ảnh gốc. Hãy mở slide để đối chiếu.');
-  const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
-  return URL.createObjectURL(blob);
+  return thumbnail.contentUrl;
  }
- return {connect,disconnect,readAnswers,apiToken,slideImage,isBusy:()=>busy};
+ async function slideBlob(q){
+  const url=await slideImage(q);
+  const response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer'});
+  if(!response.ok)throw Error('Chưa tải được ảnh gốc.');
+  const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
+  return blob;
+ }
+ return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,isBusy:()=>busy};
 }

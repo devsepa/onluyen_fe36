@@ -28,9 +28,7 @@ export function cleanSlideContent(value){
   if(!t)return false;
   if(/^(?:[©®@•📍\s|/\\_~-]*|F\s*O\s*R\s*U|LEARN\s+TO\s+KNOW|NINH)$/i.test(t))return true;
   if(/^(?:M[O0]\s*[|/\\:_-]*)$/i.test(t))return true;
-  if(/(?:beomui|msmesor|mesor|semester|semeter|sever_\d|server_\d|bu[oóe]n\s*sour)/i.test(t)&&!/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(t))return true;
-  if(/[Ññ]/.test(t)&&/[ĂÂÊÔƠƯăâêôơưỐỚẾẤ]/.test(t))return true;
-  if(/^\d{1,3}$/.test(t))return true;
+  if(/^(?:beomui\w*|msmesor\w*)\b/i.test(t)&&/[Ññ]/.test(t)&&/[ĂÂÊÔƠƯăâêôơưỐỚẾẤ]/.test(t))return true;
   if(/^[\s|/\\_~•©®📍-]{1,4}$/.test(t))return true;
   return false;
  };
@@ -39,14 +37,22 @@ export function cleanSlideContent(value){
 }
 export function normalizeChoices(choiceList=[]){
  if(!Array.isArray(choiceList)||!choiceList.length)return ['A','B','C','D'].map(id=>({id,text:''}));
- const maxCode=choiceList.reduce((max,o)=>Math.max(max,String(o.id||'').charCodeAt(0)||65),68);
+ const valid=choiceList.filter(o=>/^[A-H]$/.test(o.id));
+ if(valid.some(o=>typeof o.text==='string'&&o.text.trim()))return [...new Map(valid.map(o=>[o.id,o])).values()].sort((a,b)=>a.id.localeCompare(b.id));
+ const maxCode=valid.reduce((max,o)=>Math.max(max,o.id.charCodeAt(0)),68);
  const result=[];
  for(let c=65;c<=maxCode;c++){
   const id=String.fromCharCode(c);
-  const existing=choiceList.find(o=>o.id===id);
+  const existing=valid.find(o=>o.id===id);
   result.push(existing||{id,text:''});
  }
  return result;
+}
+export function updateQuestionContent(question,value){
+ const content=cleanSlideContent(value),parts=optionParts(content);
+ if(!content)throw Error('Nội dung câu hỏi không được để trống.');
+ if(!parts&&question.options.some(o=>o.text?.trim()))throw Error('Giữ đầy đủ các nhãn A., B., C., D. cùng nội dung lựa chọn khi sửa đề.');
+ return {...question,...(parts||{stem:content}),content};
 }
 export function cleanQuestion(q){
  const options=normalizeChoices(q.options);

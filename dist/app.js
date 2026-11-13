@@ -1,11 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-cluster-4';
-import {setupResources} from './resources-ui.js?v=20261113-cluster-4';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-fast-1';
+import {setupResources} from './resources-ui.js?v=20261113-fast-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-cluster-4';
-import {setupAccount} from './account-ui.js?v=20261113-cluster-4';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-cluster-4';
-import {solveBatch,applyAiResults,readyForPractice} from './ai.mjs?v=20261113-cluster-4';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-cluster-4';
+import {validateBank} from './banks.mjs?v=20261113-fast-1';
+import {setupAccount} from './account-ui.js?v=20261113-fast-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-fast-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini} from './ai.mjs?v=20261113-fast-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-fast-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-fast-1';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -38,6 +39,8 @@ function sourceReference(q,compact=false){
 }
 function refreshStats(){$('total').textContent=bank.length;$('ready').textContent=bank.filter(readyForPractice).length;$('navQuestionCount').textContent=bank.length}
 function aiBadge(q){return q.answerSource==='gemini'?'<span class="tag ai-answer-label">✦ Đáp án AI gợi ý</span>':''}
+function hasAiText(q){return q.stem?.trim()&&q.options.length>=2&&q.options.every(o=>typeof o.text==='string'&&o.text.trim())}
+const slideImages=createSlideImageStore(q=>resources.slideImage(q));window.addEventListener('pagehide',()=>slideImages.clear());
 function displayContent(q){
  if(q.content)return q.content;
  if(q.options&&q.options.some(o=>o.text&&o.text.trim())){
@@ -67,7 +70,7 @@ document.addEventListener('click',event=>{const action=event.target.closest('[da
 const account=setupAccount({onConnect:options=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi đổi tài khoản Google.');
  resources.connect(options);
-},onDisconnect:()=>{aiController?.abort();resources.disconnect()}});
+},onDisconnect:()=>{aiController?.abort();slideImages.clear();resources.disconnect()}});
 const resources=setupResources({onAccountChange:profile=>{
  account.update(profile);$('sourceAccessNotice').hidden=!!profile;$('sourceControls').hidden=!profile;
  if(profile)setTimeout(scheduleAutoAi,0);
@@ -79,27 +82,21 @@ const resources=setupResources({onAccountChange:profile=>{
 setupSlidePreview({getQuestion:id=>bank.find(q=>q.id===id)||session?.questions.find(q=>q.id===id)||lastResult?.questions.find(q=>q.id===id),getImage:q=>resources.slideImage(q)});
 
 function filteredQuestions(){const term=$('search').value.trim().toLowerCase(),source=$('sourceFilter').value;return bank.filter(q=>(!source||q.sourceId===source)&&(!$('unverified').checked||!q.verified)&&q.stem.toLowerCase().includes(term))}
+async function showQuestionImage(container,q){
+ if(!container?.isConnected||!q.url)return;
+ const text=container.parentElement?.querySelector('.question-title');
+ if(q.extraction==='ocr')text?.classList.add('collapsed-text');
+ container.replaceChildren();const loading=document.createElement('div');loading.className='slide-media-loading';loading.textContent='Đang tải ảnh slide gốc…';container.append(loading);
+ try{
+  const url=await slideImages.get(q);if(!container.isConnected)return;
+  const image=document.createElement('img');image.alt='Slide '+q.slide;image.className=container.classList.contains('library-slide-media')?'library-slide-img':'slide-media-img';image.dataset.previewSlide=q.id;image.title='Bấm để phóng to ảnh gốc';
+  image.onload=()=>{if(container.isConnected&&q.extraction==='ocr')text?.classList.add('collapsed-text')};
+  image.onerror=()=>{slideImages.invalidate(q.url);container.replaceChildren();text?.classList.remove('collapsed-text')};
+  image.src=url;container.replaceChildren(image);
+ }catch{if(container.isConnected){container.replaceChildren();text?.classList.remove('collapsed-text')}}
+}
 async function loadLibrarySlideImages(qs){
- for(const q of qs){
-  const container=document.querySelector(`.library-slide-media[data-lib-slide="${CSS.escape(q.id)}"]`);
-  if(!container||!q.url)continue;
-  if(slideImgCache.has(q.id)){
-   const url=slideImgCache.get(q.id);
-   container.innerHTML=`<img src="${url}" alt="Slide ${q.slide}" class="library-slide-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to">`;
-   continue;
-  }
-  try{
-   container.innerHTML=`<div class="slide-media-loading" style="padding:10px;font-size:11px">Đang tải ảnh slide ${q.slide}…</div>`;
-   const url=await resources.slideImage(q);
-   slideImgCache.set(q.id,url);
-   const current=document.querySelector(`.library-slide-media[data-lib-slide="${CSS.escape(q.id)}"]`);
-   if(current)current.innerHTML=`<img src="${url}" alt="Slide ${q.slide}" class="library-slide-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to">`;
-  }catch{
-   container.remove();
-   const card=document.querySelector(`[data-lib-slide="${CSS.escape(q.id)}"]`)?.closest('.question-card')||container.closest('.question-card');
-   card?.querySelector('.question-title')?.classList.remove('collapsed-text');
-  }
- }
+ for(const q of qs){const container=document.querySelector('.library-slide-media[data-lib-slide="'+CSS.escape(q.id)+'"]');if(!container?.isConnected)continue;await showQuestionImage(container,q)}
 }
 function renderLibrary(){
  refreshStats();$('source').textContent=bank.length?(sourceSummary||`${sources().length} tài liệu đã nhập`):'Bắt đầu từ tài liệu Google Slides của bạn.';
@@ -108,7 +105,7 @@ function renderLibrary(){
  $('questionCount').textContent=`${all.length} câu hỏi${all.length?` · Hiển thị ${(page-1)*pageSize+1}–${Math.min(page*pageSize,all.length)}`:''}`;
  $('exportBank').disabled=!bank.length;$('verifyPage').disabled=!qs.some(q=>q.answer&&!q.verified);$('clear').disabled=!bank.length||aiRunning;
  renderAi();
- $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.answerSource==='gemini'?'✦ Đáp án AI gợi ý':q.verified?(q.answerSource==='speaker-notes'?'✓ Đáp án từ ghi chú':'✓ Đáp án đã xác nhận'):'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.extraction==='ocr'?'collapsed-text':''}">${esc(displayContent(q))}</div>${q.extraction==='ocr'?`<button type="button" class="text-button toggle-text-btn" data-toggle-text="${esc(q.id)}">Hiển thị / ẩn văn bản OCR ▾</button>`:''}<div class="choice-pills choice-pills-sm">${q.options.map(o=>`<span class="choice-pill static-pill ${q.answer.includes(o.id)?'correct':''}">${esc(o.id)}</span>`).join('')}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer||'Chưa có')}</strong></span></div>${q.answerSource==='gemini'&&q.explanation?`<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>`:''}${q.explanation&&q.answerSource!=='gemini'?`<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>`:''}${q.aiStatus==='uncertain'?`<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>`:''}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button>${q.extraction==='ocr'?`<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>`:''}<button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
+ $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.answerSource==='gemini'?'✦ Đáp án AI gợi ý':q.verified?(q.answerSource==='speaker-notes'?'✓ Đáp án từ ghi chú':'✓ Đáp án đã xác nhận'):'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title">${esc(displayContent(q))}</div>${q.extraction==='ocr'?`<button type="button" class="text-button toggle-text-btn" data-toggle-text="${esc(q.id)}">Hiển thị / ẩn văn bản OCR ▾</button>`:''}<div class="choice-pills choice-pills-sm">${q.options.map(o=>`<span class="choice-pill static-pill ${q.answer.includes(o.id)?'correct':''}">${esc(o.id)}</span>`).join('')}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer||'Chưa có')}</strong></span></div>${q.answerSource==='gemini'&&q.explanation?`<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>`:''}${q.explanation&&q.answerSource!=='gemini'?`<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>`:''}${q.aiStatus==='uncertain'?`<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>`:''}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button>${q.extraction==='ocr'?`<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>`:''}<button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
  $('pagination').innerHTML=all.length?`<button class="secondary" data-page="${page-1}" ${page===1?'disabled':''}>← Trước</button><span>Trang ${page} / ${pages}</span><button class="secondary" data-page="${page+1}" ${page===pages?'disabled':''}>Sau →</button>`:'';
  setTimeout(()=>loadLibrarySlideImages(qs),0);
 }
@@ -138,7 +135,7 @@ function scheduleAutoAi(){
  autoAiTimer=setTimeout(()=>{
   if(!autoAi||aiRunning||!AI_API_BASE||session&&!session.done)return;
   if(resources.isBusy()){autoAiTimer=setTimeout(scheduleAutoAi,500);return}
-  const missing=bank.filter(q=>!q.answer);if(!missing.length)return;
+  const missing=bank.filter(q=>!q.answer&&hasAiText(q));if(!missing.length)return;
   try{resources.apiToken()}catch{return}
   const signature=JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
   try{if(sessionStorage.getItem('sot-ai-auto-attempt')===signature)return;sessionStorage.setItem('sot-ai-auto-attempt',signature)}catch{}
@@ -147,10 +144,10 @@ function scheduleAutoAi(){
 }
 function questionAutoKey(q){return q.stem+'\n'+q.options.map(o=>o.id+o.text).join('\n')}
 function renderAi(){
- const missing=bank.filter(q=>!q.answer).length,proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified).length;
- $('aiStart').disabled=aiRunning||!missing||!AI_API_BASE;$('aiStart').hidden=aiRunning;$('aiStop').hidden=!aiRunning;
+ const missing=bank.filter(q=>!q.answer).length,proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified).length,incomplete=bank.filter(q=>!q.answer&&!hasAiText(q)).length;
+ $('aiStart').disabled=aiRunning||missing===incomplete||!AI_API_BASE;$('aiStart').hidden=aiRunning;$('aiStop').hidden=!aiRunning;
  $('aiAccept').hidden=!proposed;$('aiAccept').disabled=aiRunning;
- $('aiAvailability').textContent=AI_API_BASE?`${missing} câu thiếu đáp án · ${proposed} đáp án AI gợi ý có thể dùng. Xử lý toàn bộ ngân hàng, mỗi lượt 5 câu; tiến độ được lưu sau từng lượt.`:'Tính năng AI đang được chuẩn bị. Bạn vẫn có thể lấy đáp án từ ghi chú và ôn luyện bình thường.';
+ $('aiAvailability').textContent=AI_API_BASE?`${missing} câu thiếu đáp án · ${proposed} đáp án AI gợi ý có thể dùng. ${incomplete?`${incomplete} câu chưa đọc được đầy đủ lựa chọn: cần đối chiếu ảnh hoặc sửa nội dung trước khi gửi AI. `:''}Xử lý mỗi lượt 5 câu; tiến độ được lưu sau từng lượt.`:'Tính năng AI đang được chuẩn bị. Bạn vẫn có thể lấy đáp án từ ghi chú và ôn luyện bình thường.';
 }
 $('aiStop').onclick=()=>{setAutoAi(false);$('aiProgress').textContent='Đang dừng. Các đáp án đã lưu vẫn được giữ.'};
 $('aiAccept').onclick=()=>{
@@ -177,6 +174,9 @@ async function runAi({automatic=false}={}){
    pending=pending.filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});refreshStats();renderLibrary();$('aiBar').max=pending.length||1;
    if(!pending.length){$('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú; không cần gọi AI.`;return}
   }
+  const incomplete=pending.filter(q=>!hasAiText(q)).length;pending=pending.filter(hasAiText);
+  if(!pending.length){$('aiProgress').textContent='Chưa đọc được đầy đủ lựa chọn. Hãy đối chiếu ảnh hoặc sửa đề; không gửi dữ liệu thiếu cho AI.';return}
+  $('aiBar').max=pending.length;
   while(done<pending.length){
    if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');
    const batch=pending.slice(done,done+5).filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});
@@ -188,7 +188,7 @@ async function runAi({automatic=false}={}){
    }
    done=Math.min(done+5,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();
   }
-  $('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú và lưu ${applied} đáp án AI gợi ý, có thể ôn luyện ngay. ${uncertain} câu AI chưa xác định được vẫn để trống.`;
+  $('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú và lưu ${applied} đáp án AI gợi ý, có thể ôn luyện ngay. ${uncertain} câu AI chưa xác định được vẫn để trống.${incomplete?` ${incomplete} câu thiếu lựa chọn chưa gửi AI.`:''}`;
  }catch(error){$('aiProgress').textContent=error.name==='AbortError'?`Đã dừng và giữ ${applied} đề xuất. Bấm AI bổ sung đáp án để tiếp tục các câu còn thiếu.`:`${error.message} Đã giữ ${applied} đề xuất; có thể tiếp tục sau.`}
  finally{aiRunning=false;aiController=null;renderLibrary()}
 }
@@ -208,7 +208,7 @@ notesButton.onclick=async()=>{
 $('clear').onclick=()=>{if(confirm('Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.')){bank=[];sourceSummary='';write('sot-source','');saveBank()}};
 function editQuestion(q){editing=q.id;$('editFields').innerHTML=`<label>Nội dung câu hỏi (nguyên cụm)<textarea name="stem" rows="7" required>${esc(displayContent(q))}</textarea></label><label>Đáp án đúng<input name="answer" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><label>Giải thích (tùy chọn)<textarea name="explanation" rows="3">${esc(q.explanation||'')}</textarea></label>`;$('editQuestion').showModal()}
 for(const id of ['closeEdit','cancelEdit'])$(id).onclick=()=>$('editQuestion').close();
-$('editForm').onsubmit=e=>{e.preventDefault();const q=bank.find(q=>q.id===editing);if(!q)return;const fields=new FormData(e.target),stem=String(fields.get('stem')||'').trim(),explanation=String(fields.get('explanation')||'').trim();if(!stem)return message('Nội dung câu hỏi không được để trống.');const correct=normalizeAnswer(fields.get('answer'),q.options);if(String(fields.get('answer')).trim()&&!correct)return message('Đáp án phải là các chữ cái hợp lệ, ví dụ AD hoặc ACE.');q.stem=stem;q.content=stem;q.explanation=explanation;q.answer=correct;q.answerSource='manual';q.aiStatus=null;q.verified=false;saveBank();$('editQuestion').close()};
+$('editForm').onsubmit=e=>{e.preventDefault();const q=bank.find(q=>q.id===editing);if(!q)return;const fields=new FormData(e.target),stem=String(fields.get('stem')||'').trim(),explanation=String(fields.get('explanation')||'').trim();if(!stem)return message('Nội dung câu hỏi không được để trống.');let updated;try{updated=updateQuestionContent(q,stem)}catch(error){return message(error.message)}const correct=normalizeAnswer(fields.get('answer'),updated.options);if(String(fields.get('answer')).trim()&&!correct)return message('Đáp án phải là các chữ cái hợp lệ, ví dụ AD hoặc ACE.');Object.assign(q,updated);q.explanation=explanation;q.answer=correct;q.answerSource='manual';q.aiStatus=null;q.verified=false;saveBank();$('editQuestion').close()};
 
 $('exportBank').onclick=()=>{if(!bank.length)return;const data={format:'slide-on-thi/v1',exportedAt:new Date().toISOString(),questions:bank.map(({id,stem,content,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation,answerSource,aiStatus,aiReason,aiModel})=>({id,stem,content,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation,answerSource,aiStatus,aiReason,aiModel}))};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='slide-on-thi-ngan-hang.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 for(const id of ['importBank'])$(id).onclick=()=>$('bankFile').click();
@@ -221,40 +221,24 @@ function renderPractice(){
  const pool=()=>eligible.filter(q=>!$('practiceSource').value||q.sourceId===$('practiceSource').value);
  $('practiceSource').onchange=()=>{const count=pool().length;$('poolCount').textContent=count;$('count').max=count;$('count').value=Math.min(20,count)||1;$('start').disabled=!count};
  document.querySelectorAll('[name=mode]').forEach(input=>input.onchange=()=>{preferredMode=input.value;$('timeSetting').hidden=preferredMode==='study';$('start').textContent=(preferredMode==='study'?'Bắt đầu ôn luyện':'Bắt đầu thi thử')+' →'});
- $('start').onclick=()=>{const questions=pool(),count=Number($('count').value),mins=Number($('minutes').value);if(!Number.isInteger(count)||count<1||count>questions.length||(preferredMode==='exam'&&(!Number.isInteger(mins)||mins<1||mins>180)))return message('Kiểm tra lại số câu và thời gian.');session={mode:preferredMode,questions:shuffle(questions).slice(0,count).map(q=>({...q,options:[...q.options]})),answers:{},flags:[],current:0,started:Date.now(),deadline:preferredMode==='exam'?Date.now()+mins*60000:null,done:false};write('sot-session',session);message('');renderQuiz()};
+ $('start').onclick=()=>{const questions=pool(),count=Number($('count').value),mins=Number($('minutes').value);if(!Number.isInteger(count)||count<1||count>questions.length||(preferredMode==='exam'&&(!Number.isInteger(mins)||mins<1||mins>180)))return message('Kiểm tra lại số câu và thời gian.');session={mode:preferredMode,questions:shuffle(questions).slice(0,count).map(q=>({...q,options:[...q.options]})),answers:{},flags:[],current:0,started:Date.now(),deadline:preferredMode==='exam'?Date.now()+mins*60000:null,done:false};write('sot-session',session);message('');renderQuiz();for(let i=0;i<Math.min(5,session.questions.length);i++)slideImages.get(session.questions[i]).catch(()=>{});};
 }
 function noteExplanation(q){return q.explanation?`<div class="note-explanation"><b>${q.answerSource==='gemini'?'Giải thích AI · cần kiểm tra':'Giải thích từ ghi chú'}</b><p>${esc(q.explanation)}</p></div>`:""}
-const slideImgCache=new Map();
-async function loadQuizSlideImage(q){
- const container=document.querySelector(`.slide-media-container[data-slide-q="${CSS.escape(q.id)}"]`);
- if(!container||!q.url)return;
- if(slideImgCache.has(q.id)){
-  const url=slideImgCache.get(q.id);
-  container.innerHTML=`<div class="slide-media-box"><img src="${url}" alt="Slide ${q.slide}" class="slide-media-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to ảnh slide"></div>`;
-  if(q.extraction==='ocr')container.parentElement?.querySelector('.question-title')?.classList.add('collapsed-text');
-  return;
- }
- try{
-  container.innerHTML=`<div class="slide-media-loading">Đang tải ảnh slide gốc nét chuẩn…</div>`;
-  const url=await resources.slideImage(q);
-  slideImgCache.set(q.id,url);
-  const current=document.querySelector(`.slide-media-container[data-slide-q="${CSS.escape(q.id)}"]`);
-  if(current){
-   current.innerHTML=`<div class="slide-media-box"><img src="${url}" alt="Slide ${q.slide}" class="slide-media-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to ảnh slide"></div>`;
-   if(q.extraction==='ocr')current.parentElement?.querySelector('.question-title')?.classList.add('collapsed-text');
-  }
- }catch(err){
-  container.innerHTML='';
- }
-}
+async function loadQuizSlideImage(q){const container=document.querySelector('.slide-media-container[data-slide-q="'+CSS.escape(q.id)+'"]');await showQuestionImage(container,q)}
 function renderQuiz(){
  const study=session.mode==='study',qs=session.questions;session.current=Math.max(0,Math.min(session.current||0,qs.length-1));const q=qs[session.current],answered=session.answers[q.id],multiple=q.answer.length>1;
  document.body.classList.toggle('exam-active',!study);pageHeading.hidden=true;
- $('practice').innerHTML=`<div class="quiz-head"><div><span class="overline">${study?'ÔN LUYỆN':'THI THỬ'} · ${qs.length} CÂU HỎI</span><h2>${study?'Ôn luyện':'Thi thử'}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study?'Thời gian đã học':'Thời gian còn lại'}</small><div class="timer" id="timer"></div></div><button id="submit">${study?'Kết thúc buổi học':'Nộp bài'} ↗</button></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="question-top"><span>CÂU ${session.current+1} / ${qs.length}</span><label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id)?'checked':''}> Đánh dấu xem lại</label></div>${sourceReference(q,true)}${aiBadge(q)}${multiple?'<p class="multi-hint">Chọn tất cả đáp án đúng.'+(study?' Bấm Kiểm tra sau khi chọn xong.':' Có thể thay đổi lựa chọn trước khi nộp bài.')+'</p>':''}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title">${esc(displayContent(q))}</div>${q.extraction==='ocr'?`<button type="button" class="text-button toggle-text-btn" data-toggle-text="${esc(q.id)}">Hiển thị / ẩn văn bản OCR ▾</button>`:''}<div class="choice-pills">${q.options.map((o,i)=>`<button class="choice-pill ${optionState(session,q,o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered||session.drafts?.[q.id]||'').includes(o.id)}" ${study&&answered?'disabled':''}>${esc(o.id)}</button>`).join('')}</div>${q.extraction==='ocr'?`<button class="secondary source-image-check" data-preview-slide="${esc(q.id)}">Phóng to ảnh gốc 🔍</button>`:''}${study&&multiple&&!answered?`<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id]?'disabled':''}>Kiểm tra đáp án</button>`:''}${study&&answered?`<div class="feedback ${isCorrect(q,answered)?'right':'incorrect'}" role="status">${isCorrect(q,answered)?'✓ Chính xác. Bạn đã nắm được câu này!':'✕ Chưa đúng. Cùng ghi nhớ đáp án nhé.'}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>`:''}</article><div class="quiz-controls"><button class="secondary" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><button data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study?'Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra.':'Bạn có thể quay lại và thay đổi đáp án.'}</p><div class="quiz-navigation">${qs.map((item,i)=>`<button data-index="${i}" class="${session.current===i?'current ':''}${session.answers[item.id]?'answered ':''}${session.flags.includes(item.id)?'flagged':''}" aria-label="Đến câu ${i+1}" ${session.current===i?'aria-current="step"':''}>${i+1}</button>`).join('')}</div><div class="quiz-legend"><span>■</span> Đã trả lời &nbsp; □ Chưa trả lời<br><span style="color:#e2bb7a">━</span> Đánh dấu xem lại</div></aside></div>`;
+ $('practice').innerHTML=`<div class="quiz-head"><div><span class="overline">${study?'ÔN LUYỆN':'THI THỬ'} · ${qs.length} CÂU HỎI</span><h2>${study?'Ôn luyện':'Thi thử'}</h2><small id="progress"></small></div><div class="quiz-clock"><small>${study?'Thời gian đã học':'Thời gian còn lại'}</small><div class="timer" id="timer"></div></div><button id="submit">${study?'Kết thúc buổi học':'Nộp bài'} ↗</button></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="question-top"><span>CÂU ${session.current+1} / ${qs.length}</span><label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id)?'checked':''}> Đánh dấu xem lại</label></div>${sourceReference(q,true)}${aiBadge(q)}${multiple?'<p class="multi-hint">Chọn tất cả đáp án đúng.'+(study?' Bấm Kiểm tra sau khi chọn xong.':' Có thể thay đổi lựa chọn trước khi nộp bài.')+'</p>':''}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.extraction==='ocr'?'collapsed-text':''}">${esc(displayContent(q))}</div>${q.extraction==='ocr'?`<button type="button" class="text-button toggle-text-btn" data-toggle-text="${esc(q.id)}">Hiển thị / ẩn văn bản OCR ▾</button>`:''}<div class="choice-pills">${q.options.map((o,i)=>`<button class="choice-pill ${optionState(session,q,o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered||session.drafts?.[q.id]||'').includes(o.id)}" ${study&&answered?'disabled':''}>${esc(o.id)}</button>`).join('')}</div>${q.extraction==='ocr'?`<button class="secondary source-image-check" data-preview-slide="${esc(q.id)}">Phóng to ảnh gốc 🔍</button>`:''}${study&&multiple&&!answered?`<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id]?'disabled':''}>Kiểm tra đáp án</button>`:''}${study&&answered?`<div class="feedback ${isCorrect(q,answered)?'right':'incorrect'}" role="status">${isCorrect(q,answered)?'✓ Chính xác. Bạn đã nắm được câu này!':'✕ Chưa đúng. Cùng ghi nhớ đáp án nhé.'}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>`:''}</article><div class="quiz-controls"><button class="secondary" data-index="${session.current-1}" ${!session.current?'disabled':''}>← Câu trước</button><button data-index="${session.current+1}" ${session.current===qs.length-1?'disabled':''}>Câu tiếp theo →</button></div></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study?'Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra.':'Bạn có thể quay lại và thay đổi đáp án.'}</p><div class="quiz-navigation">${qs.map((item,i)=>`<button data-index="${i}" class="${session.current===i?'current ':''}${session.answers[item.id]?'answered ':''}${session.flags.includes(item.id)?'flagged':''}" aria-label="Đến câu ${i+1}" ${session.current===i?'aria-current="step"':''}>${i+1}</button>`).join('')}</div><div class="quiz-legend"><span>■</span> Đã trả lời &nbsp; □ Chưa trả lời<br><span style="color:#e2bb7a">━</span> Đánh dấu xem lại</div></aside></div>`;
  if($('checkMultiple'))$('checkMultiple').onclick=()=>{if(confirmQuestion(session,q.id)){write('sot-session',session);renderQuiz()}};
  $('flagCurrent').onchange=e=>{session.flags=e.target.checked?[...new Set([...session.flags,q.id])]:session.flags.filter(id=>id!==q.id);write('sot-session',session);switchView('practice')};
  $('submit').onclick=()=>{if(confirm(`${study?'Kết thúc buổi học':'Nộp bài thi'}? Bạn đã trả lời ${Object.keys(session.answers).length}/${qs.length} câu.`))finish()};updateTimer();
- setTimeout(()=>loadQuizSlideImage(q),0);
+ setTimeout(()=>{
+  loadQuizSlideImage(q);
+  for(let offset=1;offset<=3;offset++){
+   const nextQ=qs[session.current+offset];
+   if(nextQ)slideImages.get(nextQ).catch(()=>{});
+  }
+ },0);
 }
 $('practice').onclick=e=>{const toggleBtn=e.target.closest('[data-toggle-text]');if(toggleBtn){const t=toggleBtn.closest('.quiz-question')?.querySelector('.question-title');if(t)t.classList.toggle('collapsed-text');return}const indexButton=e.target.closest('[data-index]');if(indexButton&&session&&!session.done){if(session.mode!=='study'&&Date.now()>=session.deadline)return finish();session.current=Number(indexButton.dataset.index);write('sot-session',session);renderQuiz();return}const answer=e.target.closest('[data-q]');if(answer&&session&&!session.done){if(answerQuestion(session,answer.dataset.q,answer.dataset.o)){write('sot-session',session);renderQuiz()}else updateTimer()}};
 function updateTimer(){if(!session||session.done)return;const study=session.mode==='study',seconds=study?Math.max(0,Math.floor((Date.now()-session.started)/1000)):Math.max(0,Math.ceil((session.deadline-Date.now())/1000));if($('timer'))$('timer').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;if($('progress'))$('progress').textContent=`${Object.keys(session.answers).length}/${session.questions.length} câu đã trả lời${study?' · Đúng '+grade(session.questions,session.answers)+' câu':''}`;if(!study&&!seconds)finish()}

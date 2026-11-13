@@ -25,8 +25,8 @@ await evaluate(`localStorage.setItem('sot-bank',JSON.stringify(Array.from({lengt
 await sleep(400);await waitFor(`document.querySelectorAll('.question-card').length===10`);
 assert.equal(await evaluate(`document.querySelector('#questions').textContent.includes('Hoàng Hoàng Buôn Source')`),false,'old imported watermarks must be removed without re-OCR');
 assert.equal(await evaluate(`document.querySelector('#questions').textContent.includes('EXEC name_sp <parameter>; WHERE x <= 10 AND y <> 2;')`),true,'source SQL operators and placeholders must remain visible verbatim');
-assert.deepEqual(await evaluate(`[...document.querySelector('.question-card .options').children].map(o=>o.querySelector('.letter').textContent)`),['A','B','C','D']);
-assert.equal(await evaluate(`(()=>{const rows=[...document.querySelector('.question-card .options').children].map(o=>o.getBoundingClientRect());return rows.every((r,i)=>!i||r.top>=rows[i-1].bottom)})()`),true,'choices must be a vertical list on PC');
+assert.deepEqual(await evaluate(`[...document.querySelector('.question-card').querySelectorAll('.choice-pill')].map(o=>o.textContent.trim())`),['A','B','C','D']);
+assert.ok((await evaluate(`document.querySelector('.question-card .question-title').textContent`)).includes('A. WHERE\nB. HAVING\nC. ORDER BY'));
 await screenshot('library-desktop',1440,1100);
 await screenshot('library-mobile',390,844);
 assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false,'mobile library overflow');
