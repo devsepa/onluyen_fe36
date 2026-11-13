@@ -1,9 +1,6 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-fast-1';
-import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {OCR_LANGUAGES,resolveOcrLanguage} from './ocr-languages.mjs?v=20261113-fast-1';
-import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-fast-1';
+import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-fast-2';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -20,9 +17,8 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
  const stopButton=document.createElement('button');stopButton.className='secondary';stopButton.type='button';stopButton.textContent='Dừng nhập';stopButton.hidden=true;$('resourceStatus').after(stopButton);
  stopButton.onclick=()=>{controller?.abort();status('Đã dừng nhập tài liệu.')};
- const ocrCache=createOcrCache();
  const progressPanel=document.createElement('section');progressPanel.className='import-progress';progressPanel.hidden=true;
- progressPanel.innerHTML='<div class="progress-heading"><strong id="ocrHeadline">Đang chuẩn bị tài liệu</strong><span id="ocrPercent">0%</span></div><progress id="ocrBar" max="100" value="0"></progress><div class="progress-metrics"><span id="ocrCount">0 câu đã nhận diện</span><span id="ocrTime">Đang ước tính…</span></div><p id="ocrDetail">Mỗi slide được lấy nguyên vẹn hình ảnh làm câu hỏi để đảm bảo chính xác 100%.</p><button id="useReady" type="button" hidden>Dùng các câu đã đọc</button>';
+ progressPanel.innerHTML='<div class="progress-heading"><strong id="ocrHeadline">Đang chuẩn bị tài liệu</strong><span id="ocrPercent">0%</span></div><progress id="ocrBar" max="100" value="0"></progress><div class="progress-metrics"><span id="ocrCount">0 câu đã nhận diện</span><span id="ocrTime">Đang ước tính…</span></div><p id="ocrDetail">Hiển thị ảnh slide gốc, không chép lại nội dung bằng OCR. Đáp án và giải thích lấy từ ghi chú.</p><button id="useReady" type="button" hidden>Dùng các câu đã đọc</button>';
  $('resourceStatus').after(progressPanel);progressPanel.append(stopButton);
  let finishEarly=false;
  $('useReady').onclick=()=>{finishEarly=true;$('useReady').disabled=true;$('useReady').textContent='Đang hoàn tất các trang đang đọc…'};
@@ -157,8 +153,10 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
       pages.push({slide:slideNum,objectId:slide.objectId,textLength:nativeQ.stem.length,images:1,recognized:true});
       continue;
      }
-     const defaultOptions=['A','B','C','D'].map(id=>({id,text:''}));
-     const {answer,explanation}=detailsFromNotes(slide,defaultOptions);
+     const possibleOptions='ABCDEFGH'.split('').map(id=>({id,text:''}));
+     const {answer,explanation}=detailsFromNotes(slide,possibleOptions);
+     const lastLabel=Math.max(3,...[...(answer||'')].map(label=>label.charCodeAt(0)-65));
+     const defaultOptions=possibleOptions.slice(0,lastLabel+1);
      const url=`https://docs.google.com/presentation/d/${encodeURIComponent(p.presentationId)}/edit#slide=id.${encodeURIComponent(slide.objectId)}`;
      const q={
       id:crypto.randomUUID(),
@@ -177,7 +175,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
      pages.push({slide:slideNum,objectId:slide.objectId,textLength:0,images:1,recognized:true});
     }
     status(p.title);$('ocrHeadline').textContent='Đã hoàn tất nhập ảnh từng slide';
-    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrCount').textContent=`${questions.length} câu đã nhận diện chuẩn từ ảnh slide`;
+    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrCount').textContent=`${questions.length} slide đã nhập`;
     foundBefore+=questions.length;
     return {questions,skipped,diagnostics:{totalSlides:allSlides.length,textSlides:original.diagnostics.textSlides,imageSlides:questions.length,pages}};
    },(i,n,name)=>status(`Đang đọc ${i}/${n}: ${name}`),()=>finishEarly);

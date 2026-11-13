@@ -68,3 +68,5 @@ body{background:radial-gradient(ellipse at 90% 0%,color-mix(in srgb,var(--purple
   .library-slide-img{max-height:230px}
 }
 .choice-pill.selected{color:var(--accent-text)}.choice-pill.correct{background:var(--success-bg);color:var(--success)}.choice-pill.wrong{background:color-mix(in srgb,var(--red) 12%,var(--panel));color:var(--red)}
+
+.slide-load-error{padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--panel);line-height:1.6}.slide-load-error a{display:inline-block;margin:12px}.slide-media-img,.library-slide-img{max-width:100%;height:auto}
