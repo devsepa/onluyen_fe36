@@ -1,10 +1,10 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-ai-13';
-import {setupResources} from './resources-ui.js?v=20261113-ai-13';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-clean-14';
+import {setupResources} from './resources-ui.js?v=20261113-clean-14';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-ai-13';
-import {setupAccount} from './account-ui.js?v=20261113-ai-13';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-ai-13';
-import {solveBatch,applyAiResults} from './ai.mjs?v=20261113-ai-13';
+import {validateBank} from './banks.mjs?v=20261113-clean-14';
+import {setupAccount} from './account-ui.js?v=20261113-clean-14';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-clean-14';
+import {solveBatch,applyAiResults} from './ai.mjs?v=20261113-clean-14';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

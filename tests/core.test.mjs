@@ -5,7 +5,7 @@ const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{conten
 test('reads the leading answer separately from translated question and explanation',()=>{
  const note='A\n\nTùy chọn ON UPDATE CASCADE có tác dụng gì?\nA. Tự động cập nhật giá trị khóa ngoại.\nON UPDATE CASCADE giúp duy trì tính toàn vẹn tham chiếu.';
  const slide={pageElements:[shape('q','What does ON UPDATE CASCADE do?\nA. Updates the foreign key\nB. Deletes the row')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}};
- const q=parsePresentation({slides:[slide]}).questions[0];assert.equal(q.answer,'A');assert.equal(q.verified,true);assert.ok(q.explanation.startsWith('Tùy chọn'));assert.ok(q.explanation.includes('A. Tự động'));assert.ok(!q.stem.includes('Tùy chọn'));
+ const q=parsePresentation({slides:[slide]}).questions[0];assert.equal(q.answer,'A');assert.equal(q.verified,true);assert.equal(q.explanation,'');assert.ok(!q.stem.includes('Tùy chọn'));
  slide.slideProperties.notesPage.pageElements=[shape('n','A\nB')];assert.equal(parsePresentation({slides:[slide]}).questions[0].answer,'');
 });
 test('single uppercase note survives split runs and invisible direction marks',()=>{
@@ -49,10 +49,17 @@ test('reports image-only slides and unrecognized text without inventing question
  assert.equal(r.questions.length,0);assert.equal(r.diagnostics.totalSlides,3);assert.equal(r.diagnostics.textSlides,1);assert.equal(r.diagnostics.imageSlides,2);assert.equal(r.diagnostics.pages[1].preview,'Introduction');
 });
 test('removes the source watermark and its icon from an option without altering the answer text',()=>{
- for(const footer of ['© Hoàng Hoàng Buôn Source','@ Hoang Hoang Buon Source','Hoàng Hoàng Buén Source','📍 Hoàng Hoàng Buôn Source']){
+ for(const footer of ['© Hoàng Hoàng Buôn Source','@ Hoang Hoang Buon Source','Hoàng Hoàng Buén Source','📍 Hoàng Hoàng Buôn Source','© Hoàng Hoàng Buén Sourge','© H0ang Hoang Buon S0urce','Hoang Hoang Buon Sourcc','Hoàng\nHoàng Buôn Source']){
   const r=parsePresentation({slides:[{pageElements:[shape('q',`Question?\nA. First\nB. Second\nC. Third\nD. Enhanced data security\n${footer}`)]}]});
   assert.equal(r.questions[0].options[3].text,'Enhanced data security',footer);assert.equal(r.questions[0].options.length,4);
  }
+});
+test('removes standalone logo OCR without touching SQL or English question content',()=>{
+ const text='Which SQL statement returns matching records?\nFORU\nA. SELECT * FROM source_table INNER JOIN sales ON id = custID;\nLEARN TO KNOW\nB. SELECT * FROM source_table;\n© Hoàng Hoàng Buén Sourge';
+ const q=parsePresentation({slides:[{pageElements:[shape('q',text)]}]}).questions[0];
+ assert.equal(q.stem,'Which SQL statement returns matching records?');assert.equal(q.options[0].text,'SELECT * FROM source_table INNER JOIN sales ON id = custID;');assert.equal(q.options[1].text,'SELECT * FROM source_table;');
+ const old=cleanQuestion({...q,answerSource:'speaker-notes',explanation:'Tùy chọn này có nghĩa là…'});assert.equal(old.explanation,'');assert.equal(old.options[1].text,q.options[1].text);
+ assert.equal(cleanSlideContent("SELECT * FROM source WHERE name = 'Việt Nam';"),"SELECT * FROM source WHERE name = 'Việt Nam';");
 });
 test('keeps meaningful source terminology and content following a watermark',()=>{
  assert.equal(cleanSlideContent('What is an open source database?'),'What is an open source database?');

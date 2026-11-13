@@ -6,7 +6,16 @@ export function cleanSlideContent(value){
   for(let i=0;i<ascii.length;i++){starts.push(position);ends.push(position+char.length)}
   folded+=ascii;position+=char.length;
  }
- const matches=[...folded.matchAll(/\bhoang[\s_-]+hoang[\s_-]+bu[oeu]?n[\s_-]+s[o0]urce\b/g)];
+ // OCR may read Source as Sourge/S0urce and Buôn as Buén. Require the full
+ // repeated-name signature before fuzzy matching, never remove ordinary "source".
+ const distance=(a,b)=>{let row=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){const next=[i];for(let j=1;j<=b.length;j++)next[j]=Math.min(next[j-1]+1,row[j]+1,row[j-1]+(a[i-1]===b[j-1]?0:1));row=next}return row[b.length]};
+ const tokens=[...folded.matchAll(/[a-z0-9]+/g)],matches=[];
+ for(let i=0;i+3<tokens.length;i++){
+  const group=tokens.slice(i,i+4),words=group.map(t=>t[0]);
+  if(distance(words[0],'hoang')>1||distance(words[1],'hoang')>1||!['buon','buen','bun'].some(w=>distance(words[2],w)<=1)||distance(words[3],'source')>2)continue;
+  if(group.slice(1).some((t,j)=>! /^[\s_.-]+$/.test(folded.slice(group[j].index+group[j][0].length,t.index))))continue;
+  const index=group[0].index,end=group[3].index+group[3][0].length;matches.push({index,0:folded.slice(index,end)});i+=3;
+ }
  let result=text;
  for(const match of matches.reverse()){
   let start=starts[match.index];const end=ends[match.index+match[0].length-1];
@@ -14,10 +23,10 @@ export function cleanSlideContent(value){
   const prefix=before.match(/[ \t]*[©®@•📍][ \t]*$/u);if(prefix)start-=prefix[0].length;
   result=result.slice(0,start)+result.slice(end);
  }
- return result.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+ return result.split('\n').filter(line=>! /^(?:[©®@•📍\s]*|F\s*O\s*R\s*U|LEARN\s+TO\s+KNOW)$/i.test(line.trim())).join('\n').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 export function cleanQuestion(q){
- return {...q,stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
+ return {...q,explanation:q.answerSource==='gemini'?q.explanation:'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
 }
 export function textOf(elements=[]){
  const ordered=[...elements].sort((a,b)=>(a.transform?.translateY??0)-(b.transform?.translateY??0)||(a.transform?.translateX??0)-(b.transform?.translateX??0));
@@ -63,8 +72,8 @@ export function parsePresentation(p){
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   pages.push({slide:i+1,objectId:s.objectId,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}
-  const {answer,explanation}=detailsFromNotes(s,parts.options);
-  questions.push({id:crypto.randomUUID(),...parts,answer,explanation,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
+  const answer=answerFromNotes(s,parts.options);
+  questions.push({id:crypto.randomUUID(),...parts,answer,explanation:'',verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
  }
  return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
 }

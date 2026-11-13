@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-ai-13';
+import {parseWithOcr} from './ocr.mjs?v=20261113-clean-14';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-ai-13';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-clean-14';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -197,8 +197,8 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
      const objectId=q.url?.match(/#slide=id\.(.+)$/)?.[1];
      const slide=p.slides?.find(s=>s.objectId===objectId);
      if(!slide){unresolved.missingSlide.push(q.slide);continue;}
-     const {answer,explanation}=detailsFromNotes(slide,q.options);
-     if(answer)updates.push({id:q.id,answer,explanation});
+     const {answer}=detailsFromNotes(slide,q.options);
+     if(answer)updates.push({id:q.id,answer,explanation:''});
      else unresolved[speakerNotesText(slide)?'unmatched':'empty'].push(q.slide);
     }
    }catch(error){if(run!==epoch)throw error;failures.push(error.message)}
