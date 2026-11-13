@@ -30,15 +30,28 @@ export function cleanSlideContent(value){
   if(/^(?:M[O0]\s*[|/\\:_-]*)$/i.test(t))return true;
   if(/(?:beomui|msmesor|mesor|semester|semeter|sever_\d|server_\d|bu[oóe]n\s*sour)/i.test(t)&&!/[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(t))return true;
   if(/[Ññ]/.test(t)&&/[ĂÂÊÔƠƯăâêôơưỐỚẾẤ]/.test(t))return true;
+  if(/^\d{1,3}$/.test(t))return true;
   if(/^[\s|/\\_~•©®📍-]{1,4}$/.test(t))return true;
   return false;
  };
  const lines=result.split('\n').map(line=>line.replace(/[\s\t]+(?:M[O0]\s*[|/\\:_-]*|NINH)$/i,'').trimEnd());
  return lines.filter(line=>!isJunkLine(line)).join('\n').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
+export function normalizeChoices(choiceList=[]){
+ if(!Array.isArray(choiceList)||!choiceList.length)return ['A','B','C','D'].map(id=>({id,text:''}));
+ const maxCode=choiceList.reduce((max,o)=>Math.max(max,String(o.id||'').charCodeAt(0)||65),68);
+ const result=[];
+ for(let c=65;c<=maxCode;c++){
+  const id=String.fromCharCode(c);
+  const existing=choiceList.find(o=>o.id===id);
+  result.push(existing||{id,text:''});
+ }
+ return result;
+}
 export function cleanQuestion(q){
- const answer=normalizeAnswer(q.answer,q.options);
- return {...q,answer,verified:!!answer&&q.verified===true,explanation:typeof q.explanation==='string'?cleanSlideContent(q.explanation):'',stem:cleanSlideContent(q.stem),content:typeof q.content==='string'?cleanSlideContent(q.content):(q.content||''),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text||'')}))};
+ const options=normalizeChoices(q.options);
+ const answer=normalizeAnswer(q.answer,options);
+ return {...q,answer,verified:!!answer&&q.verified===true,explanation:typeof q.explanation==='string'?cleanSlideContent(q.explanation):'',stem:cleanSlideContent(q.stem),content:typeof q.content==='string'?cleanSlideContent(q.content):(q.content||''),options:options.sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text||'')}))};
 }
 export function normalizeAnswer(value,options){
  if(typeof value==='string')value=value.normalize('NFKC');

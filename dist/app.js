@@ -1,11 +1,11 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-cluster-2';
-import {setupResources} from './resources-ui.js?v=20261113-cluster-2';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-cluster-3';
+import {setupResources} from './resources-ui.js?v=20261113-cluster-3';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-cluster-2';
-import {setupAccount} from './account-ui.js?v=20261113-cluster-2';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-cluster-2';
-import {solveBatch,applyAiResults,readyForPractice} from './ai.mjs?v=20261113-cluster-2';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-cluster-2';
+import {validateBank} from './banks.mjs?v=20261113-cluster-3';
+import {setupAccount} from './account-ui.js?v=20261113-cluster-3';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-cluster-3';
+import {solveBatch,applyAiResults,readyForPractice} from './ai.mjs?v=20261113-cluster-3';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-cluster-3';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -79,6 +79,26 @@ const resources=setupResources({onAccountChange:profile=>{
 setupSlidePreview({getQuestion:id=>bank.find(q=>q.id===id)||session?.questions.find(q=>q.id===id)||lastResult?.questions.find(q=>q.id===id),getImage:q=>resources.slideImage(q)});
 
 function filteredQuestions(){const term=$('search').value.trim().toLowerCase(),source=$('sourceFilter').value;return bank.filter(q=>(!source||q.sourceId===source)&&(!$('unverified').checked||!q.verified)&&q.stem.toLowerCase().includes(term))}
+async function loadLibrarySlideImages(qs){
+ for(const q of qs){
+  const container=document.querySelector(`.library-slide-media[data-lib-slide="${CSS.escape(q.id)}"]`);
+  if(!container||!q.url)continue;
+  if(slideImgCache.has(q.id)){
+   const url=slideImgCache.get(q.id);
+   container.innerHTML=`<img src="${url}" alt="Slide ${q.slide}" class="library-slide-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to">`;
+   continue;
+  }
+  try{
+   container.innerHTML=`<div class="slide-media-loading" style="padding:10px;font-size:11px">Đang tải ảnh slide ${q.slide}…</div>`;
+   const url=await resources.slideImage(q);
+   slideImgCache.set(q.id,url);
+   const current=document.querySelector(`.library-slide-media[data-lib-slide="${CSS.escape(q.id)}"]`);
+   if(current)current.innerHTML=`<img src="${url}" alt="Slide ${q.slide}" class="library-slide-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to">`;
+  }catch{
+   container.remove();
+  }
+ }
+}
 function renderLibrary(){
  refreshStats();$('source').textContent=bank.length?(sourceSummary||`${sources().length} tài liệu đã nhập`):'Bắt đầu từ tài liệu Google Slides của bạn.';
  const chosen=$('sourceFilter').value;$('sourceFilter').innerHTML='<option value="">Tất cả tài liệu</option>'+sources().map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');if(sources().some(([id])=>id===chosen))$('sourceFilter').value=chosen;
@@ -86,13 +106,14 @@ function renderLibrary(){
  $('questionCount').textContent=`${all.length} câu hỏi${all.length?` · Hiển thị ${(page-1)*pageSize+1}–${Math.min(page*pageSize,all.length)}`:''}`;
  $('exportBank').disabled=!bank.length;$('verifyPage').disabled=!qs.some(q=>q.answer&&!q.verified);$('clear').disabled=!bank.length||aiRunning;
  renderAi();
- $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.answerSource==='gemini'?'✦ Đáp án AI gợi ý':q.verified?(q.answerSource==='speaker-notes'?'✓ Đáp án từ ghi chú':'✓ Đáp án đã xác nhận'):'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="question-title">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-sm">${q.options.map(o=>`<span class="choice-pill static-pill ${q.answer.includes(o.id)?'correct':''}">${esc(o.id)}</span>`).join('')}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer||'Chưa có')}</strong></span></div>${q.answerSource==='gemini'&&q.explanation?`<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>`:''}${q.explanation&&q.answerSource!=='gemini'?`<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>`:''}${q.aiStatus==='uncertain'?`<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>`:''}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button>${q.extraction==='ocr'?`<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>`:''}<button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
+ $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.answerSource==='gemini'?'✦ Đáp án AI gợi ý':q.verified?(q.answerSource==='speaker-notes'?'✓ Đáp án từ ghi chú':'✓ Đáp án đã xác nhận'):'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.extraction==='ocr'?'collapsed-text':''}">${esc(displayContent(q))}</div>${q.extraction==='ocr'?`<button type="button" class="text-button toggle-text-btn" data-toggle-text="${esc(q.id)}">Hiển thị / ẩn văn bản OCR ▾</button>`:''}<div class="choice-pills choice-pills-sm">${q.options.map(o=>`<span class="choice-pill static-pill ${q.answer.includes(o.id)?'correct':''}">${esc(o.id)}</span>`).join('')}<span class="pill-answer-label">Đáp án: <strong>${esc(q.answer||'Chưa có')}</strong></span></div>${q.answerSource==='gemini'&&q.explanation?`<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>`:''}${q.explanation&&q.answerSource!=='gemini'?`<details class="note-explanation"><summary>Ghi chú / Giải thích</summary><p>${esc(q.explanation)}</p></details>`:''}${q.aiStatus==='uncertain'?`<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>`:''}<div class="question-bottom"><label>Đáp án đúng<input data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button>${q.extraction==='ocr'?`<button class="secondary" data-preview-slide="${esc(q.id)}">Đối chiếu ảnh gốc</button>`:''}<button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
  $('pagination').innerHTML=all.length?`<button class="secondary" data-page="${page-1}" ${page===1?'disabled':''}>← Trước</button><span>Trang ${page} / ${pages}</span><button class="secondary" data-page="${page+1}" ${page===pages?'disabled':''}>Sau →</button>`:'';
+ setTimeout(()=>loadLibrarySlideImages(qs),0);
 }
 for(const id of ['search','sourceFilter','unverified'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=1;renderLibrary()});
 $('pagination').onclick=e=>{const target=e.target.closest('[data-page]');if(target){page=Number(target.dataset.page);renderLibrary();$('library').scrollIntoView({behavior:'smooth',block:'start'})}};
 $('questions').onchange=e=>{const q=bank.find(q=>q.id===e.target.dataset.answer);if(q){const value=normalizeAnswer(e.target.value,q.options);if(e.target.value.trim()&&!value){e.target.value=q.answer;return message('Nhập các chữ cái đáp án có trong câu, ví dụ AD hoặc ACE.')}q.answer=value;q.answerSource='manual';q.aiStatus=null;q.verified=false;saveBank()}};
-$('questions').onclick=e=>{const button=e.target.closest('button');if(!button)return;const id=button.dataset.verify||button.dataset.edit||button.dataset.delete,q=bank.find(q=>q.id===id);if(!q)return;
+$('questions').onclick=e=>{const toggleBtn=e.target.closest('[data-toggle-text]');if(toggleBtn){const t=toggleBtn.closest('.question-card')?.querySelector('.question-title');if(t)t.classList.toggle('collapsed-text');return}const button=e.target.closest('button');if(!button)return;const id=button.dataset.verify||button.dataset.edit||button.dataset.delete,q=bank.find(q=>q.id===id);if(!q)return;
  if(button.dataset.edit)return editQuestion(q);
  if(button.dataset.verify){if(!q.answer)return message('Chọn đáp án đúng trước khi xác nhận.');q.verified=!q.verified}
  if(button.dataset.delete){if(!confirm('Xóa câu hỏi này khỏi ngân hàng?'))return;bank=bank.filter(q=>q.id!==id)}saveBank();
