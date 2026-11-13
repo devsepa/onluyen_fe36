@@ -1,12 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-filter-1';
-import {setupResources} from './resources-ui.js?v=20261113-filter-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-filter-2';
+import {setupResources} from './resources-ui.js?v=20261113-filter-2';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-filter-1';
-import {setupAccount} from './account-ui.js?v=20261113-filter-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-filter-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-filter-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-filter-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-filter-1';
+import {validateBank} from './banks.mjs?v=20261113-filter-2';
+import {setupAccount} from './account-ui.js?v=20261113-filter-2';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-filter-2';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-filter-2';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-filter-2';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-filter-2';
 import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs';
 
 const $=id=>document.getElementById(id);
@@ -190,7 +190,7 @@ function scheduleAutoAi(){
   if(resources.isBusy()){autoAiTimer=setTimeout(scheduleAutoAi,500);return}
   const missing=bank.filter(q=>!q.answer&&hasAiInput(q));if(!missing.length)return;
   try{resources.apiToken()}catch{return}
-  const signature=JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
+  const signature='slide-filter-v1:'+JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
   try{if(sessionStorage.getItem('sot-ai-auto-attempt')===signature)return;sessionStorage.setItem('sot-ai-auto-attempt',signature)}catch{}
   runAi({automatic:true});
  },250);
