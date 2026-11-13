@@ -20,7 +20,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
  function expireConnection(){backgroundId++;classifying=false;thumbnailCache.clear();presentations.clear();slideBytes.clear();token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
- const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Chỉ nhập slide có câu hỏi và lựa chọn. Giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc. Bỏ trang quảng cáo, giới thiệu và danh sách link.';
+ const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Thêm môn mới vẫn giữ các môn đã lưu; nhập lại cùng slide không nhân đôi câu. Chỉ nhập slide có câu hỏi và lựa chọn, giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc.';
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
  const stopButton=document.createElement('button');stopButton.className='secondary';stopButton.type='button';stopButton.textContent='Dừng nhập';stopButton.hidden=true;$('resourceStatus').after(stopButton);
@@ -137,7 +137,6 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
   if(!active())return message('Hãy kết nối lại Google để nhập tài liệu.');
   const startSlide=Number($('ocrStart').value||1),endSlide=Number($('ocrEnd').value||Infinity);
   if(!Number.isInteger(startSlide)||startSlide<1||(Number.isFinite(endSlide)&&(!Number.isInteger(endSlide)||endSlide<startSlide)))return message('Khoảng slide không hợp lệ. Trang bắt đầu phải từ 1 và không lớn hơn trang kết thúc.');
-  if(document.getElementById('total').textContent!=='0'&&!await (window.askConfirm ? window.askConfirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.',{title:'Thay đổi ngân hàng',okText:'Thay thế'}) : confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.')))return;
   const maxQuestions=Number($('ocrLimit').value)||Infinity;
   backgroundId++;classifying=false;controller?.abort();const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;stopButton.textContent='Dừng nhập';
   $('useReady').hidden=true;$('useReady').disabled=false;$('ocrBar').value=0;$('ocrPercent').textContent='0%';

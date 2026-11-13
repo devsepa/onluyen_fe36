@@ -12,7 +12,8 @@ import {
   confirmQuestion,
   updateQuestionContent,
 } from "./core.mjs?v=20261113-background-publish-1";
-import { setupResources } from "./resources-ui.js?v=20261113-background-publish-1";
+import { setupResources } from "./resources-ui.js?v=multi-bank-1";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs';
 import { presentationIdFromLink } from "./resources.mjs";
 import { validateBank } from "./banks.mjs?v=20261113-background-publish-1";
 import { setupAccount } from "./account-ui.js?v=20261113-background-publish-1";
@@ -30,7 +31,7 @@ import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=20261113-background-publish-1";
+} from "./shared-decks.mjs?v=multi-bank-1";
 import { fitQuizScreen } from "./quiz-screen.mjs?v=answer-row-next-1";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
@@ -58,7 +59,7 @@ let bank = read("sot-bank", []),
   session = read("sot-session", null),
   sourceSummary = read("sot-source", "");
 let pendingImportBank = null,
-  importOrder = new Map();
+  importedQuestionKeys = new Map();
 const originalStorage = new Map([
   ["sot-bank", JSON.stringify(bank)],
   ["sot-history", JSON.stringify(history)],
@@ -328,16 +329,17 @@ const resources = setupResources({
   onImport: (result) => {
     if (aiRunning || (session && !session.done)) {
       message(
-        "Dừng AI và hoàn thành bài đang làm trước khi thay ngân hàng câu hỏi.",
+        "Dừng AI và hoàn thành bài đang làm trước khi thêm câu hỏi.",
         "sources",
       );
       return false;
     }
-    if (!write("sot-bank", result.questions)) return false;
-    bank = result.questions;
+    const merged = mergeQuestionBanks(bank,result.questions);
+    if (!write("sot-bank", merged)) return false;
+    bank = merged;
     pendingImportBank = bank;
-    importOrder = new Map(result.sources.map((source, i) => [source.id, i]));
-    sourceSummary = result.sources.map((s) => s.name).join(" · ");
+    importedQuestionKeys = new Map(result.sources.map(source=>[source.id,new Set(result.questions.filter(q=>q.sourceId===source.id).map(bankQuestionKey))]));
+    sourceSummary = sources().map(([,name])=>name).join(" · ");
     write("sot-source", sourceSummary);
     page = 1;
     refreshStats();
@@ -350,33 +352,21 @@ const resources = setupResources({
   },
   onDeferredQuestion: (question, { limit }) => {
     if (bank !== pendingImportBank) return false;
-    if (
-      bank.some(
-        (q) => q.sourceId === question.sourceId && q.url === question.url,
-      )
-    )
-      return { count: bank.length };
-    const same = bank
-      .filter((q) => q.sourceId === question.sourceId)
-      .concat(cleanQuestion(question))
-      .sort((a, b) => a.slide - b.slide)
-      .slice(0, limit);
-    const merged = bank
-      .filter((q) => q.sourceId !== question.sourceId)
-      .concat(same)
-      .sort(
-        (a, b) =>
-          (importOrder.get(a.sourceId) || 0) -
-            (importOrder.get(b.sourceId) || 0) || a.slide - b.slide,
-      );
+    const keys=importedQuestionKeys.get(question.sourceId);
+    if(!keys)return false;
+    const count=()=>[...importedQuestionKeys.values()].reduce((total,items)=>total+items.size,0);
+    const key=bankQuestionKey(question);
+    if(keys.has(key)||keys.size>=limit)return {count:count()};
+    const merged = mergeQuestionBanks(bank,[cleanQuestion(question)]);
     if (!write("sot-bank", merged)) return false;
+    keys.add(key);
     bank = merged;
     pendingImportBank = bank;
     refreshStats();
     if (view === "library") renderLibrary();
     $("openImportedBank").textContent =
       `Kiểm tra ${bank.length} câu hỏi đã nhập →`;
-    return { count: bank.length };
+    return { count: count() };
   },
 });
 const shared = setupSharedDecks({
@@ -395,9 +385,10 @@ const shared = setupSharedDecks({
   },
   onUse: (deck) => {
     const questions = deck.questions.map(cleanQuestion);
-    if (!write("sot-bank", questions)) return;
-    bank = questions;
-    sourceSummary = deck.title;
+    const merged=mergeQuestionBanks(bank,questions);
+    if (!write("sot-bank", merged)) return;
+    bank = merged;
+    sourceSummary = sources().map(([,name])=>name).join(" · ");
     write("sot-source", sourceSummary);
     page = 1;
     refreshStats();
@@ -986,6 +977,9 @@ $("exportBank").onclick = () => {
         verified,
         sourceId,
         sourceName,
+        sharedDeck,
+        sharedIndex,
+        sourceVersion,
         slide,
         url,
         extraction,
@@ -1004,6 +998,9 @@ $("exportBank").onclick = () => {
         verified,
         sourceId,
         sourceName,
+        sharedDeck,
+        sharedIndex,
+        sourceVersion,
         slide,
         url,
         extraction,
@@ -1030,21 +1027,14 @@ $("bankFile").onchange = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
   try {
-    if (aiRunning) throw Error("Dừng AI trước khi thay ngân hàng.");
+    if (aiRunning) throw Error("Dừng AI trước khi thêm câu hỏi.");
     if (session && !session.done)
       throw Error("Hãy hoàn thành bài đang làm trước khi nhập bộ câu hỏi.");
     if (file.size > 10 * 1024 * 1024) throw Error("File lớn hơn 10 MB.");
     const imported = validateBank(JSON.parse(await file.text()));
-    if (
-      bank.length &&
-      !await askConfirm(
-        `Thay ngân hàng hiện tại bằng ${imported.length} câu từ file này?`,
-        { title: "Nhập bộ câu hỏi", okText: "Thay thế" }
-      )
-    )
-      return;
-    if (!write("sot-bank", imported)) return;
-    bank = imported;
+    const merged=mergeQuestionBanks(bank,imported),added=merged.length-bank.length;
+    if (!write("sot-bank", merged)) return;
+    bank = merged;
     sourceSummary = sources()
       .map(([, name]) => name)
       .join(" · ");
@@ -1053,7 +1043,7 @@ $("bankFile").onchange = async (e) => {
     page = 1;
     switchView("library");
     message(
-      `Đã nhập ${bank.length} câu từ bộ đã lưu. Không cần đọc lại ảnh; hãy kiểm tra nguồn và đáp án trước khi dùng.`,
+      `Đã thêm ${added} câu mới; các môn đã lưu vẫn được giữ. Thư viện hiện có ${bank.length} câu. Chọn mã môn ở Ôn luyện & Thi thử để học.`,
     );
   } catch (error) {
     message(
