@@ -1,4 +1,54 @@
 function add(parent,tag,className,text){const node=document.createElement(tag);if(className)node.className=className;if(text!==undefined)node.textContent=text;parent.append(node);return node}
+
+export function getSmartTip(question, details) {
+ if (question.tip && typeof question.tip === 'string' && question.tip.trim()) return question.tip.trim();
+ if (details?.tip && typeof details.tip === 'string' && details.tip.trim()) return details.tip.trim();
+ 
+ const rawText = (details?.reason || question.explanation || '');
+ const match = rawText.match(/(?:mẹo|gợi ý|tip|lưu ý|bí quyết)[\s:]+([^\n\r]+)/i);
+ if (match && match[1]?.trim().length > 10) {
+  return match[1].trim();
+ }
+
+ const stem = (question.stem || question.title || '').toLowerCase();
+ const isMultiple = question.answer && question.answer.length > 1;
+ const isNegative = stem.includes('không') || stem.includes('chưa') || stem.includes('sai') || stem.includes('ngoại trừ') || stem.includes('not') || stem.includes('except');
+ const isDefinition = stem.includes('là gì') || stem.includes('định nghĩa') || stem.includes('khái niệm') || stem.includes('what is') || stem.includes('which of the following defines');
+ const isSql = stem.includes('sql') || stem.includes('select') || stem.includes('query') || stem.includes('table') || stem.includes('database') || stem.includes('khoá') || stem.includes('key');
+ const isJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(question.stem || '') || stem.includes('jpd');
+
+ if (isNegative) {
+  return '⚠️ Chú ý câu phủ định ("KHÔNG" / "SAI" / "NGOẠI TRỪ"): Hãy tìm và gạch chân 3 phương án ĐÚNG trước để loại trừ, phương án còn lại là đáp án cần chọn.';
+ }
+ if (isMultiple) {
+  return '✨ Dạng chọn nhiều đáp án: Xét từng phương án độc lập đúng/sai. Chú ý các đáp án mang tính tuyệt đối (chỉ duy nhất, luôn luôn) thường là bẫy gây nhiễu.';
+ }
+ if (isSql) {
+  if (stem.includes('having') || stem.includes('where')) {
+   return '🔑 Mẹo SQL: WHERE lọc từng dòng TRƯỚC khi gom nhóm; HAVING lọc trên nhóm SAU hàm tổng hợp (COUNT, SUM, AVG).';
+  }
+  if (stem.includes('primary key') || stem.includes('khóa chính')) {
+   return '🔑 Mẹo SQL: Khóa chính (Primary Key) = Bắt buộc UNIQUE + NOT NULL. Mỗi bảng chỉ có duy nhất 1 Primary Key.';
+  }
+  return '🔑 Mẹo Database/SQL: Đối chiếu thứ tự thực thi truy vấn (FROM → WHERE → GROUP BY → HAVING → SELECT → ORDER BY) và kiểm tra kỹ điều kiện JOIN.';
+ }
+ if (isJapanese) {
+  return '🎌 Mẹo Tiếng Nhật: Chú ý trợ từ đi kèm (は, が, を, に, で) và đuôi câu (thể thông thường hay lịch sự, khẳng định hay phủ định) để phán đoán ngữ cảnh nhanh.';
+ }
+ if (isDefinition) {
+  const ansChoice = question.options?.find(o => question.answer.includes(o.id));
+  const keyword = ansChoice?.text?.slice(0, 45) || question.answer;
+  return `💡 Mẹo ghi nhớ: Nhớ từ khóa then chốt gắn với "${keyword}". Khi gặp câu hỏi tương tự, dò tìm từ khóa này đầu tiên.`;
+ }
+ 
+ const ansChoice = question.options?.find(o => question.answer.includes(o.id));
+ if (ansChoice?.text) {
+  return `💡 Mẹo làm bài: Nắm từ khóa trọng tâm ở câu hỏi, đối chiếu nhanh với đáp án [${question.answer}] (${ansChoice.text.slice(0, 50)}${ansChoice.text.length > 50 ? '...' : ''}) để loại bỏ nhanh phương án nhiễu.`;
+ }
+
+ return `💡 Mẹo làm bài: Ghi nhớ đáp án chuẩn [${question.answer}]. Đối chiếu với slide bài giảng để ghi nhớ hình ảnh và từ khóa đặc trưng.`;
+}
+
 export function renderQuizFeedback({root,session,question,isCorrect,state={status:'idle'},onRetry,onRead=()=>{}}){
  const card=root.querySelector('.quiz-question'),answered=session.answers[question.id];
  if(session.mode!=='study'||!answered){card.querySelector('.feedback')?.remove();return}
@@ -24,6 +74,14 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
     for(const id of extra){const option=details.options.find(o=>o.id===id);if(option)add(box,'p','explanation-choice-reason',`${id}: ${option.reason}`)}
     if(missing.length&&question.answer.length>1){add(box,'p','explanation-choice-reason','Bạn còn thiếu: '+missing.join(', ')+'.');for(const id of missing){const option=details.options.find(o=>o.id===id);if(option)add(box,'p','explanation-choice-reason',`${id}: ${option.reason}`)}}
    }
+  }
+  const tip = getSmartTip(question, details);
+  if(tip){
+   const tipBox = add(box, 'div', 'explanation-tip-box');
+   const tipHead = add(tipBox, 'div', 'explanation-tip-heading');
+   add(tipHead, 'span', 'tip-icon', '💡');
+   add(tipHead, 'strong', '', 'Mẹo xử lý & Ghi nhớ nhanh:');
+   add(tipBox, 'div', 'explanation-tip-text', tip);
   }
   box.scrollTop=scroll;
  }

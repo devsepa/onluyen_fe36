@@ -517,3 +517,44 @@ body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important
   .history-item{flex-direction:column;align-items:flex-start;gap:14px}
   .history-actions{width:100%;justify-content:flex-end}
 }
+
+/* Brand & Footer Logo */
+.brand-logo-img{width:38px;height:38px;border-radius:11px;object-fit:cover;box-shadow:0 4px 14px rgba(99,102,241,0.35);flex:none;transition:transform .15s ease}
+.brand-logo-img:hover{transform:scale(1.05)}
+.footer-logo-img{width:30px;height:30px;border-radius:8px;object-fit:cover;box-shadow:0 4px 12px rgba(99,102,241,0.3);flex:none}
+@media(max-width:760px){
+  .brand-logo-img{width:32px;height:32px;border-radius:9px}
+}
+
+/* Hide timer cleanly in study mode */
+.quiz-clock[hidden]{display:none!important}
+
+/* AI Explanation Tips / Tricks */
+.explanation-tip-box{
+  margin-top:12px;
+  padding:11px 14px;
+  background:color-mix(in srgb, #f59e0b 11%, var(--panel));
+  border:1px solid color-mix(in srgb, #f59e0b 32%, var(--line));
+  border-left:3.5px solid #f59e0b;
+  border-radius:9px;
+  font-size:13px;
+  line-height:1.55;
+}
+.explanation-tip-heading{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-bottom:5px;
+  font-weight:700;
+  font-size:12.5px;
+  color:#f59e0b;
+}
+.explanation-tip-heading .tip-icon{
+  font-size:15px;
+}
+.explanation-tip-text{
+  color:var(--text);
+  font-size:12.5px;
+  line-height:1.6;
+  white-space:pre-wrap;
+}

@@ -43,12 +43,12 @@ Nhiệm vụ:
 1. Giải câu hỏi trong slide để tìm đáp án chính xác nhất (A, B, C hoặc D...).
 2. Kiểm tra xem đáp án ghi chú ("${q.answer}") có ĐÚNG không.
 3. Trả về đúng JSON theo định dạng sau:
-{"bestAnswer":"A hoặc B hoặc C hoặc D","isCurrentCorrect":true hoặc false,"explanation":"Giải thích ngắn gọn lý do chọn đáp án này bằng tiếng Việt"}`
+{"bestAnswer":"A hoặc B hoặc C hoặc D","isCurrentCorrect":true hoặc false,"explanation":"Giải thích ngắn gọn lý do chọn đáp án này bằng tiếng Việt","tip":"Gợi ý mẹo xử lý hoặc mẹo ghi nhớ nhanh"}`
   : `Bạn là trợ lý giải đề thi trắc nghiệm từ hình ảnh slide. Đọc kỹ hình ảnh slide (đề bài, câu hỏi, các lựa chọn A, B, C, D...).
 Nhiệm vụ:
 1. Giải câu hỏi trong slide để tìm đáp án chính xác nhất (A, B, C hoặc D...).
 2. Trả về đúng JSON theo định dạng sau:
-{"bestAnswer":"A hoặc B hoặc C hoặc D","explanation":"Giải thích ngắn gọn lý do chọn đáp án này bằng tiếng Việt"}`;
+{"bestAnswer":"A hoặc B hoặc C hoặc D","explanation":"Giải thích ngắn gọn lý do chọn đáp án này bằng tiếng Việt","tip":"Gợi ý mẹo xử lý hoặc mẹo ghi nhớ nhanh"}`;
  parts.push({text:prompt});
  const url=`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
  const schema=checkExisting?{
@@ -56,14 +56,16 @@ Nhiệm vụ:
   properties:{
    bestAnswer:{type:'STRING'},
    isCurrentCorrect:{type:'BOOLEAN'},
-   explanation:{type:'STRING'}
+   explanation:{type:'STRING'},
+   tip:{type:'STRING'}
   },
   required:['bestAnswer','isCurrentCorrect','explanation']
  }:{
   type:'OBJECT',
   properties:{
    bestAnswer:{type:'STRING'},
-   explanation:{type:'STRING'}
+   explanation:{type:'STRING'},
+   tip:{type:'STRING'}
   },
   required:['bestAnswer','explanation']
  };
