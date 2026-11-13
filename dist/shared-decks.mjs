@@ -12,7 +12,7 @@ export async function deckRequest(base,path,{method='GET',token,uploadToken,body
  if(!response.ok){let message=response.statusText;try{const data=await response.json();message=data.error||message}catch{}const error=new Error(message);error.status=response.status;throw error}
  return response;
 }
-export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}){
+export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,onUseLocal}){
  const $=id=>document.getElementById(id),section=$('shared'),dialog=document.createElement('dialog'),publishButton=document.createElement('button');publishButton.id='publishDeck';publishButton.className='secondary';publishButton.textContent='↑ Đăng vào kho chung';$('library').querySelector('.section-heading .row').prepend(publishButton);dialog.className='publish-dialog';dialog.setAttribute('aria-labelledby','publishTitle');
  dialog.innerHTML='<form id="publishForm"><div class="modal-heading"><h2 id="publishTitle">Đăng bộ đề vào kho chung</h2><button type="button" class="secondary" id="closePublish">Đóng</button></div><label>Tên bộ đề<input id="deckTitle" required maxlength="160" placeholder="Ví dụ: DBI202 · Học kỳ 3"></label><p id="publishCount"></p><p>Ảnh slide, đáp án và giải thích sẽ công khai cho mọi người. Link Google riêng vẫn giữ quyền truy cập của Google. Lịch sử và thông tin tài khoản không được chia sẻ.</p><label class="check-label"><input id="publishRights" type="checkbox" required> Tôi có quyền chia sẻ các ảnh slide và nội dung này.</label><p id="publishStatus" role="status" aria-live="polite"></p><progress id="publishBar" value="0" max="1" hidden></progress><div class="modal-actions"><button type="submit" id="publishSubmit">Đăng bộ đề</button><button type="button" id="stopPublish" class="secondary" hidden>Dừng tải lên</button></div></form>';
  dialog.querySelector('p:not([id])').textContent='Ảnh slide, đáp án và giải thích sẽ công khai; tài khoản và lịch sử vẫn riêng. Link Google giữ nguyên quyền xem. Có thể đóng hộp thoại để ôn tiếp, nhưng cần giữ tab này mở đến khi tải xong.';
@@ -83,7 +83,31 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
 
  function cards(){
   const term=$('deckSearch').value.trim().toLocaleLowerCase(),filtered=items.filter(d=>d.title.toLocaleLowerCase().includes(term));
-  $('deckList').innerHTML=filtered.length?filtered.map(d=>{
+  const localReady=getBank().filter(readyForPractice);
+  let localCardHtml='';
+  if(localReady.length && (!term || 'ngân hàng của bạn hiện tại máy bộ đề'.includes(term))){
+   localCardHtml=`<article class="card shared-deck local-deck-card">
+     <div class="shared-deck-topbar">
+       <span class="deck-type-tag local-tag">💻 Bộ đề trên máy của bạn</span>
+       <span class="shared-deck-date">Sẵn sàng ôn luyện</span>
+     </div>
+     <div class="shared-deck-main">
+       <h3 class="shared-deck-title">Ngân hàng câu hỏi đã nạp</h3>
+       <div class="shared-deck-badges">
+         <span class="shared-badge count">📚 <b>${localReady.length}</b> câu sẵn sàng</span>
+         <span class="shared-badge">📁 Đã nạp từ slide</span>
+         <span class="shared-badge">⚡ Thiết bị này</span>
+       </div>
+     </div>
+     <div class="shared-deck-footer shared-deck-actions">
+       <button class="btn-deck-use shared-use-btn" data-use-local="true">
+         <span>Vào ôn luyện ngay</span>
+         <span class="btn-arrow">→</span>
+       </button>
+     </div>
+   </article>`;
+  }
+  $('deckList').innerHTML=(localCardHtml+(filtered.length?filtered.map(d=>{
    const isOwner=owned().includes(d.id);
    return `<article class="card shared-deck ${isOwner?'is-owner-deck':''}">
      <div class="shared-deck-topbar">
@@ -111,7 +135,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
        </button>`:''}
      </div>
    </article>`;
-  }).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>';
+  }).join(''):(localCardHtml?'':'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>')));
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
@@ -121,6 +145,12 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
  }
  $('refreshDecks').onclick=load;$('deckSearch').oninput=cards;
  section.addEventListener('click',async e=>{
+  const useLocal=e.target.closest('[data-use-local]');
+  if(useLocal){
+   if(!canChange())return;
+   onUseLocal?.();
+   return;
+  }
   const use=e.target.closest('[data-use-deck]'),remove=e.target.closest('[data-delete-deck]');if(!use&&!remove)return;if(!canChange())return;
   const button=use||remove,id=use?.dataset.useDeck||remove.dataset.deleteDeck;button.disabled=true;
   try{

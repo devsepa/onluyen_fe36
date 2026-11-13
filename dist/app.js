@@ -39,7 +39,7 @@ import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=shared-card-v2";
+} from "./shared-decks.mjs?v=merge-practice-1";
 import { fitQuizScreen } from "./quiz-screen.mjs?v=study-speed-1";
 import { createQuizSound } from "./quiz-sound.mjs";
 import { setupSidebar } from "./sidebar.mjs";
@@ -106,9 +106,9 @@ libraryTracker=createBankTracker(bank);bank=libraryTracker.stamp(bank);
 const pageSize = 10;
 const pageInfo = {
   shared: [
-    "Kho đề chung",
-    "Kho đề chung",
-    "Chọn bộ đề đã có để ôn ngay. Mỗi lượt random câu hỏi, giữ nguyên thứ tự đáp án.",
+    "Kho đề & Ôn luyện",
+    "Kho đề & Ôn luyện",
+    "Chọn bộ đề từ cộng đồng hoặc ngân hàng máy để bắt đầu ôn luyện ngay.",
   ],
   sources: [
     "Tài liệu của tôi",
@@ -121,9 +121,9 @@ const pageInfo = {
     "Đáp án rõ ràng trong ghi chú được dùng ngay. Chỉ cần kiểm tra câu thiếu đáp án.",
   ],
   practice: [
-    "Ôn luyện & Thi thử",
-    "Ôn luyện & Thi thử",
-    "Chọn chế độ, nguồn câu hỏi và số câu để bắt đầu làm bài.",
+    "Kho đề & Ôn luyện",
+    "Thiết lập buổi học",
+    "Lựa chọn chế độ, số lượng câu hỏi và bắt đầu phiên học.",
   ],
   history: [
     "Lịch sử & Kết quả",
@@ -292,7 +292,7 @@ function switchView(next, mode) {
     view === "practice" && !!session && !session.done,
   );
   for (const id of Object.keys(pageInfo)) $(id).hidden = id !== view;
-  const activeNav = view === "result" ? "history" : view;
+  const activeNav = view === "result" ? "history" : (view === "practice" ? "shared" : view);
   document.querySelectorAll("[data-view].nav").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === activeNav);
     if (button.dataset.view === activeNav)
@@ -405,6 +405,7 @@ const shared = setupSharedDecks({
     }
     return true;
   },
+  onUseLocal: () => switchView("practice"),
   onUse: (deck) => {
     const questions = deck.questions.map(cleanQuestion);
     const merged=mergeQuestionBanks(bank,questions);
@@ -1121,6 +1122,12 @@ function renderPractice() {
 
   $("practice").innerHTML = `
 <div class="setup-container-v2">
+  <div class="setup-nav-bar">
+    <button type="button" class="btn-back-to-shared" id="backToSharedBtn">
+      <span class="back-icon">←</span>
+      <span>Quay lại Kho đề & Ôn luyện</span>
+    </button>
+  </div>
   <div class="setup-grid-v2">
     <!-- LEFT COLUMN: Controller Card -->
     <div class="setup-card-v2 controller-card">
@@ -1354,6 +1361,11 @@ function renderPractice() {
       updateDashboard();
     };
   });
+
+  const backBtn = $("backToSharedBtn");
+  if (backBtn) {
+    backBtn.onclick = () => switchView("shared");
+  }
 
   // Subject change
   $("practiceSource").onchange = () => {
