@@ -45,11 +45,16 @@ export function speakerNotesText(slide){
  const target=exact.length?exact:body.length===1?body:[];
  return normalizeSlideText(textOf(target)).replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').trim();
 }
-export function answerFromNotes(slide,options){
- const note=speakerNotesText(slide);
- const match=note.match(/^(?:(?:answer|correct answer|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i);
+export function detailsFromNotes(slide,options){
+ const lines=speakerNotesText(slide).split('\n').map(line=>line.trim()).filter(Boolean);
+ const pattern=/^(?:(?:answer|correct answer|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i;
+ const match=lines[0]?.match(pattern);
  const answer=match?.[1].toUpperCase()||'';
- return options.some(o=>o.id===answer)?answer:'';
+ if(!options.some(o=>o.id===answer)||lines.slice(1).some(line=>{const other=line.match(pattern);return other&&other[1].toUpperCase()!==answer}))return {answer:'',explanation:''};
+ return {answer,explanation:cleanSlideContent(lines.slice(1).join('\n'))};
+}
+export function answerFromNotes(slide,options){
+ return detailsFromNotes(slide,options).answer;
 }
 export function parsePresentation(p){
  const questions=[],skipped=[],pages=[];
@@ -58,8 +63,8 @@ export function parsePresentation(p){
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   pages.push({slide:i+1,objectId:s.objectId,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}
-  const answer=answerFromNotes(s,parts.options);
-  questions.push({id:crypto.randomUUID(),...parts,answer,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
+  const {answer,explanation}=detailsFromNotes(s,parts.options);
+  questions.push({id:crypto.randomUUID(),...parts,answer,explanation,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
  }
  return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
 }

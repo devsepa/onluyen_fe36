@@ -16,7 +16,7 @@ assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidde
 await evaluate(`(()=>{
  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=700;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,1400,700);c.fillStyle='black';c.font='34px Arial';['Which clause filters groups after aggregation?','A. WHERE','B. HAVING','C. ORDER BY','D. SELECT'].forEach((t,i)=>c.fillText(t,60,100+i*90));
  const image=canvas.toDataURL();const originalFetch=window.fetch;window.qaCalls=[];
- const presentation={presentationId:'qa_import',title:'SEMESTER_2_QA',slides:Array.from({length:4},(_,i)=>({objectId:'page'+i,pageElements:[{image:{contentUrl:image}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[{objectId:'note',shape:{text:{textElements:[{textRun:{content:'B'}}]}}}]}}}))};
+ const presentation={presentationId:'qa_import',title:'SEMESTER_2_QA',slides:Array.from({length:4},(_,i)=>({objectId:'page'+i,pageElements:[{image:{contentUrl:image}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[{objectId:'note',shape:{text:{textElements:[{textRun:{content:'B\\nĐây là phần giải thích. B. HAVING lọc các nhóm.'}}]}}}]}}}))};
  presentation.slides.unshift({objectId:'intro',pageElements:[{shape:{text:{textElements:[{textRun:{content:'Welcome to the course'}}]}}}]});
  window.fetch=(url,options)=>{
   if(url==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa-user',name:'Người học QA',email:'qa@example.com'}));

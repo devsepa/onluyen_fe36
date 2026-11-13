@@ -24,3 +24,4 @@ body{background:radial-gradient(ellipse at 90% 0%,color-mix(in srgb,var(--purple
 .options{grid-template-columns:minmax(0,1fr)}.option{display:flex;align-items:flex-start;gap:12px;width:100%;font-size:14px;line-height:1.85;padding:14px 16px}.option>span:last-child{flex:1;min-width:0}.option .letter{flex:none;margin-top:1px}.question-title{line-height:1.9}.quiz-question .options{grid-template-columns:minmax(0,1fr)}
 @media(max-width:760px){.option{font-size:13px;padding:13px 12px;gap:10px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+.note-explanation{margin-top:16px;line-height:1.8;overflow-wrap:anywhere}.note-explanation p{white-space:pre-wrap;margin:8px 0 0}

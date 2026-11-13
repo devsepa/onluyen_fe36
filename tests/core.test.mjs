@@ -2,6 +2,12 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
+test('reads the leading answer separately from translated question and explanation',()=>{
+ const note='A\n\nTùy chọn ON UPDATE CASCADE có tác dụng gì?\nA. Tự động cập nhật giá trị khóa ngoại.\nON UPDATE CASCADE giúp duy trì tính toàn vẹn tham chiếu.';
+ const slide={pageElements:[shape('q','What does ON UPDATE CASCADE do?\nA. Updates the foreign key\nB. Deletes the row')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}};
+ const q=parsePresentation({slides:[slide]}).questions[0];assert.equal(q.answer,'A');assert.equal(q.verified,true);assert.ok(q.explanation.startsWith('Tùy chọn'));assert.ok(q.explanation.includes('A. Tự động'));assert.ok(!q.stem.includes('Tùy chọn'));
+ slide.slideProperties.notesPage.pageElements=[shape('n','A\nB')];assert.equal(parsePresentation({slides:[slide]}).questions[0].answer,'');
+});
 test('single uppercase note survives split runs and invisible direction marks',()=>{
  const p={slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[{objectId:'n',shape:{text:{textElements:[{textRun:{content:'\u200e'}},{textRun:{content:'B'}},{textRun:{content:'\n'}}]}}}]}}}]};
  const q=parsePresentation(p).questions[0];assert.equal(q.answer,'B');assert.equal(q.verified,true);
