@@ -36,3 +36,7 @@ jobs:
             GEMINI_API_KEY
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Verify Gemini with one synthetic question
+        run: node scripts/check-gemini.mjs
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
