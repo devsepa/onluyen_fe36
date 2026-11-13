@@ -26,8 +26,15 @@ export function cleanSlideContent(value){
  return result.split('\n').filter(line=>! /^(?:[©®@•📍\s]*|F\s*O\s*R\s*U|LEARN\s+TO\s+KNOW)$/i.test(line.trim())).join('\n').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
 }
 export function cleanQuestion(q){
- return {...q,explanation:q.answerSource==='gemini'?q.explanation:'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
+ const answer=normalizeAnswer(q.answer,q.options);
+ return {...q,answer,verified:!!answer&&q.verified===true,explanation:q.answerSource==='gemini'?q.explanation:'',stem:cleanSlideContent(q.stem),options:[...q.options].sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text)}))};
 }
+export function normalizeAnswer(value,options){
+ if(typeof value!=='string'||! /^[A-H](?:[A-H]|[\s,;/&+]+[A-H])*$/i.test(value.trim()))return '';
+ const ids=[...new Set(value.toUpperCase().match(/[A-H]/g))].sort();
+ return ids.every(id=>options.some(o=>o.id===id))?ids.join(''):'';
+}
+export function isCorrect(question,selection){const answer=normalizeAnswer(question.answer,question.options);return !!answer&&normalizeAnswer(selection,question.options)===answer}
 export function textOf(elements=[]){
  const ordered=[...elements].sort((a,b)=>(a.transform?.translateY??0)-(b.transform?.translateY??0)||(a.transform?.translateX??0)-(b.transform?.translateX??0));
  return ordered.flatMap(e=>e.elementGroup?textOf(e.elementGroup.children):e.shape?[(e.shape.text?.textElements||[]).map(t=>t.textRun?.content||'').join('')]:e.table?e.table.tableRows.flatMap(r=>r.tableCells.map(c=>(c.text?.textElements||[]).map(t=>t.textRun?.content||'').join(''))):e.wordArt?[e.wordArt.renderedText||'']:[]).join('\n');
@@ -56,10 +63,10 @@ export function speakerNotesText(slide){
 }
 export function detailsFromNotes(slide,options){
  const lines=speakerNotesText(slide).split('\n').map(line=>line.trim()).filter(Boolean);
- const pattern=/^(?:(?:answer|correct answer|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i;
+ const pattern=/^(?:(?:answers?|correct answers?|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H](?:[A-H]|[ ,;/&+]+[A-H])*)\)?[.)]?\s*$/i;
  const match=lines[0]?.match(pattern);
- const answer=match?.[1].toUpperCase()||'';
- if(!options.some(o=>o.id===answer)||lines.slice(1).some(line=>{const other=line.match(pattern);return other&&other[1].toUpperCase()!==answer}))return {answer:'',explanation:''};
+ const answer=normalizeAnswer(match?.[1],options);
+ if(!answer||lines.slice(1).some(line=>{const other=line.match(pattern);return other&&normalizeAnswer(other[1],options)!==answer}))return {answer:'',explanation:''};
  return {answer,explanation:cleanSlideContent(lines.slice(1).join('\n'))};
 }
 export function answerFromNotes(slide,options){
@@ -78,15 +85,26 @@ export function parsePresentation(p){
  return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
 }
 export function shuffle(values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-export function grade(questions,answers){return questions.reduce((n,q)=>n+(answers[q.id]===q.answer?1:0),0);}
+export function grade(questions,answers){return questions.reduce((n,q)=>n+(isCorrect(q,answers[q.id])?1:0),0);}
 export function answerQuestion(session,questionId,optionId,now=Date.now()){
  if(session.done||(session.mode!=='study'&&now>=session.deadline))return false;
  const question=session.questions.find(q=>q.id===questionId);
  if(!question||!question.options.some(o=>o.id===optionId)||(session.mode==='study'&&session.answers[questionId]))return false;
- session.answers[questionId]=optionId;return true;
+ if(question.answer.length>1){
+  const map=session.mode==='study'?(session.drafts??={}):session.answers;
+  const values=new Set(map[questionId]||'');values.has(optionId)?values.delete(optionId):values.add(optionId);
+  const selected=[...values].sort().join('');if(selected)map[questionId]=selected;else delete map[questionId];
+ }else session.answers[questionId]=optionId;
+ return true;
+}
+export function confirmQuestion(session,questionId){
+ const question=session.questions.find(q=>q.id===questionId);
+ if(session.done||session.mode!=='study'||!question||question.answer.length<2||session.answers[questionId])return false;
+ const selected=normalizeAnswer(session.drafts?.[questionId],question.options);if(!selected)return false;
+ session.answers[questionId]=selected;return true;
 }
 export function optionState(session,question,optionId){
  const selected=session.answers[question.id];
- if(session.mode==='study'&&selected){if(optionId===question.answer)return 'correct';if(optionId===selected)return 'wrong';return '';}
- return selected===optionId?'selected':'';
+ if(session.mode==='study'&&selected){if(question.answer.includes(optionId))return 'correct';if(selected.includes(optionId))return 'wrong';return '';}
+ return (selected||session.drafts?.[question.id]||'').includes(optionId)?'selected':'';
 }

@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-clean-14';
+import {parseWithOcr} from './ocr.mjs?v=20261113-multi-16';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-clean-14';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-multi-16';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){

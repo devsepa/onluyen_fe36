@@ -5,6 +5,11 @@ import {parseWithOcr,cacheKey,directImageUrl} from '../dist/ocr.mjs';
 const shape=(text)=>({shape:{text:{textElements:[{textRun:{content:text}}]}}});
 const imageSlide=(id,answer='B')=>({objectId:id,pageElements:[{image:{contentUrl:'https://google.example/temporary'}},shape('Slide watermark')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[{objectId:'note',...shape(answer)}]}}});
 const makePresentation=()=>({presentationId:'private-id',title:'Private Slides',slides:[{objectId:'native',pageElements:[shape('Native question?\nA. One\nB. Two')]},imageSlide('image'),{objectId:'intro',pageElements:[shape('Introduction')]}]});
+test('image questions preserve multiple speaker-note answers without OCRing notes',async()=>{
+ const p={presentationId:'p',slides:[imageSlide('s','ACE')]};
+ const result=await parseWithOcr(p,{}, {request:async()=>({contentUrl:'image'}),recognize:async()=>({text:'Choose correct answers\nA. One\nB. Two\nC. Three\nD. Four\nE. Five'})});
+ assert.equal(result.questions[0].answer,'ACE');assert.equal(result.questions[0].verified,true);assert.deepEqual(result.questions[0].options.map(o=>o.id),['A','B','C','D','E']);
+});
 test('OCRs only unresolved image pages, preserves notes, source URL, page number and native questions',async()=>{
  const p=makePresentation(),calls=[],progress=[];
  const parsed=await parseWithOcr(p,{},{request:async url=>{calls.push(url);return{contentUrl:'https://google.example/image'}},recognize:async url=>{assert.equal(url,'https://google.example/image');return {text:'Image question?\nA. First\nB. Second',confidence:89}},onProgress:x=>progress.push(x)});

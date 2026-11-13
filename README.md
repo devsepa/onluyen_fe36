@@ -61,7 +61,7 @@ Gồm bốn trang: Tài liệu của tôi, Ngân hàng câu hỏi (lọc nguồn
 
 ## Nội dung tài liệu
 
-Trích câu hỏi có lựa chọn A. B. C. D., A) B), (A), [A], xuống dòng hoặc cùng dòng; hỗ trợ shape, group và table, OCR cho trang dạng ảnh. Đáp án đơn lấy từ speaker notes dạng `A`, `Answer: A` hoặc `Đáp án: A` và tự sẵn sàng để luyện. Báo các slide bị bỏ qua. Chưa hỗ trợ câu nhiều đáp án, tự sinh câu mới bằng AI hoặc giải thích bằng AI.
+Trích câu hỏi có lựa chọn A. B. C. D., A) B), (A), [A], xuống dòng hoặc cùng dòng; hỗ trợ shape, group và table, OCR cho trang dạng ảnh. Đáp án đơn lấy từ speaker notes dạng `A`, `Answer: A` hoặc `Đáp án: A` và tự sẵn sàng để luyện. Báo các slide bị bỏ qua. Chưa tự sinh câu mới bằng AI. Câu nhiều đáp án được hỗ trợ như mô tả bên dưới.
 
 Câu hỏi, Client ID, bài đang làm và tối đa 50 kết quả được lưu bằng localStorage trong trình duyệt hiện tại. Đồng hồ dựa trên deadline tuyệt đối, tự nộp khi hết giờ kể cả sau khi tải lại trang. Không dùng cho kỳ thi có giám sát; đáp án có trong trình duyệt để tự học. Dữ liệu không đồng bộ giữa thiết bị, và dùng chung trong cùng hồ sơ trình duyệt. Có thể xóa ngân hàng hoặc dữ liệu trang để xóa nội dung đã nhập.
 
@@ -86,3 +86,8 @@ The library now includes optional batch AI suggestions, stop/resume with saved r
 ### English slide content cleanup
 
 Questions retain the original English stem and ordered choices. Speaker-note translations/explanations are no longer attached to imported questions; only the answer letter is used. Existing non-AI note explanations are removed on load without rescanning, including active sessions and history. The complete repeated-name branding signature is matched with bounded OCR tolerance (including Buén Sourge and S0urce); standalone FORU/LEARN TO KNOW logo lines are removed. Ordinary uses of source, SQL syntax and quoted literals are preserved. Optional AI proposals keep their distinct explanation/provenance separately.
+### Multiple correct answers
+
+Speaker notes such as `AD`, `ACE`, `ABC`, `A, D` or `Đáp án: ACE` are accepted on the first line, including when explanation text follows. All letters must exist among the slide choices. The stored answer is a canonical set of letters; displayed choices retain original A/B/C/D/E order. Existing unanswered imports can read notes again without OCR. Single-answer study feedback remains immediate. Multi-answer study questions allow toggling choices and require **Kiểm tra đáp án** before grading/locking; mock exams allow changing selections until submission/deadline. Only an exact full set earns a point. Draft selections survive reload; results highlight every correct/incorrect choice. Library/editor answer inputs accept concatenated letters, and exported/imported banks retain them. AI answer generation remains limited to single-choice proposals and leaves uncertain/multiple-answer generation for review.
+
+`node scripts/browser-multi-qa.mjs` verifies multi-answer entry, draft reload, explicit checking, exact-set grading, extra-choice errors, retry, option order and desktop/mobile light/dark/narrow layouts with synthetic local data.

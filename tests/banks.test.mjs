@@ -16,3 +16,7 @@ test('exported AI proposals retain provenance and remain unverified',()=>{
  const result=validateBank({format:'slide-on-thi/v1',questions:[{...question(),answerSource:'gemini',aiModel:'qa',explanation:'AI explanation',verified:false}]});
  assert.equal(result[0].answerSource,'gemini');assert.equal(result[0].verified,false);assert.equal(result[0].explanation,'AI explanation');assert.equal(result[0].aiModel,'qa');
 });
+test('multi-answer banks preserve complete correct sets across export/import',()=>{
+ const base=question();base.options='ABCDE'.split('').map(id=>({id,text:id}));base.answer='ECA';
+ const result=validateBank({format:'slide-on-thi/v1',questions:[base]});assert.equal(result[0].answer,'ACE');assert.equal(result[0].verified,true);
+});

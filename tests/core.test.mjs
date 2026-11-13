@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion} from '../dist/core.mjs';
+import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion,confirmQuestion,normalizeAnswer} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
 test('reads the leading answer separately from translated question and explanation',()=>{
  const note='A\n\nTùy chọn ON UPDATE CASCADE có tác dụng gì?\nA. Tự động cập nhật giá trị khóa ngoại.\nON UPDATE CASCADE giúp duy trì tính toàn vẹn tham chiếu.';
@@ -25,10 +25,28 @@ test('accepts explicit note formats but leaves missing, conflicting and multiple
   const q=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
   assert.equal(q.answer,'B',note);assert.equal(q.verified,true);assert.equal(q.answerSource,'speaker-notes');
  }
- for(const note of ['','A or B','A, B','Answer: H','A\nB','Maybe B']){
+ for(const note of ['','A or B','Answer: H','A\nB','Maybe B']){
   const q=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
   assert.equal(q.answer,'',note);assert.equal(q.verified,false);
  }
+});
+test('splits AD, ACE and ABC notes into valid ordered sets, including explanation tails',()=>{
+ for(const [note,expected] of [['AD','AD'],['ACE','ACE'],['ABC','ABC'],['ECA','ACE'],['A, D','AD'],['Đáp án: ACE\nGiải thích bằng tiếng Việt.','ACE']]){
+  const q=parsePresentation({slides:[{pageElements:[shape('q','Choose correct answers\nA. First\nB. Second\nC. Third\nD. Fourth\nE. Fifth')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}}]}).questions[0];
+  assert.equal(q.answer,expected,note);assert.equal(q.verified,true);assert.equal(q.explanation,'');
+ }
+ assert.equal(normalizeAnswer('AZ',[{id:'A'}]),'');
+});
+const multi=mode=>({mode,questions:[{id:'m',answer:'ACE',options:'ABCDE'.split('').map(id=>({id}))}],answers:{},deadline:2000,done:false});
+test('multi-answer study stores drafts, confirms explicitly and locks only after confirmation',()=>{
+ const s=multi('study'),q=s.questions[0];answerQuestion(s,'m','C');answerQuestion(s,'m','A');assert.equal(s.answers.m,undefined);assert.equal(optionState(s,q,'A'),'selected');assert.equal(grade(s.questions,s.answers),0);
+ const restored=JSON.parse(JSON.stringify(s));answerQuestion(restored,'m','E');assert.equal(confirmQuestion(restored,'m'),true);assert.equal(restored.answers.m,'ACE');assert.equal(grade(restored.questions,restored.answers),1);assert.equal(optionState(restored,q,'C'),'correct');assert.equal(answerQuestion(restored,'m','B'),false);assert.equal(confirmQuestion(restored,'m'),false);
+});
+test('multi-answer exams permit toggling and require exactly the full answer set',()=>{
+ const s=multi('exam'),q=s.questions[0];for(const id of 'ECA')answerQuestion(s,'m',id,1000);assert.equal(s.answers.m,'ACE');assert.equal(grade(s.questions,s.answers),1);assert.equal(optionState(s,q,'A'),'selected');
+ answerQuestion(s,'m','B',1000);assert.equal(grade(s.questions,s.answers),0);answerQuestion(s,'m','B',1000);answerQuestion(s,'m','E',1000);assert.equal(grade(s.questions,s.answers),0);assert.equal(answerQuestion(s,'m','E',2000),false);
+ assert.equal(grade(s.questions,{m:'EAC'}),1);assert.equal(grade(s.questions,{m:'AC'}),0);assert.equal(grade(s.questions,{m:'ABCE'}),0);
+ for(const id of 'AC')answerQuestion(s,'m',id,1000);assert.equal(s.answers.m,undefined);
 });
 test('grade uses stable option identifiers after shuffling',()=>{const q={id:'q',answer:'B',options:shuffle([{id:'A'},{id:'B'}])};assert.equal(grade([q],{q:'B'}),1);assert.equal(grade([q],{}),0);assert.equal(grade([q],{q:'A'}),0);assert.equal(q.options.length,2)});
 const makeSession=mode=>({mode,questions:[{id:'q',answer:'B',options:[{id:'B'},{id:'A'}]}],answers:{},deadline:mode==='study'?null:2000,done:false});
