@@ -13,3 +13,4 @@
 
 - During study and mock exams, show only a compact original slide number and Open slide link. Omit the source label, document name and full source banner from the active quiz.
 - Speaker notes may contain multiple concatenated answer letters (AD, ACE, ABC). Preserve the complete set; support multiple selection in study/exams, explicit checking for multi-answer study questions, and exact-set scoring (no credit for missing or extra choices). Do not change option positions. Saved banks, editing, exports and results must preserve all correct labels.
+- Do not claim OCR or AI transcriptions are perfectly accurate or silently guess SQL punctuation. A verified answer from speaker notes is not verification of every transcribed character. Offer original-slide image comparison for OCR questions, retain a usable source link, and preserve legitimate incorrect distractors exactly as authored.

@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-multi-16';
+import {parseWithOcr} from './ocr.mjs?v=20261113-fidelity-17';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-multi-16';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-fidelity-17';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -55,7 +55,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve()},ms);signal?.addEventListener('abort',abort,{once:true});
  })}
  async function request(url){
-  const signal=controller?.signal;
+  const signal=controller?.signal.aborted?undefined:controller?.signal;
   if(url.includes('/thumbnail?')){const reserved=Math.max(Date.now(),nextThumbnailAt);nextThumbnailAt=reserved+1100;await delay(Math.max(0,reserved-Date.now()),signal);}
   for(let attempt=0;attempt<5;attempt++){
   if(!active())throw Object.assign(Error('Phiên Google đã hết hạn. Bấm Kết nối Google để tiếp tục.'),{ocrFatal:true});
@@ -214,5 +214,17 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }else sessionStorage.removeItem(sessionKey);
  }catch{try{sessionStorage.removeItem(sessionKey)}catch{}}
  function apiToken(){if(!active())throw Error('Kết nối Google ở ảnh đại diện để sử dụng AI. Câu đã lưu vẫn ôn được mà không cần đăng nhập.');return token}
- return {connect,disconnect,readAnswers,apiToken};
+ async function slideImage(q){
+  apiToken();
+  const source=presentationIdFromLink(q.url),url=new URL(q.url),objectId=new URLSearchParams(url.hash.slice(1)).get('slide')?.replace(/^id\./,'');
+  if(!source||q.sourceId&&q.sourceId!==source||!objectId||! /^[\w.-]+$/.test(objectId))throw Error('Không xác định được slide gốc của câu này.');
+  const thumbnail=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}/pages/${encodeURIComponent(objectId)}/thumbnail?thumbnailProperties.thumbnailSize=LARGE`);
+  const imageUrl=new URL(thumbnail.contentUrl);
+  if(imageUrl.protocol!=='https:')throw Error('Google chưa trả ảnh slide hợp lệ.');
+  const response=await fetch(imageUrl,{credentials:'omit',referrerPolicy:'no-referrer'});
+  if(!response.ok)throw Error('Chưa tải được ảnh gốc. Hãy mở slide để đối chiếu.');
+  const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
+  return URL.createObjectURL(blob);
+ }
+ return {connect,disconnect,readAnswers,apiToken,slideImage};
 }

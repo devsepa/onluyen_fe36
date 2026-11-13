@@ -2,6 +2,11 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion,confirmQuestion,normalizeAnswer} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
+test('retains source SQL punctuation and placeholders verbatim instead of guessing missing OCR characters',()=>{
+ const text='How to execute a procedure?\nA. EXECUTE name_sp <parameter>\nB. EXEC name_sp @value = \'x\'\nC. WHERE x <= 10 AND y <> 2\nD. name_sp <parameter=';
+ const q=parsePresentation({slides:[{pageElements:[shape('q',text)]}]}).questions[0];
+ assert.equal(q.options[0].text,'EXECUTE name_sp <parameter>');assert.equal(q.options[1].text,"EXEC name_sp @value = 'x'");assert.equal(q.options[2].text,'WHERE x <= 10 AND y <> 2');assert.equal(q.options[3].text,'name_sp <parameter=');
+});
 test('reads the leading answer separately from translated question and explanation',()=>{
  const note='A\n\nTùy chọn ON UPDATE CASCADE có tác dụng gì?\nA. Tự động cập nhật giá trị khóa ngoại.\nON UPDATE CASCADE giúp duy trì tính toàn vẹn tham chiếu.';
  const slide={pageElements:[shape('q','What does ON UPDATE CASCADE do?\nA. Updates the foreign key\nB. Deletes the row')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n',note)]}}};

@@ -23,6 +23,8 @@ await evaluate(`(()=>{
   if(String(url).startsWith('https://www.googleapis.com/drive/v3/files?'))return Promise.resolve(Response.json({files:[{id:'qa_import',name:'SEMESTER_2_QA',mimeType:'application/vnd.google-apps.presentation',modifiedTime:'2026-11-13T00:00:00Z'},{id:'qa_not_selected',name:'Sever_1_SEMESTER_3_DBI202_Tai_lieu_khong_chon',mimeType:'application/vnd.google-apps.presentation',modifiedTime:'2026-11-13T00:00:00Z'}]}));
   if(String(url).startsWith('https://www.googleapis.com/drive/v3/files/qa_import?'))return Promise.resolve(Response.json({modifiedTime:'2026-11-13T00:00:00Z'}));
   if(url==='https://slides.googleapis.com/v1/presentations/qa_import')return Promise.resolve(Response.json(presentation));
+  if(String(url).includes('/pages/page0/thumbnail?')){qaCalls.push(url);return Promise.resolve(Response.json({contentUrl:'https://images.qa/slide.png'}))}
+  if(String(url)==='https://images.qa/slide.png'){if(options?.headers)throw Error('OAuth token leaked to image host');return originalFetch(image,options)}
   if(String(url).includes('slides.googleapis.com')){qaCalls.push(url);return Promise.resolve(Response.json({error:'Unexpected request'},{status:500}))}
   return originalFetch(url,options);
  };
@@ -85,6 +87,20 @@ assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).every(
 await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==='Lấy đáp án từ ghi chú').click()`);
 await waitFor(`document.querySelector('#message').textContent.includes('Không tìm thấy đáp án mới')`);
 assert.equal(await evaluate(`document.querySelector('#message').textContent.includes('có thể ôn luyện ngay')`),false);
+await evaluate(`document.querySelector('[data-preview-slide]').click()`);
+await waitFor(`!document.querySelector('#slidePreviewImage').hidden&&document.querySelector('#slidePreviewImage').naturalWidth>0`);
+assert.equal(await evaluate(`document.querySelector('#slidePreviewTitle').textContent`),'Đối chiếu slide 2');
+await evaluate(`document.querySelector('#slidePreviewActual').click()`);assert.equal(await evaluate(`document.querySelector('#slidePreviewActual').getAttribute('aria-pressed')`),'true');
+await evaluate(`document.querySelector('#slidePreviewFit').click()`);assert.equal(await evaluate(`document.querySelector('.slide-preview-image').classList.contains('is-fit')`),true);
+for(const theme of ['light','dark'])for(const width of [1440,390,320]){
+ await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<700});await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
+ const bounds=await evaluate(`(()=>{const r=document.querySelector('.slide-preview').getBoundingClientRect();return{left:r.left,right:r.right,width:innerWidth}})()`);
+ assert.ok(bounds.left>=0&&bounds.right<=bounds.width,`${theme}/${width} original-image dialog bounds`);
+ const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile(`outputs/source-selection/${theme}-${width}-original.png`,Buffer.from(shot.data,'base64'));
+}
+await evaluate(`document.querySelector('#closeSlidePreview').click()`);
+assert.equal(await evaluate(`document.querySelector('#slidePreviewImage').getAttribute('src')`),null,'revoke and release original image on close');
+assert.equal(await evaluate(`!!sessionStorage.getItem('sot-google-session')`),true,'image preview must preserve the valid Google session');
 // Restore a still-valid tab session without invoking Google authorization again.
 const restoreScript=await call('Page.addScriptToEvaluateOnNewDocument',{source:`window.google={accounts:{oauth2:{revoke:()=>{},initTokenClient:()=>{throw Error('Unexpected login on reload')}}}};const original=window.fetch;window.fetch=(url,options)=>String(url).startsWith('https://www.googleapis.com/drive/v3/files?')?Promise.resolve(Response.json({files:[]})):original(url,options);`});
 await evaluate(`location.reload()`);await new Promise(resolve=>setTimeout(resolve,500));
