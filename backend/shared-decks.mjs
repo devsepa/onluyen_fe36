@@ -21,7 +21,7 @@ export class SharedDecks{
   const path=new URL(request.url).pathname,user=request.headers.get('X-Owner')||'';
   try{
    if(path==='/catalog'&&request.method==='GET')return json([...await this.storage.list({prefix:'public:',limit:100})].map(([,v])=>v).sort((a,b)=>b.created-a.created));
-   if(path==='/reserve'&&request.method==='POST')return this.storage.transaction(async tx=>{const day=new Date().toISOString().slice(0,10),key='rate:'+user,previous=await tx.get(key),count=previous?.day===day?previous.count:0;if(count>=3)return json({error:'Mỗi tài khoản đăng tối đa 3 bộ đề mỗi ngày.'},429);await tx.put(key,{day,count:count+1});return json({ok:true})});
+   if(path==='/reserve'&&request.method==='POST')return this.storage.transaction(async tx=>{const day=new Date().toISOString().slice(0,10),key='rate:'+user,previous=await tx.get(key),count=previous?.day===day?previous.count:0;if(count>=50)return json({error:'Mỗi tài khoản đăng tối đa 50 bộ đề mỗi ngày.'},429);await tx.put(key,{day,count:count+1});return json({ok:true})});
    if(path==='/catalog'&&request.method==='POST'){const entry=await request.json();await this.storage.put('public:'+entry.id,entry);return json({ok:true})}
    if(path.startsWith('/catalog/')&&request.method==='DELETE'){await this.storage.delete('public:'+path.split('/').at(-1));return json({ok:true})}
    if(path==='/init'&&request.method==='POST'){
