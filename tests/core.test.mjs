@@ -2,6 +2,16 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {parsePresentation,grade,shuffle,answerQuestion,optionState,cleanSlideContent,cleanQuestion} from '../dist/core.mjs';
 const shape=(id,text)=>({objectId:id,shape:{text:{textElements:[{textRun:{content:text}}]}}});
+test('single uppercase note survives split runs and invisible direction marks',()=>{
+ const p={slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[{objectId:'n',shape:{text:{textElements:[{textRun:{content:'\u200e'}},{textRun:{content:'B'}},{textRun:{content:'\n'}}]}}}]}}}]};
+ const q=parsePresentation(p).questions[0];assert.equal(q.answer,'B');assert.equal(q.verified,true);
+});
+test('notes fallback uses the unique BODY placeholder, never the page number',()=>{
+ const slide={pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{pageElements:[shape('page','A'),{...shape('body','B'),shape:{...shape('body','B').shape,placeholder:{type:'BODY'}}}]}}};
+ assert.equal(parsePresentation({slides:[slide]}).questions[0].answer,'B');
+ delete slide.slideProperties.notesPage.pageElements[1].shape.placeholder;
+ assert.equal(parsePresentation({slides:[slide]}).questions[0].answer,'');
+});
 test('reads grouped questions and speaker notes, automatically accepts explicit speaker-note answer',()=>{const p={presentationId:'abc',slides:[{objectId:'s1',pageElements:[{elementGroup:{children:[shape('q','What is an index?\nA. Fast lookup\nB. Alias')]}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[shape('number','1'),shape('note','Answer: A\n')]}}},{objectId:'s2',pageElements:[{image:{}}]}]};const r=parsePresentation(p);assert.equal(r.questions.length,1);assert.equal(r.questions[0].answer,'A');assert.equal(r.questions[0].verified,true);assert.equal(r.questions[0].options[1].text,'Alias');assert.deepEqual(r.skipped,[2]);});
 test('ambiguous notes never create a guessed answer',()=>{const r=parsePresentation({slides:[{pageElements:[shape('q','Question\nA. One\nB. Two')],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'n'},pageElements:[shape('n','A or B')]}}}]});assert.equal(r.questions[0].answer,'')});
 test('accepts explicit note formats but leaves missing, conflicting and multiple answers for review',()=>{

@@ -17,7 +17,7 @@ export function setupAccount({onConnect,onDisconnect}){
  document.addEventListener('click',event=>{if(!event.target.closest('.account-control'))close()});
  document.addEventListener('focusin',event=>{if(!event.target.closest('.account-control'))close()});
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!menu.hidden){close();button.focus()}});
- for(const id of ['accountLogin','accountSwitch'])$(id).onclick=()=>{close();onConnect()};
+ for(const id of ['accountLogin','accountSwitch'])$(id).onclick=()=>{close();onConnect({switchAccount:id==='accountSwitch'})};
  $('accountLogout').onclick=()=>{close();onDisconnect()};
  function update(profile){
   const connected=!!profile;

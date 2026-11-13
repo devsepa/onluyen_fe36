@@ -36,10 +36,17 @@ function optionParts(text){
  return null;
 }
 function imageCount(elements=[]){return elements.reduce((n,e)=>n+(e.image?1:0)+(e.elementGroup?imageCount(e.elementGroup.children):0),0)}
-export function answerFromNotes(slide,options){
+export function speakerNotesText(slide){
  const page=slide.slideProperties?.notesPage,id=page?.notesProperties?.speakerNotesObjectId;
- if(!id)return '';
- const note=normalizeSlideText(textOf((page.pageElements||[]).filter(e=>e.objectId===id)));
+ const flatten=items=>items.flatMap(e=>e.elementGroup?flatten(e.elementGroup.children||[]):[e]);
+ const elements=flatten(page?.pageElements||[]);
+ const exact=id?elements.filter(e=>e.objectId===id):[];
+ const body=elements.filter(e=>e.shape?.placeholder?.type==='BODY');
+ const target=exact.length?exact:body.length===1?body:[];
+ return normalizeSlideText(textOf(target)).replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069]/g,'').trim();
+}
+export function answerFromNotes(slide,options){
+ const note=speakerNotesText(slide);
  const match=note.match(/^(?:(?:answer|correct answer|correct option|đáp án|đáp án đúng)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i);
  const answer=match?.[1].toUpperCase()||'';
  return options.some(o=>o.id===answer)?answer:'';

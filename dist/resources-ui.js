@@ -1,13 +1,19 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-order-10';
+import {parseWithOcr} from './ocr.mjs?v=20261113-session-11';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {answerFromNotes} from './core.mjs?v=20261113-order-10';
+import {answerFromNotes,speakerNotesText} from './core.mjs?v=20261113-session-11';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
  let token=null,expires=0,files=[],suggestions=[],selected=new Map(),controller=null,busy=false,epoch=0;
  let expiryTimer,profileController;
+ let accountProfile=null;
+ const sessionKey='sot-google-session';
+ function saveConnection(){try{if(token&&expires>Date.now())sessionStorage.setItem(sessionKey,JSON.stringify({token,expires,profile:accountProfile,clientId:resolveGoogleClientId()}));else sessionStorage.removeItem(sessionKey)}catch{}}
+ function updateProfile(profile){accountProfile=profile;saveConnection();onAccountChange(profile)}
+ function expireConnection(){token=null;expires=0;updateProfile(null)}
+ function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
@@ -28,7 +34,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    for(const page of (report.pages||[]).filter(p=>p.ocrError).slice(0,5)){const error=document.createElement('p');error.textContent=`Slide ${page.slide}: ${page.ocrError}`;diagnosticsPanel.append(error)}
    const unresolved=(report.pages||[]).filter(p=>p.processed&&!p.recognized);
    if(unresolved.length){
-    const help=document.createElement('p');help.textContent='Các trang đã đọc nhưng chưa nhận diện được câu trắc nghiệm (có thể là trang giới thiệu hoặc OCR chưa đọc đúng). Có thể chọn khoảng slide bên dưới để đọc lại.';diagnosticsPanel.append(help);
+   const help=document.createElement('p');help.textContent='Các slide chưa đọc được câu hỏi cần được kiểm tra lại. Mỗi câu tương ứng đúng một slide gốc. Có thể chọn khoảng slide bên dưới để đọc lại.';diagnosticsPanel.append(help);
     for(const page of unresolved){
      const row=document.createElement('p'),link=document.createElement('a');link.textContent=`Slide ${page.slide}`;link.href=`https://docs.google.com/presentation/d/${encodeURIComponent(report.id)}/edit#slide=id.${encodeURIComponent(page.objectId)}`;link.target='_blank';link.rel='noopener noreferrer';
      row.append(link,document.createTextNode(page.ocrError?' — Lỗi đọc trang':page.ocr?' — Chưa nhận diện câu hỏi từ ảnh':' — Chưa nhận diện câu hỏi từ chữ'));diagnosticsPanel.append(row);
@@ -41,7 +47,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }
  }
  function active(){return token&&Date.now()<expires}
- function reset(){clearTimeout(expiryTimer);profileController?.abort();onAccountChange(null);stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])$(id).disabled=false;epoch++;controller?.abort();controller=null;token=null;expires=0;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
+ function reset(){clearTimeout(expiryTimer);profileController?.abort();expireConnection();stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLanguage','ocrLimit','ocrStart','ocrEnd'])$(id).disabled=false;epoch++;controller?.abort();controller=null;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
  let nextThumbnailAt=0;
  function delay(ms,signal){return new Promise((resolve,reject)=>{
   if(signal?.aborted)return reject(new DOMException('Đã dừng.','AbortError'));
@@ -56,7 +62,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal});
   if((r.status===429||r.status>=500)&&attempt<4){await delay(Math.max(Number(r.headers.get('Retry-After')||0)*1000,2**attempt*1000+Math.random()*500),signal);continue;}
   if(!r.ok){
-   if(r.status===401){token=null;expires=0;onAccountChange(null);throw Object.assign(Error('Phiên Google đã hết hạn. Hãy kết nối lại.'),{ocrFatal:true});}
+   if(r.status===401){expireConnection();throw Object.assign(Error('Quyền đọc Google đã hết hạn. Kết nối lại ở ảnh đại diện khi cần đọc slide; câu đã lưu vẫn ôn bình thường.'),{ocrFatal:true});}
    if(r.status===403||r.status===404)throw Error('Chưa truy cập được tài liệu. Hãy dùng đúng tài khoản Google có quyền xem tài liệu rồi thử lại.');
    throw Error(`Google trả lỗi ${r.status}. Hãy thử lại.`);
   }
@@ -103,7 +109,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }catch(error){if(run!==epoch||error.name==='AbortError')return;status('Chưa tìm được danh sách tài liệu.');message(error.message)}
   finally{if(run===epoch)setBusy(false)}
  }
- function connect(){
+ function connect({switchAccount=false}={}){
   if(hasActiveSession())return onAccountError('Hãy hoàn thành bài đang làm trước khi đổi kết nối Google.');
   if(busy)return;
   const clientId=resolveGoogleClientId();if(!clientId)return onAccountError('Kết nối Google hiện chưa sẵn sàng. Vui lòng thử lại sau.');
@@ -115,15 +121,14 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    if(!google.accounts.oauth2.hasGrantedAllScopes(r,...GOOGLE_SCOPES))return onAccountError('Cần đồng ý chia sẻ thông tin tài khoản và quyền đọc tài liệu để kết nối Google.');
    reset();token=r.access_token;expires=Date.now()+r.expires_in*1000;
     const accountEpoch=epoch;profileController=new AbortController();
-    onAccountChange({name:'Tài khoản Google'});
-    expiryTimer=setTimeout(()=>{if(accountEpoch===epoch){token=null;expires=0;onAccountChange(null);}},Math.max(0,expires-Date.now()));
+    updateProfile({name:'Tài khoản Google'});scheduleExpiry();
     try{
      const response=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:`Bearer ${token}`},signal:profileController.signal});
-     if(response.ok){const profile=await response.json();if(accountEpoch!==epoch)return;onAccountChange({name:profile.name,email:profile.email,picture:profile.picture});}
+     if(response.ok){const profile=await response.json();if(accountEpoch!==epoch)return;updateProfile({name:profile.name,email:profile.email,picture:profile.picture});}
     }catch(error){if(accountEpoch!==epoch||error.name==='AbortError')return;}
     if(accountEpoch!==epoch)return;
    message('');scan();
-  },error_callback:()=>{if(run===epoch)onAccountError('Cửa sổ Google bị đóng hoặc chặn. Hãy kết nối lại.')}}).requestAccessToken({prompt:'select_account'});
+  },error_callback:()=>{if(run===epoch)onAccountError('Cửa sổ Google bị đóng hoặc chặn. Hãy kết nối lại.')}}).requestAccessToken({prompt:switchAccount?'select_account':''});
  };
  function disconnect(){const oldToken=token;reset();if(oldToken)google.accounts.oauth2.revoke(oldToken,()=>{});status('Đăng nhập ở góc phải để chọn tài liệu.');message('Đã đăng xuất Google. Dữ liệu đã nhập vẫn được giữ trên trình duyệt này.')}
  $('scan').onclick=scan;
@@ -181,7 +186,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  async function readAnswers(questions){
   if(!active())throw Error('Đăng nhập Google ở ảnh đại diện để đọc ghi chú từ slide.');
   if(busy)throw Error('Hãy đợi nhập tài liệu xong rồi lấy đáp án.');
-  const updates=[],failures=[],run=epoch;
+  const updates=[],failures=[],unresolved={missingSlide:[],empty:[],unmatched:[]},run=epoch;
   const ids=[...new Set(questions.filter(q=>!q.verified).map(q=>q.sourceId||presentationIdFromLink(q.url)).filter(Boolean))];
   for(const id of ids){
    try{
@@ -191,14 +196,22 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
     for(const q of questions.filter(q=>!q.verified&&(q.sourceId||presentationIdFromLink(q.url))===id)){
      const objectId=q.url?.match(/#slide=id\.(.+)$/)?.[1];
      const slide=p.slides?.find(s=>s.objectId===objectId);
-     if(!slide)continue;
+     if(!slide){unresolved.missingSlide.push(q.slide);continue;}
      const answer=answerFromNotes(slide,q.options);
      if(answer)updates.push({id:q.id,answer});
+     else unresolved[speakerNotesText(slide)?'unmatched':'empty'].push(q.slide);
     }
    }catch(error){if(run!==epoch)throw error;failures.push(error.message)}
   }
   if(run!==epoch)throw Error('Tài khoản đã thay đổi. Hãy thử lại.');
-  return {updates,failures};
+  return {updates,failures,unresolved};
  }
+ try{
+  const saved=JSON.parse(sessionStorage.getItem(sessionKey)||'null');
+  if(saved&&saved.clientId===resolveGoogleClientId()&&typeof saved.token==='string'&&Number.isFinite(saved.expires)&&saved.expires>Date.now()){
+   token=saved.token;expires=saved.expires;updateProfile(saved.profile||{name:'Tài khoản Google'});scheduleExpiry();
+   setTimeout(()=>{if(active())scan()},0);
+  }else sessionStorage.removeItem(sessionKey);
+ }catch{try{sessionStorage.removeItem(sessionKey)}catch{}}
  return {connect,disconnect,readAnswers};
 }

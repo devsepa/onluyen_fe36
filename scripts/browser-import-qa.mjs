@@ -9,7 +9,7 @@ let sequence=0;const pending=new Map();
 function call(method,params={}){return new Promise((resolve,reject)=>{const id=++sequence;pending.set(id,{resolve,reject});ws.send(JSON.stringify({id,method,params}))})}
 ws.onmessage=event=>{const m=JSON.parse(event.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}};
 async function evaluate(expression){const r=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value}
-await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Wrong origin');localStorage.clear();location.reload()`);await new Promise(resolve=>setTimeout(resolve,500));
+await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Wrong origin');localStorage.clear();sessionStorage.clear();location.reload()`);await new Promise(resolve=>setTimeout(resolve,500));
 assert.equal(await evaluate(`document.querySelector('#connect,#disconnect')===null`),true,'login controls must exist only in the avatar');
 assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),true);
 assert.equal(await evaluate(`document.querySelector('#sourceAccessNotice').hidden`),false);
@@ -82,7 +82,17 @@ await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==
 await waitFor(`document.querySelector('#ready').textContent==='4'`);
 assert.equal(await evaluate(`qaCalls.length`),0,'refreshing notes must not request thumbnails or OCR');
 assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).every(q=>q.answerSource==='speaker-notes')`),true);
+await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==='Lấy đáp án từ ghi chú').click()`);
+await waitFor(`document.querySelector('#message').textContent.includes('Không tìm thấy đáp án mới')`);
+assert.equal(await evaluate(`document.querySelector('#message').textContent.includes('có thể ôn luyện ngay')`),false);
+// Restore a still-valid tab session without invoking Google authorization again.
+const restoreScript=await call('Page.addScriptToEvaluateOnNewDocument',{source:`window.google={accounts:{oauth2:{revoke:()=>{},initTokenClient:()=>{throw Error('Unexpected login on reload')}}}};const original=window.fetch;window.fetch=(url,options)=>String(url).startsWith('https://www.googleapis.com/drive/v3/files?')?Promise.resolve(Response.json({files:[]})):original(url,options);`});
+await evaluate(`location.reload()`);await new Promise(resolve=>setTimeout(resolve,500));
+await waitFor(`document.querySelector('#accountName').textContent==='Người học QA'`);
+assert.equal(await evaluate(`document.querySelector('#accountButton').classList.contains('connected')`),true);
 await evaluate(`document.querySelector('#accountButton').click();document.querySelector('#accountLogout').click()`);
+assert.equal(await evaluate(`sessionStorage.getItem('sot-google-session')`),null);
+await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:restoreScript.identifier});
 assert.equal(await evaluate(`document.querySelector('#accountName').textContent`),'Khách');
 assert.equal(await evaluate(`document.querySelector('#accountButton').classList.contains('connected')`),false);
 assert.equal(await evaluate(`document.querySelector('#sourceControls').hidden`),true);

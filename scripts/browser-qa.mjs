@@ -12,7 +12,7 @@ async function evaluate(expression){const result=await call('Runtime.evaluate',{
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function waitFor(expression,timeout=5000){const start=Date.now();while(Date.now()-start<timeout){if(await evaluate(expression))return;await sleep(100)}throw Error('Timed out: '+expression)}
 await call('Page.enable');await call('Runtime.enable');
-await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Unexpected QA origin');localStorage.clear();location.reload()`);await sleep(500);await waitFor(`!!document.querySelector('.nav.active')`);
+await evaluate(`if(location.origin!=='http://localhost:8080')throw Error('Unexpected QA origin');localStorage.clear();sessionStorage.clear();location.reload()`);await sleep(500);await waitFor(`!!document.querySelector('.nav.active')`);
 await mkdir('outputs',{recursive:true});
 async function screenshot(name,width,height){await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<700});await sleep(100);const result=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});await writeFile('outputs/'+name+'.png',Buffer.from(result.data,'base64'))}
 assert.equal(await evaluate(`document.querySelector('.nav.active').dataset.view`),'sources');

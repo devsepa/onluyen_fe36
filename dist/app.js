@@ -1,8 +1,8 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-order-10';
-import {setupResources} from './resources-ui.js?v=20261113-order-10';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-session-11';
+import {setupResources} from './resources-ui.js?v=20261113-session-11';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-order-10';
-import {setupAccount} from './account-ui.js';
+import {validateBank} from './banks.mjs?v=20261113-session-11';
+import {setupAccount} from './account-ui.js?v=20261113-session-11';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -50,9 +50,9 @@ function switchView(next,mode){
  refreshStats();if(view==='library')renderLibrary();if(view==='practice')renderPractice();if(view==='history')renderHistory();if(view==='result')renderResult(lastResult);
 }
 document.addEventListener('click',event=>{const action=event.target.closest('[data-view]');if(action){event.preventDefault();switchView(action.dataset.view,action.dataset.mode)}});
-const account=setupAccount({onConnect:()=>{
+const account=setupAccount({onConnect:options=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi đổi tài khoản Google.');
- resources.connect();
+ resources.connect(options);
 },onDisconnect:()=>resources.disconnect()});
 const resources=setupResources({onAccountChange:profile=>{
  account.update(profile);$('sourceAccessNotice').hidden=!!profile;$('sourceControls').hidden=!profile;
@@ -86,10 +86,11 @@ notesButton.onclick=async()=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi cập nhật đáp án.');
  const snapshot=bank;notesButton.disabled=true;notesButton.textContent='Đang đọc ghi chú…';
  try{
-  const {updates,failures}=await resources.readAnswers(snapshot);
+  const {updates,failures,unresolved}=await resources.readAnswers(snapshot);
   if(bank!==snapshot||session&&!session.done)return message('Ngân hàng hoặc bài làm đã thay đổi. Hãy lấy lại đáp án.');
   for(const update of updates){const q=bank.find(q=>q.id===update.id);if(q&&!q.verified){q.answer=update.answer;q.verified=true;q.answerSource='speaker-notes'}}
-  saveBank();message(`Đã lấy ${updates.length} đáp án từ ghi chú, có thể ôn luyện ngay. Không quét lại ảnh.${failures.length?' Một số tài liệu không đọc được: '+failures.join('; '):''}${bank.some(q=>!q.answer)?' Câu thiếu hoặc ghi chú không rõ vẫn cần kiểm tra.':''}`);
+  const details=[['missingSlide','Không khớp slide gốc'],['empty','Google chưa trả nội dung ghi chú'],['unmatched','Ghi chú chưa khớp lựa chọn đáp án']].filter(([key])=>unresolved[key].length).map(([key,label])=>`${label}: ${unresolved[key].length} câu (slide ${unresolved[key].slice(0,10).join(', ')}${unresolved[key].length>10?', …':''}).`).join(' ');
+  saveBank();message(`${updates.length?`Đã cập nhật ${updates.length} đáp án từ ghi chú.`:'Không tìm thấy đáp án mới phù hợp trong ghi chú.'} Hiện có ${bank.filter(q=>q.verified&&q.answer).length}/${bank.length} câu sẵn sàng ôn luyện. Không quét lại ảnh. ${details}${failures.length?' Một số tài liệu không đọc được: '+failures.join('; '):''}`);
  }catch(error){message(error.message)}finally{notesButton.disabled=false;notesButton.textContent='Lấy đáp án từ ghi chú'}
 };
 $('clear').onclick=()=>{if(confirm('Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.')){bank=[];sourceSummary='';write('sot-source','');saveBank()}};
