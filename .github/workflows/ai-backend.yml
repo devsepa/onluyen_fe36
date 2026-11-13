@@ -24,6 +24,10 @@ jobs:
           test -n "$CF_TOKEN" || { echo 'Add CLOUDFLARE_API_TOKEN in repository Secrets.'; exit 1; }
           test -n "$CF_ACCOUNT" || { echo 'Add CLOUDFLARE_ACCOUNT_ID in repository Secrets.'; exit 1; }
           test -n "$GEMINI_KEY" || { echo 'Add GEMINI_API_KEY in repository Secrets.'; exit 1; }
+      - name: Resolve available Gemini model
+        run: node scripts/select-gemini-model.mjs
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       - name: Deploy Worker and private Gemini key
         uses: cloudflare/wrangler-action@v3
         with:
