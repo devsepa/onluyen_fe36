@@ -21,8 +21,26 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
  mapButton.onclick=()=>{mapDialog.querySelector('.quiz-map-card')?.remove();const copy=aside.cloneNode(true);copy.querySelector('.quiz-map-pager').remove();copy.querySelector('h3').remove();paginateMap(copy);mapDialog.append(copy);mapDialog.showModal()};
  const feedback=card.querySelector('.feedback');
  if(feedback){
-  feedback.replaceChildren();const result=document.createElement('strong');result.textContent=(isCorrect(question,session.answers[question.id])?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer;feedback.append(result);
-  if(question.explanation){const button=document.createElement('button');button.type='button';button.className='text-button';button.textContent='Xem giải thích';button.onclick=()=>openPagedText(root,question.answerSource==='gemini'?'Giải thích AI · cần kiểm tra':'Giải thích từ ghi chú',question.explanation);feedback.append(button)}
+  feedback.replaceChildren();
+  const mainRow=document.createElement('div');mainRow.className='feedback-main-row';
+  const result=document.createElement('strong');result.textContent=(isCorrect(question,session.answers[question.id])?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer;
+  mainRow.append(result);
+  if(question.explanation){
+   const button=document.createElement('button');button.type='button';button.className='text-button feedback-toggle-btn';button.textContent='Xem giải thích';
+   const expBox=document.createElement('div');expBox.className='feedback-inline-exp';expBox.hidden=true;
+   const expTitle=document.createElement('b');expTitle.textContent=question.answerSource==='gemini'?'Giải thích AI:':'Ghi chú / Giải thích:';
+   const expText=document.createElement('span');expText.textContent=question.explanation;
+   expBox.append(expTitle,expText);
+   button.onclick=()=>{
+    const show=expBox.hidden;
+    expBox.hidden=!show;
+    button.textContent=show?'Ẩn giải thích':'Xem giải thích';
+   };
+   mainRow.append(button);
+   feedback.append(mainRow,expBox);
+  }else{
+   feedback.append(mainRow);
+  }
  }
  if(!question.url&&!question.sharedDeck){card.querySelector('.slide-media-container')?.remove();const text=card.querySelector('.question-title'),button=document.createElement('button');button.type='button';button.className='text-button quiz-read-text';button.textContent='Đọc toàn bộ nội dung';button.onclick=()=>openPagedText(root,'Nội dung câu hỏi',text.textContent);text.after(button)}
 }
