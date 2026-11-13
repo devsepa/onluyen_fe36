@@ -4,7 +4,7 @@ import {createBankTracker} from './library-data.mjs';
 import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
 import {createExplanationQueue} from './explanation-queue.mjs';
 import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=20261114-cache-exp';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-cache-exp';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-smart-tip-2';
 import {setupVersionUpdates} from './version-updates.mjs';
 import { askConfirm } from "./confirm-dialog.mjs";
 import { practiceSubjects, subjectKey } from "./subjects.mjs";
