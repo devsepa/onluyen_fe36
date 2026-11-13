@@ -1,3 +1,4 @@
+import { practiceSubjects, subjectKey } from "./subjects.mjs";
 import { nextUnanswered, explanationFromResult } from "./study-flow.mjs";
 import {
   shuffle,
@@ -1065,15 +1066,11 @@ function renderPractice() {
   const eligible = bank.filter(readyForPractice),
     n = eligible.length;
   $("practice").innerHTML =
-    `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><label>Nguồn câu hỏi<select id="practiceSource"><option value="">Tất cả tài liệu (${n} câu sẵn sàng)</option>${sources()
-      .map(([id, name]) => `<option value="${esc(id)}">${esc(name)}</option>`)
-      .join(
-        "",
-      )}</select></label><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><div class="setup-fields"><label>Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
+    `<div class="mode-layout"><div class="card"><span class="overline">THIẾT LẬP BUỔI HỌC</span><h2>Chọn chế độ phù hợp với bạn</h2><fieldset class="mode-picker"><legend>Hôm nay bạn muốn…</legend><label class="mode-choice"><input type="radio" name="mode" value="study" ${preferredMode === "study" ? "checked" : ""}><span><b>◉ Ôn luyện</b><small>Chọn đáp án và biết đúng sai ngay. Không giới hạn thời gian.</small></span></label><label class="mode-choice"><input type="radio" name="mode" value="exam" ${preferredMode === "exam" ? "checked" : ""}><span><b>◷ Thi thử</b><small>Đếm ngược, tự nộp khi hết giờ. Chấm điểm sau khi nộp bài.</small></span></label></fieldset><div class="setup-fields setup-fields-main"><label class="field-subject">Mã môn<select id="practiceSource"><option value="">Tất cả môn (${n} câu sẵn sàng)</option>${practiceSubjects(eligible).map(({key,label,count})=>`<option value="${esc(key)}">${esc(label)} (${count} câu)</option>`).join("")}</select></label><label class="field-count">Số câu<input id="count" type="number" min="1" max="${n}" value="${Math.min(20, n) || 1}"></label><label id="timeSetting" class="field-time" ${preferredMode === "study" ? "hidden" : ""}>Thời gian (phút)<input id="minutes" type="number" min="1" max="180" value="20"></label></div><p class="pool-availability"><strong id="poolCount">${n}</strong> câu có đáp án để ôn luyện (gồm đáp án AI gợi ý).</p><button id="start" class="wide-button" ${!n ? "disabled" : ""}>${preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử"} →</button>${!n ? '<p>Chưa có câu hỏi có đáp án. <a href="#" data-view="library">Kiểm tra ngân hàng câu hỏi →</a></p>' : ""}</div></div>`;
   const pool = () =>
     eligible.filter(
       (q) =>
-        !$("practiceSource").value || q.sourceId === $("practiceSource").value,
+        !$("practiceSource").value || subjectKey(q) === $("practiceSource").value,
     );
   $("practiceSource").onchange = () => {
     const count = pool().length;
