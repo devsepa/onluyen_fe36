@@ -218,7 +218,7 @@ async function questionBlob(q, options = {}) {
         })
       ).blob()
     : resources.slideBlob(q, options));
-  }catch(error){if(!['AbortError','TimeoutError'].includes(error.name))telemetry.record('image_error');throw error}finally{telemetry.record('image_ms',performance.now()-started)}
+  }catch(error){if(error.name!=='AbortError'){telemetry.record('image_error');error.imageReported=true}throw error}finally{telemetry.record('image_ms',performance.now()-started)}
 }
 
 async function questionImage(q) {
@@ -516,6 +516,7 @@ async function showQuestionImage(container, q) {
     };
     image.onload = displayImage;
     image.onerror = () => {
+      telemetry.record('image_error');
       slideImages.invalidate(
         q.mediaId?`local:${q.mediaId}`:q.sharedDeck ? `shared:${q.sharedDeck}:${q.sharedIndex}` : q.url,
       );
@@ -530,7 +531,8 @@ async function showQuestionImage(container, q) {
         .then(displayImage)
         .catch(() => {});
     }
-  } catch {
+  } catch(error) {
+    if(error.name!=='AbortError'&&!error.imageReported)telemetry.record('image_error');
     if (container.isConnected) showSlideError(container, q);
   }
 }
@@ -548,6 +550,7 @@ function showSlideError(container, q) {
     showQuestionImage(container, q);
   };
   container.append(retry);
+  const report=document.createElement('button');report.type='button';report.className='secondary';report.textContent='Báo lỗi ảnh';report.dataset.reportQuestion=q.id;container.append(report);
   if (!q.sharedDeck) {
     const loginBtn = document.createElement("button");
     loginBtn.className = "primary";
@@ -1219,8 +1222,9 @@ function renderPractice() {
         <!-- Question Count Selection with Range Slider & Presets -->
         <div class="form-group-v2">
           <label class="form-label-v2" for="selectionStrategy">Cách chọn câu hỏi</label>
-          <select id="selectionStrategy" class="select-control-v2"><option value="unseen" ${selectionStrategy==='unseen'?'selected':''}>Ưu tiên câu chưa làm · không trùng trong vòng</option><option value="random" ${selectionStrategy==='random'?'selected':''}>Ngẫu nhiên toàn bộ · có thể gặp lại câu cũ</option></select>
+          <select id="selectionStrategy" class="select-control-v2"><option value="unseen" ${selectionStrategy==='unseen'?'selected':''}>Ưu tiên câu chưa làm</option><option value="random" ${selectionStrategy==='random'?'selected':''}>Ngẫu nhiên toàn bộ</option></select>
           <p id="selectionSummary" class="selection-summary">${selectionSummary()}</p>
+          <small class="muted">Tiến độ bốc câu lưu trên trình duyệt này. Chế độ ngẫu nhiên có thể gặp lại câu cũ.</small>
           <button type="button" id="resetSelection" class="secondary selection-reset" ${studySelection.remaining(allPool()).length?'hidden':''}>Bắt đầu vòng mới cho nhóm câu này</button>
         </div>
         <div class="form-group-v2">
@@ -1456,7 +1460,8 @@ function renderPractice() {
     };
   });
 
-  $("start").onclick = () => {
+  $("start").onclick = async () => {
+   const createSession=()=>{
     const questions = pool(),
       count = Number($("count").value),
       mins = Number($("minutes").value);
@@ -1485,6 +1490,7 @@ function renderPractice() {
     message("");
     renderQuiz();
     startSessionPreload(session.questions);
+   };return navigator.locks?navigator.locks.request('sot-study-draw',createSession):createSession();
   };
   updateDashboard();
 }
@@ -2010,7 +2016,7 @@ libraryManager=setupLibraryManager({base:AI_API_BASE,getBank:()=>bank,getGenerat
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
  onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);
-quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id),getDetails:q=>explanationQueue.state(q).details||q.explanationDetails,onRead:readExplanation});quality.setProfile(libraryProfile);
+quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>{const q=(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id);return q&&view==='practice'&&session&&!session.done&&(session.mode==='exam'||!session.answers[q.id])?{...q,answer:'',explanation:'',explanationDetails:undefined}:q},getDetails:q=>explanationQueue.state(q).details||q.explanationDetails,onRead:readExplanation});quality.setProfile(libraryProfile);
 window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);

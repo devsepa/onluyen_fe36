@@ -13,6 +13,8 @@ on:
       - 'scripts/check-gemini.mjs'
       - 'scripts/check-private-library.mjs'
       - 'scripts/check-explanation-cache.mjs'
+      - 'scripts/configure-quality.mjs'
+      - 'scripts/check-quality.mjs'
       - '.github/workflows/ai-backend.yml'
 permissions:
   contents: read
@@ -45,7 +47,12 @@ jobs:
         run: node scripts/check-gemini.mjs
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Configure moderation access
+        run: node scripts/configure-quality.mjs
+        env:
+          MODERATOR_EMAILS: ${{ vars.MODERATOR_EMAILS }}
       - name: Deploy Worker and private Gemini key
+        # Moderator identities remain server configuration, never visitor inputs.
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -63,5 +70,9 @@ jobs:
           AI_API_BASE: ${{ vars.AI_API_BASE }}
       - name: Verify anonymous explanations and shared reuse
         run: node scripts/check-explanation-cache.mjs
+        env:
+          AI_API_BASE: ${{ vars.AI_API_BASE }}
+      - name: Verify quality reporting, private review and cache revision checks
+        run: node scripts/check-quality.mjs
         env:
           AI_API_BASE: ${{ vars.AI_API_BASE }}

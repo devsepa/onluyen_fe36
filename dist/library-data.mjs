@@ -25,7 +25,7 @@ export function validateLibraryQuestions(input){
   for(const key of ['aiStatus','aiReason','aiModel'])if(typeof q[key]==='string')value[key]=text(key,key==='aiReason'?6000:100);
   if(q.mediaId!==undefined){if(!validMediaId(q.mediaId))throw Error('Mã ảnh trong thư viện không hợp lệ.');value.mediaId=q.mediaId}
   for(const key of ['savedAt','updatedAt'])if(Number.isFinite(q[key])&&q[key]>0)value[key]=q[key];
-  if(q.explanationDetails){const details=q.explanationDetails;if(details.answer===q.answer&&details.key===explanationKey(value)){if(typeof details.reason!=='string'||details.reason.length>3000)throw Error('Giải thích AI trong thư viện không hợp lệ.');value.explanationDetails={answer:details.answer,reason:details.reason,key:details.key,options:validateOptionReasons(details.options,details.options?.map(o=>o.id))}}}
+  if(q.explanationDetails){const details=q.explanationDetails;if(details.answer===q.answer&&details.key===explanationKey(value)){if(typeof details.reason!=='string'||details.reason.length>3000)throw Error('Giải thích AI trong thư viện không hợp lệ.');value.explanationDetails={answer:details.answer,reason:details.reason,key:details.key,options:validateOptionReasons(details.options,details.options?.map(o=>o.id)),...(validMediaId(details.cacheKey)&&typeof details.cacheEtag==='string'?{cacheKey:details.cacheKey,cacheEtag:details.cacheEtag.slice(0,100),reviewed:!!details.reviewed}:{})}}}
   const key=bankQuestionKey(value);if(keys.has(key))throw Error('Thư viện có câu hỏi trùng slide.');keys.add(key);return value;
  });
 }

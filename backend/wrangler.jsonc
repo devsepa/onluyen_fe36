@@ -26,6 +26,10 @@
       {
         "name": "EXPLANATION_CACHE",
         "class_name": "ExplanationCache"
+      },
+      {
+        "name": "QUALITY_STORE",
+        "class_name": "QualityStore"
       }
     ]
   },
@@ -52,6 +56,12 @@
       "tag": "v4-explanation-cache",
       "new_sqlite_classes": [
         "ExplanationCache"
+      ]
+    },
+    {
+      "tag": "v5-quality-store",
+      "new_sqlite_classes": [
+        "QualityStore"
       ]
     }
   ]

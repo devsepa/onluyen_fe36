@@ -31,12 +31,13 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  const scroll=feedback.querySelector('.feedback-inline-exp')?.scrollTop||0;
  feedback.className='feedback '+(isCorrect(question,answered)?'right':'incorrect');feedback.setAttribute('role','status');feedback.replaceChildren();
  const row=add(feedback,'div','feedback-main-row');add(row,'strong','',(isCorrect(question,answered)?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer);
+ const report=add(row,'button','secondary quality-report-button','Báo lỗi');report.type='button';report.dataset.reportQuestion=question.id;
  const details=state.details;
  if(details||question.explanation){
   const box=add(feedback,'div','feedback-inline-exp');box.tabIndex=0;box.setAttribute('role','region');box.setAttribute('aria-label','Giải thích đáp án');
   for(const event of ['pointerdown','wheel','focus','touchstart'])box.addEventListener(event,onRead,{passive:true});
   add(box,'b','',details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:');
-  if(details)add(box,'small','explanation-storage-note',details.reused?'Đã lưu · dùng lại từ kho giải thích chung':'Tự động lưu cho lần ôn sau');
+  if(details)add(box,'small','explanation-storage-note',details.reviewed?'Đã được kiểm duyệt':details.reused?'Đã lưu · dùng lại từ kho giải thích chung':'Tự động lưu cho lần ôn sau');
   const choices=question.options.map(o=>({id:o.id,text:o.text||details?.options.find(item=>item.id===o.id)?.text||''}));
   const content=labels=>[...labels].map(id=>{const text=choices.find(o=>o.id===id)?.text;return id+(text?' — '+text:'')}).join('\n');
   add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
