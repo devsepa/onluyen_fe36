@@ -1,12 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-vision-1';
-import {setupResources} from './resources-ui.js?v=20261113-vision-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-system-theme-1';
+import {setupResources} from './resources-ui.js?v=20261113-system-theme-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-vision-1';
-import {setupAccount} from './account-ui.js?v=20261113-vision-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-vision-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-vision-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-vision-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-vision-1';
+import {validateBank} from './banks.mjs?v=20261113-system-theme-1';
+import {setupAccount} from './account-ui.js?v=20261113-system-theme-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-system-theme-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-system-theme-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-system-theme-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-system-theme-1';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -265,6 +265,5 @@ function renderHistory(){
  $('history').innerHTML=`<div class="section-heading"><div><span class="overline">HÀNH TRÌNH CỦA BẠN</span><h2>${history.length} bài đã hoàn thành</h2><p>${history.length?`Điểm trung bình ${average.toFixed(1)}/10 · Lưu tối đa 50 bài gần nhất trên thiết bị này.`:'Những bài bạn hoàn thành sẽ được lưu tại đây.'}</p></div><button data-view="practice">Luyện một đề mới →</button></div>`+(history.length?`<div class="history-list">${history.map(r=>`<article class="card history-item"><div class="history-score">${(r.correct/r.questions.length*10).toFixed(1)}</div><div class="history-info"><span class="tag ${r.mode==='study'?'ok':''}">${r.mode==='study'?'ÔN LUYỆN':'THI THỬ'}</span><h3>Đúng ${r.correct}/${r.questions.length} câu hỏi</h3><p>${new Date(r.finished).toLocaleString('vi-VN')}</p></div><button class="secondary" data-result="${esc(r.id)}">Xem bài làm ↗</button></article>`).join('')}</div>`:empty('Buổi học đầu tiên đang chờ bạn','Hãy bắt đầu với một đề ngắn. Kết quả sẽ giúp bạn biết mình đã vững phần nào.','practice','Bắt đầu luyện tập →'));
 }
 $('history').onclick=e=>{const id=e.target.closest('[data-result]')?.dataset.result;if(!id)return;if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi mở kết quả khác.');lastResult=history.find(r=>r.id===id);resultFilter='all';switchView('result')};
-let theme=localStorage.getItem('sot-theme')||'light';document.documentElement.dataset.theme=theme;$('themeToggle').textContent=theme==='dark'?'☀':'☾';$('themeToggle').onclick=()=>{theme=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=theme;localStorage.setItem('sot-theme',theme);$('themeToggle').textContent=theme==='dark'?'☀':'☾'};
 for(const [key,value] of [['sot-bank',bank],['sot-history',history],['sot-session',session]])if(originalStorage.get(key)!==JSON.stringify(value))write(key,value);
 setTimeout(scheduleAutoAi,0);setInterval(updateTimer,1000);document.addEventListener('visibilitychange',updateTimer);refreshStats();switchView(session&&!session.done?'practice':view);
