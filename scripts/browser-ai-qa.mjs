@@ -28,6 +28,7 @@ const mock=await call('Page.addScriptToEvaluateOnNewDocument',{source:`
   if(String(url).startsWith('https://qa-slide.example/'))return Promise.resolve(new Response(new Uint8Array([137,80,78,71]),{headers:{'content-type':'image/png'}}));
   if(String(url).startsWith('https://qa-ai.example/')){
    const questions=JSON.parse(init.body).questions;aiCalls.push(questions);
+   if(questions[0].id===window.aiBadImageId)return Promise.resolve(Response.json({error:'Image unreadable',code:'AI_IMAGE_INVALID'},{status:400}));
    return new Promise((resolve,reject)=>{const timer=setTimeout(()=>resolve(aiFail?Response.json({error:'Hạn mức QA'},{status:429}):Response.json({answers:questions.map(q=>({id:q.id,status:'answered',answer:'B',explanation:'Giải thích AI để kiểm tra.'})),model:'qa-model'})),aiDelay);init.signal?.addEventListener('abort',()=>{clearTimeout(timer);reject(new DOMException('Stopped','AbortError'))},{once:true})});
   }
   return original(url,init);
@@ -63,10 +64,14 @@ try{
  await evaluate(`document.querySelector('#aiStop').click()`);await waitFor(`document.querySelector('#aiProgress').textContent.includes('Đã dừng')`);
  assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).filter(q=>q.answer).length`),6);
  await evaluate(`aiDelay=10;document.querySelector('#aiStart').click()`);await waitFor(`document.querySelector('#aiProgress').textContent.includes('1 đáp án AI gợi ý')`);
+ // One corrupt image must not block a later valid question or erase stored answers.
+ await evaluate(`const b=JSON.parse(localStorage.getItem('sot-bank'));for(const q of b.slice(1,3)){q.answer='';q.verified=false}localStorage.setItem('sot-bank',JSON.stringify(b));location.reload()`);await waitFor(`!document.querySelector('#aiStart').disabled`);
+ await evaluate(`aiBadImageId='ai-1';document.querySelector('#aiStart').click()`);await waitFor(`JSON.parse(localStorage.getItem('sot-bank'))[1].aiStatus==='uncertain'&&JSON.parse(localStorage.getItem('sot-bank'))[2].answer==='B'`);
+ assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank'))[1].answer`),'');assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank'))[0].answer`),'A');assert.deepEqual(await evaluate(`aiCalls.map(batch=>batch[0].id)`),['ai-1','ai-2']);
  // Missing token never sends questions, and no login popup is forced.
  await evaluate(`sessionStorage.clear();const b=JSON.parse(localStorage.getItem('sot-bank'));b[1].answer='';b[1].verified=false;localStorage.setItem('sot-bank',JSON.stringify(b));location.reload()`);await waitFor(`!document.querySelector('#aiStart').disabled`);
  await evaluate(`document.querySelector('#aiStart').click()`);assert.equal(await evaluate(`aiCalls.length`),0);assert.ok((await evaluate(`document.querySelector('#message').textContent`)).includes('Kết nối Google'));
- assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'passed',checks:['original image one per request','no source answer overwritten','AI not auto verified','accept all proposals','reload avoids repeat','stop/resume keeps results','requires Google auth','PC/mobile light/dark/narrow']}));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({result:'passed',checks:['original image one per request','no source answer overwritten','AI not auto verified','accept all proposals','reload avoids repeat','stop/resume keeps results','requires Google auth','400 image error skips one slide and continues','PC/mobile light/dark/narrow']}));
 }finally{
  await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:mock.identifier});await call('Fetch.disable');ws.close();
 }

@@ -1,7 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
 import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs';
-import {solveBatch,blobToBase64} from './ai.mjs';
-import {selectQuestionSlides} from './question-slides.mjs';
+import {solveBatch,blobToBase64} from './ai.mjs?v=20261113-retry-1';
+import {selectQuestionSlides} from './question-slides.mjs?v=20261113-retry-1';
+import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs';
 import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-filter-1';
 
 const $=id=>document.getElementById(id);
@@ -12,7 +13,8 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  const sessionKey='sot-google-session';
  function saveConnection(){try{if(token&&expires>Date.now())sessionStorage.setItem(sessionKey,JSON.stringify({token,expires,profile:accountProfile,clientId:resolveGoogleClientId()}));else sessionStorage.removeItem(sessionKey)}catch{}}
  function updateProfile(profile){accountProfile=profile;saveConnection();onAccountChange(profile)}
- function expireConnection(){token=null;expires=0;updateProfile(null)}
+ const thumbnailCache=new Map(),thumbnailQueue=createGoogleReadQueue();
+ function expireConnection(){thumbnailCache.clear();token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
  const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Chỉ nhập slide có câu hỏi và lựa chọn. Giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc. Bỏ trang quảng cáo, giới thiệu và danh sách link.';
@@ -34,23 +36,22 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  }
  function active(){return token&&Date.now()<expires}
  function reset(){clearTimeout(expiryTimer);profileController?.abort();expireConnection();stopButton.hidden=true;progressPanel.hidden=true;diagnosticsPanel.hidden=true;for(const id of ['ocrLimit','ocrStart','ocrEnd'])if($(id))$(id).disabled=false;epoch++;controller?.abort();controller=null;files=[];suggestions=[];selected.clear();busy=false;renderSelected();renderFiles([]);$('scan').disabled=false;$('chooseFiles').disabled=false;$('import').disabled=false;$('useResources').disabled=false;if($('filePicker').open)$('filePicker').close()}
- let nextThumbnailAt=0;
  function delay(ms,signal){return new Promise((resolve,reject)=>{
   if(signal?.aborted)return reject(new DOMException('Đã dừng.','AbortError'));
   const abort=()=>{clearTimeout(timer);reject(new DOMException('Đã dừng.','AbortError'))};
   const timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve()},ms);signal?.addEventListener('abort',abort,{once:true});
  })}
- async function request(url){
-  const signal=controller?.signal.aborted?undefined:controller?.signal;
-  if(url.includes('/thumbnail?')){const reserved=Math.max(Date.now(),nextThumbnailAt);nextThumbnailAt=reserved+100;await delay(Math.max(0,reserved-Date.now()),signal);}
+ async function request(url,{signal:externalSignal,onWait=()=>{}}={}){
+  const signal=externalSignal||(controller?.signal.aborted?undefined:controller?.signal),thumbnail=url.includes('/thumbnail?');
   for(let attempt=0;attempt<5;attempt++){
+  if(thumbnail)await thumbnailQueue.reserve(signal,onWait);
   if(!active())throw Object.assign(Error('Phiên Google đã hết hạn. Bấm Kết nối Google để tiếp tục.'),{ocrFatal:true});
   const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal});
-  if((r.status===429||r.status>=500)&&attempt<4){await delay(Math.max(Number(r.headers.get('Retry-After')||0)*1000,2**attempt*1000+Math.random()*500),signal);continue;}
+  if((r.status===429||r.status>=500)&&attempt<4){const header=r.headers.get('Retry-After'),after=header?(Number.isFinite(Number(header))?Number(header)*1000:Math.max(0,Date.parse(header)-Date.now())):0,ms=Math.max(after||0,r.status===429?60000:2**attempt*1000+Math.random()*500);if(thumbnail&&r.status===429)thumbnailQueue.pause(ms);onWait({ms,reason:r.status===429?'quota':'network'});await delay(ms,signal);continue;}
   if(!r.ok){
    if(r.status===401){expireConnection();throw Object.assign(Error('Quyền đọc Google đã hết hạn. Kết nối lại ở ảnh đại diện khi cần đọc slide; câu đã lưu vẫn ôn bình thường.'),{ocrFatal:true});}
    if(r.status===403||r.status===404)throw Error('Chưa truy cập được tài liệu. Hãy dùng đúng tài khoản Google có quyền xem tài liệu rồi thử lại.');
-   throw Error(`Google trả lỗi ${r.status}. Hãy thử lại.`);
+   throw Object.assign(Error(r.status===429?'Google đang giới hạn lượt tải ảnh (429). Phần tải lên đã có được giữ lại; hãy tiếp tục sau.':`Google trả lỗi ${r.status}. Hãy thử lại.`),{status:r.status});
   }
   return r.json();
   }
@@ -201,18 +202,19 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   }else sessionStorage.removeItem(sessionKey);
  }catch{try{sessionStorage.removeItem(sessionKey)}catch{}}
  function apiToken(){if(!active())throw Error('Kết nối Google ở ảnh đại diện để sử dụng AI. Câu đã lưu vẫn ôn được mà không cần đăng nhập.');return token}
- async function slideImage(q){
+ async function slideImage(q,options={}){
   apiToken();
   const source=presentationIdFromLink(q.url),url=new URL(q.url),objectId=new URLSearchParams(url.hash.slice(1)).get('slide')?.replace(/^id\./,'');
   if(!source||q.sourceId&&q.sourceId!==source||!objectId||! /^[\w.-]+$/.test(objectId))throw Error('Không xác định được slide gốc của câu này.');
-  const thumbnail=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}/pages/${encodeURIComponent(objectId)}/thumbnail?thumbnailProperties.thumbnailSize=LARGE`);
-  const imageUrl=new URL(thumbnail.contentUrl);
-  if(imageUrl.protocol!=='https:')throw Error('Google chưa trả ảnh slide hợp lệ.');
-  return thumbnail.contentUrl;
+  const cached=thumbnailCache.get(q.url);if(cached&&Date.now()-cached.created<5*60000)return abortableResult(cached.promise,options.signal);
+  const run=epoch;
+  const promise=request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}/pages/${encodeURIComponent(objectId)}/thumbnail?thumbnailProperties.thumbnailSize=LARGE`,options).then(thumbnail=>{if(run!==epoch||!active())throw Error('Tài khoản Google đã thay đổi.');const imageUrl=new URL(thumbnail.contentUrl);if(imageUrl.protocol!=='https:')throw Error('Google chưa trả ảnh slide hợp lệ.');return thumbnail.contentUrl}).catch(error=>{thumbnailCache.delete(q.url);throw error});
+  thumbnailCache.set(q.url,{created:Date.now(),promise});return abortableResult(promise,options.signal);
  }
- async function slideBlob(q){
-  const url=await slideImage(q);
-  const response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer'});
+ async function slideBlob(q,options={}){
+  const url=await slideImage(q,options);
+  let response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal});
+  if([401,403,404].includes(response.status)){thumbnailCache.delete(q.url);response=await fetch(await slideImage(q,options),{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}
   if(!response.ok)throw Error('Chưa tải được ảnh gốc.');
   const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
   return blob;

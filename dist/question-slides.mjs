@@ -25,7 +25,7 @@ export async function selectQuestionSlides(p,{startSlide=1,endSlide=Infinity,max
      q.options=result.labels.map(id=>({id,text:''}));accepted=true;reason='question';
      if(result.status==='answered'&&result.answer&&[...result.answer].every(label=>result.labels.includes(label))){q.answer=result.answer;q.explanation=result.explanation;q.verified=false;q.answerSource='gemini';q.aiModel=model;q.aiStatus='proposed'}
     }else reason=result.kind==='other'?'other':'uncertain';
-   }catch(error){if(error.name==='AbortError')throw error;reason='uncertain';unavailable=true}
+   }catch(error){if(error.name==='AbortError')throw error;reason='uncertain';unavailable=error.code!=='AI_IMAGE_INVALID'}
   }
   if(accepted)questions.push(q);else if(reason==='other')skipped.push(page.slide);else unresolved.push(page.slide);
   pages.push({...page,recognized:accepted,classification:accepted?'question':reason});onProgress({slide:page.slide,totalSlides:p.slides.length,found:questions.length,skipped:skipped.length,unresolved:unresolved.length});

@@ -28,6 +28,10 @@ export class SharedDecks{
     const meta={id:input.id,title:input.title.trim(),count:input.count,owner:user,created:Date.now(),published:false,bytes:0};await this.storage.put('meta',meta);await this.storage.setAlarm(Date.now()+86400000);return json({id:meta.id});
    }
    const meta=await this.storage.get('meta');if(!meta)return json({error:'Không tìm thấy bộ đề.'},404);
+   if(path==='/draft'&&request.method==='GET'){
+    if(user!==meta.owner)return json({error:'Bản tải dở thuộc tài khoản Google khác.'},403);
+    return json({id:meta.id,title:meta.title,count:meta.count,published:meta.published,uploaded:[...await this.storage.list({prefix:'q:'})].map(([key])=>Number(key.slice(2))).sort((a,b)=>a-b)});
+   }
    if(request.method==='PUT'&&/^\/questions\/\d+$/.test(path)){
     if(user!==meta.owner)return json({error:'Bạn không có quyền sửa bộ đề này.'},403);
     if(meta.published)return json({error:'Bộ đề đã công khai; hãy đăng bản mới để cập nhật.'},409);
@@ -61,7 +65,7 @@ export async function sharedDeckRoute(request,env,cors){
  const wrap=response=>{const headers=new Headers(response.headers);for(const [k,v]of Object.entries(cors))headers.set(k,v);headers.set('Cache-Control','no-store');return new Response(response.body,{status:response.status,headers})};
  if(!env.SHARED_DECKS)return wrap(json({error:'Kho đề đang được chuẩn bị.'},503));
  const url=new URL(request.url),match=url.pathname.match(/^\/v1\/decks(?:\/([a-f0-9-]{36})(\/.*)?)?$/);if(!match)return wrap(json({error:'Không tìm thấy bộ đề.'},404));
- let user='';if(request.method!=='GET'){
+ let user='';if(request.method!=='GET'||url.pathname.endsWith('/draft')){
   const authorization=request.headers.get('Authorization')||'';if(!/^Bearer [\w.~-]+$/.test(authorization)||authorization.length>4096)return wrap(json({error:'Đăng nhập Google ở ảnh đại diện để đăng hoặc gỡ bộ đề.'},401));
   try{const response=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:authorization},signal:AbortSignal.timeout(10000)});if(!response.ok)return wrap(json({error:'Phiên Google hết hạn. Hãy đăng nhập lại.'},401));const profile=await response.json();if(!profile.sub)return wrap(json({error:'Tài khoản không hợp lệ.'},401));const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(profile.sub));user=[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('')}catch{return wrap(json({error:'Chưa xác thực được Google.'},503))}
  }

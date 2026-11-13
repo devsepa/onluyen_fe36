@@ -13,6 +13,7 @@ if(!names.includes(model)){
  config.vars.GEMINI_MODEL=model;await writeFile(path,JSON.stringify(config,null,2)+'\n');
 }
 const fallbacks=names.filter(n=>n!==model&&/^gemini-\d+(?:\.\d+)?-flash-lite$/.test(n)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
-if(fallbacks[0])config.vars.GEMINI_FALLBACK_MODEL=fallbacks[0];else delete config.vars.GEMINI_FALLBACK_MODEL;
+const alternate=fallbacks[0]||names.filter(n=>n!==model&&/^gemini-\d+(?:\.\d+)?-flash$/.test(n)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}))[0];
+if(alternate)config.vars.GEMINI_FALLBACK_MODEL=alternate;else delete config.vars.GEMINI_FALLBACK_MODEL;
 await writeFile(path,JSON.stringify(config,null,2)+'\n');
 console.log(`Verified available Gemini model: ${model}; fallback: ${config.vars.GEMINI_FALLBACK_MODEL||'none'}`);

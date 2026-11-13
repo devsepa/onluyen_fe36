@@ -1,8 +1,10 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {validateQuestions,validateResults,generateAnswers} from '../backend/worker.mjs';
 import {solveBatch,applyAiResults} from '../dist/ai.mjs';
-const question=()=>({id:'image-1',stem:'Slide 10',url:'https://docs.google.com/presentation/d/private/edit#slide=id.s10',options:'ABCD'.split('').map(id=>({id,text:''})),answer:'',image:{mimeType:'image/png',data:'aGVsbG8='}});
+const png=readFileSync(new URL('./fixtures/vision-smoke.png',import.meta.url)).toString('base64');
+const question=()=>({id:'image-1',stem:'Slide 10',url:'https://docs.google.com/presentation/d/private/edit#slide=id.s10',options:'ABCD'.split('').map(id=>({id,text:''})),answer:'',image:{mimeType:'image/png',data:png}});
 test('vision input accepts blank choice text, strips source links, and limits uploads',()=>{
  const q=question(),valid=validateQuestions({questions:[q]});assert.equal(valid[0].url,undefined);assert.deepEqual(valid[0].image,q.image);
  for(const image of [{mimeType:'image/svg+xml',data:'aGVsbG8='},{mimeType:'image/png',data:'https://private'},{mimeType:'image/png',data:'a'.repeat(2800004)}])assert.throws(()=>validateQuestions({questions:[{...q,image}]}));

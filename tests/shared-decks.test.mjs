@@ -19,9 +19,11 @@ test('shared decks remain private until complete; publish once, read anonymously
  const state={storage:new Memory()},deck=new SharedDecks(state);const call=(...args)=>deck.fetch(request(...args));
  assert.equal((await call('/init','POST',{id,title:'DBI202',count:2,rights:false})).status,400);
  assert.equal((await call('/init','POST',{id,title:'DBI202',count:2,rights:true})).status,200);
+ assert.deepEqual((await(await call('/draft')).json()).uploaded,[]);assert.equal((await call('/draft','GET',undefined,'other')).status,403);
  assert.equal((await call('/')).status,404);assert.equal((await call('/images/0')).status,404);assert.equal((await call('/publish','POST',{})).status,409);
  assert.equal((await call('/questions/0','PUT',input(),'other')).status,403);
  assert.equal((await call('/questions/0','PUT',input())).status,200);assert.equal((await call('/publish','POST',{})).status,409);
+ assert.deepEqual((await(await call('/draft')).json()).uploaded,[0]);
  assert.equal((await call('/questions/1','PUT',input())).status,200);assert.equal((await call('/publish','POST',{})).status,200);
  const shared=await(await call('/','GET',undefined,'')).json();assert.equal(shared.questions.length,2);assert.equal(shared.owner,undefined);assert.equal(shared.questions[0].email,undefined);assert.equal(shared.questions[0].token,undefined);assert.equal(shared.questions[0].answer,'AD');assert.deepEqual(shared.questions[0].options.map(o=>o.id),['A','B','C','D']);
  const restored=validateBank({format:'slide-on-thi/v1',questions:shared.questions});assert.equal(restored[0].sharedDeck,id);assert.equal(restored[0].sharedIndex,0);

@@ -1,0 +1,7 @@
+export function waitAbortable(ms,signal){return new Promise((resolve,reject)=>{if(signal?.aborted)return reject(new DOMException('Đã dừng.','AbortError'));const abort=()=>{clearTimeout(timer);reject(new DOMException('Đã dừng.','AbortError'))},timer=setTimeout(()=>{signal?.removeEventListener('abort',abort);resolve()},ms);signal?.addEventListener('abort',abort,{once:true})})}
+export function abortableResult(promise,signal){if(!signal)return promise;return new Promise((resolve,reject)=>{const abort=()=>reject(new DOMException('Đã dừng.','AbortError'));signal.addEventListener('abort',abort,{once:true});promise.then(value=>{signal.removeEventListener('abort',abort);resolve(value)},error=>{signal.removeEventListener('abort',abort);reject(error)});if(signal.aborted)abort()})}
+// getThumbnail is an expensive read: default 60/user/minute. Leave headroom.
+export function createGoogleReadQueue({interval=1200,now=Date.now,sleep=waitAbortable}={}){
+ let tail=Promise.resolve(),next=0,cooldown=0;
+ return {pause(ms){cooldown=Math.max(cooldown,now()+ms)},reserve(signal,onWait=()=>{}){const turn=tail.then(async()=>{while(Math.max(next,cooldown)>now()){const ms=Math.max(next,cooldown)-now();if(ms>=1000)onWait({ms,reason:cooldown>now()?'quota':'pace'});await sleep(ms,signal)}if(signal?.aborted)throw new DOMException('Đã dừng.','AbortError');next=now()+interval});tail=turn.catch(()=>{});return turn}};
+}

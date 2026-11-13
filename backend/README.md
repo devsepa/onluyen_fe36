@@ -52,3 +52,8 @@ The SHARED_DECKS SQLite Durable Object binding (migration v2) stores explicitly 
 
 ## Slide classification
 Image answers now include kind (question/other/uncertain) and the visible ordered labels. Native structured questions and clear note-backed image questions are accepted without an AI round trip. Unclear image slides are inspected only when AI is enabled; advertisements, introductions, resource links and unclassified images are excluded from new imports. The original image remains the displayed question; no OCR transcription replaces it. Existing unanswered bank images confirmed as non-questions by AI are removed while answered/edited questions are protected.
+
+
+## Handling 400 and 429 errors
+AI uses only required structured-output parameters, and prefers the image-tested Flash-Lite model. Upstream 400 errors are categorized without exposing Google response bodies, keys or question content. Invalid image bytes are rejected before generation; one unreadable image does not block subsequent questions. See https://aistudio.google.com/docs/troubleshooting for model parameter compatibility.
+Google getThumbnail calls share a paced queue (1.2 s minimum spacing), a short-lived account-scoped URL cache and quota cooldown with bounded retries. Published-deck uploads keep a private draft and local id/fingerprint after interruption; the authenticated owner can query uploaded indices at GET /v1/decks/:id/draft and resume only missing images for up to the existing 24-hour expiry. No Google token is stored in the draft checkpoint. Existing pre-fix uploads were deleted on failure and cannot be restored. See https://developers.google.com/workspace/slides/api/limits.

@@ -1,13 +1,13 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-sidebar-1';
-import {setupResources} from './resources-ui.js?v=20261113-sidebar-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-retry-1';
+import {setupResources} from './resources-ui.js?v=20261113-retry-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-sidebar-1';
-import {setupAccount} from './account-ui.js?v=20261113-sidebar-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-sidebar-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-sidebar-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-sidebar-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-sidebar-1';
-import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs';
+import {validateBank} from './banks.mjs?v=20261113-retry-1';
+import {setupAccount} from './account-ui.js?v=20261113-retry-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-retry-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-retry-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-retry-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-retry-1';
+import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-retry-1';
 import {fitQuizScreen} from './quiz-screen.mjs';
 import {createQuizSound} from './quiz-sound.mjs';
 import {setupSidebar} from './sidebar.mjs';
@@ -51,7 +51,7 @@ function refreshStats(){$('total').textContent=bank.length;$('ready').textConten
 function aiBadge(q){return q.answerSource==='gemini'?'<span class="tag ai-answer-label">✦ Đáp án AI gợi ý</span>':''}
 function hasAiInput(q){return !!q.url||hasAiText(q)}
 function hasAiText(q){return q.stem?.trim()&&q.options.length>=2&&q.options.every(o=>typeof o.text==='string'&&o.text.trim())}
-async function questionBlob(q){return q.sharedDeck?(await deckRequest(AI_API_BASE,sharedImagePath(q))).blob():resources.slideBlob(q)}
+async function questionBlob(q,options={}){return q.sharedDeck?(await deckRequest(AI_API_BASE,sharedImagePath(q),{signal:options.signal})).blob():resources.slideBlob(q,options)}
 async function questionImage(q){return q.sharedDeck?URL.createObjectURL(await questionBlob(q)):resources.slideImage(q)}
 const slideImages=createSlideImageStore(questionImage,{limit:300});window.addEventListener('pagehide',()=>slideImages.clear());
 async function preloadSlideImage(q){
@@ -70,7 +70,7 @@ function startSessionPreload(questions){
  preloadingSession=questions;
  let idx=0;
  async function next(){
-  if(preloadingSession!==questions||idx>=questions.length)return;
+  if(preloadingSession!==questions||idx>=Math.min(6,questions.length))return;
   const q=questions[idx++];
   await preloadSlideImage(q);
   setTimeout(next,40);
@@ -94,6 +94,7 @@ function switchView(next,mode){
  if(mode)preferredMode=mode;
  if(next==='result'&&!lastResult)next='history';
  view=next;renderNotice();
+ if(view!=='practice')preloadingSession=null;
  document.body.classList.toggle('quiz-active',view==='practice'&&!!session&&!session.done);
  for(const id of Object.keys(pageInfo))$(id).hidden=id!==view;
  const activeNav=view==='result'?'history':view;
@@ -196,7 +197,7 @@ function scheduleAutoAi(){
   if(resources.isBusy()){autoAiTimer=setTimeout(scheduleAutoAi,500);return}
   const missing=bank.filter(q=>!q.answer&&hasAiInput(q));if(!missing.length)return;
   try{resources.apiToken()}catch{return}
-  const signature='slide-filter-v1:'+JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
+  const signature='ai-retry-v2:'+JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
   try{if(sessionStorage.getItem('sot-ai-auto-attempt')===signature)return;sessionStorage.setItem('sot-ai-auto-attempt',signature)}catch{}
   runAi({automatic:true});
  },250);
@@ -241,9 +242,14 @@ async function runAi({automatic=false}={}){
    const batch=pending.slice(done,done+1).filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});
    $('aiProgress').textContent=`Đang xử lý ${done+1}–${Math.min(done+1,pending.length)} / ${pending.length} câu…`;
    if(batch.length){
+    try{
     for(const q of batch){if(q.url){const blob=await questionBlob(q);if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');if(blob.size>2100000)throw Error('Slide image exceeds 2 MB.');q.image={mimeType:blob.type,data:await blobToBase64(blob)}}}
     const result=await solveBatch(AI_API_BASE,batch,resources.apiToken(),{signal:aiController.signal});
     const before=bank.length,counts=applyAiResults(bank,batch,result.answers,result.model);removed+=before-bank.length;applied+=counts.applied;uncertain+=counts.uncertain;
+    }catch(error){
+     if(error.code!=='AI_IMAGE_INVALID')throw error;
+     for(const submitted of batch){const q=bank.find(q=>q.id===submitted.id);if(q&&!q.answer&&questionAutoKey(q)===questionAutoKey(submitted)){q.aiStatus='uncertain';q.aiReason='Ảnh slide chưa đọc được. Tải lại ảnh và thử AI sau.';uncertain++}}
+    }
     if(!write('sot-bank',bank))throw Error('Không lưu được kết quả. Hãy xuất ngân hàng và kiểm tra dung lượng trình duyệt trước khi tiếp tục.');
    }
    done=Math.min(done+1,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();

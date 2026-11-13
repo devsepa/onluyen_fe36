@@ -39,7 +39,7 @@ test('Gemini request uses server-only key, structured schema and safe model vali
  await assert.rejects(()=>generateAnswers([q()],{},async()=>Response.json({candidates:[{finishReason:'MAX_TOKENS'}]})),/đầy đủ/);
 });
 test('distinguishes overload, quota, permission, missing model and request errors without leaking upstream text',async()=>{
- for(const [status,expected] of [[503,'quá tải tạm thời (503)'],[429,'hạn mức'],[403,'quyền truy cập'],[404,'Model Gemini'],[400,'cấu hình yêu cầu']]){
+ for(const [status,expected] of [[503,'quá tải tạm thời (503)'],[429,'hạn mức'],[403,'quyền truy cập'],[404,'Model Gemini'],[400,'từ chối nội dung yêu cầu']]){
   await assert.rejects(()=>generateAnswers([q()],{GEMINI_API_KEY:'private-test'},async()=>Response.json({error:{message:'private-test must not reach the client'}},{status})),error=>error.message.includes(expected)&&!error.message.includes('private-test'));
  }
 });
