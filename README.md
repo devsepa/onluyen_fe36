@@ -2,24 +2,71 @@
 
 Ứng dụng tĩnh, không cần build. Phục vụ thư mục `dist` qua HTTP, không mở trực tiếp bằng file://.
 
+Xuất bản GitHub Pages: xem [hướng dẫn triển khai](docs/github-pages.md). Workflow đã chuẩn bị ở `.github/workflows/pages.yml`; chỉ upload `dist/`, chạy kiểm tra trước khi deploy. Backend/kho dùng chung chưa được triển khai.
+
+Toàn bộ dự án nằm trong folder `slide-on-thi`. Với Node.js đã cài, chạy `npm start` trong folder rồi mở http://localhost:8080. Không cần cài dependency. Chạy `npm test` để kiểm tra logic.
+
 ## Cấu hình Google
 
-1. Tạo Google Cloud project và bật Google Slides API.
-2. Cấu hình Google Auth Platform: branding, audience và scope `https://www.googleapis.com/auth/presentations.readonly`. Khi ở Testing, thêm Gmail được phép xem tài liệu vào Test users.
+1. Tạo Google Cloud project và bật Google Slides API cùng Google Drive API.
+2. Cấu hình Google Auth Platform: branding, audience và hai scope `https://www.googleapis.com/auth/presentations.readonly`, `https://www.googleapis.com/auth/drive.metadata.readonly`. Khi ở Testing, thêm Gmail được phép xem tài liệu vào Test users. Nếu đã kết nối bản trước, cần kết nối lại để cấp thêm quyền tìm file.
 3. Tạo OAuth Client ID loại Web application. Thêm origin của web vào Authorized JavaScript origins (không có path). Với local có thể dùng http://localhost:8080.
-4. Trong web chọn Cấu hình Google, dán Client ID. Client ID là thông tin công khai; không nhập Client Secret.
-5. Kết nối Google bằng đúng tài khoản có quyền xem slide. Dán link rồi nhập.
+4. Chủ web cấu hình `GOOGLE_CLIENT_ID` trong `dist/site-config.mjs` một lần khi triển khai. Client ID là thông tin công khai; không đặt Client Secret vào frontend. Cấu hình dùng chung được ưu tiên hơn dữ liệu cũ trong trình duyệt. Khách không có trang/nút nhập Client ID hoặc hướng dẫn thiết lập kỹ thuật.
+5. Kết nối Google bằng đúng tài khoản có quyền xem slide. Web tự tìm file theo mẫu tên, hiện các kết quả phù hợp nhưng mặc định không chọn nguồn nào. Người dùng tích chọn nguồn muốn ôn rồi bấm Dùng tài liệu đã chọn.
+
+## Chọn nguồn tài liệu
+
+Web dùng Drive API để liệt kê metadata của Google Slides (cả tài liệu được chia sẻ có trong kết quả của tài khoản), duyệt đủ phân trang rồi lọc tên không phân biệt hoa/thường: SEMESTER, SEMETER, Sever kèm số, cho phép dấu cách, dấu gạch dưới, dấu gạch ngang. Ví dụ `SEMESTER_2_MAD101`, `SEMETER_2`, `Sever_2_SEMESTER_1_CSI`. Quy tắc ở `dist/resources.mjs`.
+
+Chỉ đọc nội dung những tài liệu trong danh sách đã chọn, không đọc nội dung các file khác. Nếu không có kết quả phù hợp, người dùng bấm Chọn tài liệu khác để chọn một hoặc nhiều Google Slides bằng tên, hoặc dán link. Khi nhập, ngân hàng được thay bằng câu hỏi từ các nguồn đã chọn; lịch sử cũ giữ nguyên. Câu hỏi ghi nguồn (file ID, tên và trang slide). Tài liệu không đọc được hoặc slide không nhận diện được đều được báo; lỗi một phần phải được người dùng đồng ý trước khi thay ngân hàng.
+
+Không còn bộ câu hỏi mẫu hoặc nội dung ngoài nguồn do người dùng chọn. Đây là bộ lọc trong ứng dụng; Google không cung cấp scope OAuth giới hạn theo mẫu tên file. `drive.metadata.readonly` là quyền metadata rộng và thuộc nhóm Restricted của Google: khi đưa ứng dụng cho nhiều người dùng phải xem yêu cầu xác minh tương ứng. Chế độ Testing dùng các tài khoản test đã cấu hình. Nội dung chỉ gọi trực tiếp Google API trong trình duyệt, không chuyển qua máy chủ của ứng dụng.
+
+Chỉ hỗ trợ Google Slides native. File `.ppt`/`.pptx` cần được chuyển thành Google Slides trước khi dùng. Không tự chuyển file hoặc tạo bản sao.
+
+## OCR cho slide dạng ảnh
+
+Sau khi đọc chữ native, tự OCR các trang có ảnh chưa nhận diện được câu hỏi. Với trang chỉ có một ảnh không bị crop, đọc ảnh gốc trực tiếp từ Google để tránh tạo thumbnail từng trang. Bố cục nhiều thành phần dùng Google Slides getThumbnail LARGE. Dùng Tesseract.js 6.0.1 với hai worker trên máy phù hợp, một worker trên máy ít bộ nhớ/ít nhân. Tiếng Anh là mặc định; có thể chọn Anh + Việt. Không cần API key dịch vụ AI, không gửi ảnh qua máy chủ OCR. Lần đầu tải mã OCR/WASM và dữ liệu ngôn ngữ từ CDN. Chỉ gửi access token tới Google API; URL ảnh có chữ ký chỉ dùng để tải ảnh Google, không lưu vào cache hoặc gửi sang dịch vụ khác.
+
+Mặc định lấy nhanh 30 câu / tài liệu thay vì bắt người học chờ hết bộ slide. Có thể chọn 60/100 câu hoặc Đọc toàn bộ, khoảng trang cần nhập và ngôn ngữ phù hợp. Nút Dùng ngay các câu đã đọc sẽ hoàn tất các tác vụ đang chạy rồi nhập phần đã có, không cần đợi các trang còn lại. Nút Dừng nhập hủy và giữ ngân hàng trước. Kết quả luôn theo thứ tự trang dù OCR hoàn tất khác thứ tự.
+
+Ngân hàng đã kiểm tra có thể xuất thành JSON và nhập lại để dùng ngay. File lưu nội dung, đáp án và nguồn slide; không chứa cấu hình Google, access token hoặc URL ảnh có chữ ký. File do người dùng chủ động tải về và chọn nhập. Ngân hàng nhập phải có nguồn Google Slides hợp lệ; chưa có hệ thống chia sẻ hoặc cache chung giữa nhiều người dùng. Muốn phục vụ ngay cho nhiều thiết bị cần triển khai xử lý một lần ở máy chủ và lưu ngân hàng theo nguồn/quyền truy cập.
+
+Giới hạn nhịp yêu cầu thumbnail, thử lại khi Google trả 429/5xx. Hiển thị slide đang đọc, số trang đã xử lý và số câu đã nhận diện. Có nút Dừng nhập. OCR text/confidence được lưu trong IndexedDB theo file, trang, thời điểm sửa và cấu trúc slide; nguồn sửa sẽ đọc lại. Nếu thiếu version/thời điểm sửa hoặc IndexedDB không khả dụng thì không tái sử dụng cache bền vững. Có thể xóa toàn bộ dữ liệu trang trong trình duyệt để xóa cache này.
+
+Giữ đáp án từ speaker notes của trang gốc; không đoán đáp án khi thiếu. Câu OCR luôn cần xác nhận, giữ liên kết về slide gốc. Slide không có câu hỏi, OCR không nhận diện được hoặc ảnh không tải được sẽ được báo trong chẩn đoán. Không đảm bảo OCR chính xác với ảnh mờ, bố cục phức tạp hoặc một ảnh có nhiều câu hỏi.
 
 Google Identity Services token model; token chỉ tồn tại trong bộ nhớ và được cấp lại bằng thao tác người dùng khi hết hạn. Ứng dụng gọi Google Slides API trực tiếp. Không chuyển token hoặc tài liệu tới backend/AI. OAuth chỉ cấp quyền đọc Slides, không tạo một tài khoản ứng dụng riêng.
 
 ## Phạm vi
 
-Trích câu hỏi có lựa chọn A. B. C. D. hoặc A) B) trên các dòng riêng trong một slide; hỗ trợ shape, group và table. Đáp án đơn lấy từ speaker notes dạng `A` hoặc `Answer: A` hoặc `Đáp án: A`. Mọi câu nhập đều cần xác nhận trước khi thi. Báo các slide bị bỏ qua. Chưa hỗ trợ OCR, câu nhiều đáp án, tự sinh câu mới bằng AI hoặc giải thích bằng AI.
+## Hai chế độ làm bài
+
+- **Ôn luyện:** chấm ngay sau khi chọn mỗi câu, hiện đúng/sai và đáp án đúng. Khóa đáp án sau lần chọn đầu để giữ điểm thực tế. Không giới hạn thời gian; hiển thị thời gian đã học và số câu đúng. Có thể kết thúc bất cứ lúc nào và luyện lại câu sai.
+- **Thi thử:** chọn số câu, thời gian thi và đảo đáp án. Được thay đổi lựa chọn, đánh dấu câu cần xem lại. Không hiện đúng/sai hoặc điểm trong khi làm. Tự nộp khi hết giờ, chỉ xem điểm và đáp án sau khi nộp. Ẩn ngân hàng câu hỏi trong khi thi.
+
+Cả hai chế độ giữ bài đang làm sau khi tải lại trang; lịch sử ghi rõ chế độ. Bài đang làm từ phiên bản trước được coi là Thi thử.
+
+## Giao diện và kiểm tra trình duyệt
+
+Avatar góc phải có menu đăng nhập Google, hiển thị tên/email/ảnh đại diện khi đã kết nối, đổi tài khoản và đăng xuất. Dùng UserInfo với quyền `openid`, `userinfo.profile`, `userinfo.email` cùng các quyền đọc tài liệu. Chỉ giữ token và profile trong bộ nhớ phiên, không lưu access token vào localStorage. Đây là trạng thái kết nối Google trong trình duyệt; chưa phải tài khoản backend hoặc đồng bộ dữ liệu theo Gmail. Đăng xuất ngắt quyền Google nhưng giữ ngân hàng đã lưu trên thiết bị.
+
+Mỗi tab chỉ hiển thị nội dung nhiệm vụ của nó: Tài liệu chọn nguồn/nhập; Ngân hàng kiểm tra/sửa/xác nhận và nhập xuất bộ câu hỏi; Ôn luyện & Thi thử thiết lập/làm bài; Lịch sử xem bài đã nộp. Kết quả có màn hình riêng, giữ mục Lịch sử đang chọn. Không lặp hero chào mừng hoặc ba thẻ thống kê trên mọi trang. Số câu chỉ nằm trong ngân hàng, số bài và điểm chỉ nằm trong lịch sử/kết quả. Thông báo OCR chỉ hiển thị ở Tài liệu; nhập xong không tự chuyển tab, có nút để người dùng chủ động mở ngân hàng.
+
+Bảng màu dùng xanh tím trên nền trắng xanh nhạt (light) và xanh đêm (dark), với màu riêng cho đúng/sai/cảnh báo. Mặc định light khi chưa chọn theme; lựa chọn trước đó được giữ lại. `AGENTS.md` yêu cầu mọi lần thay đổi giao diện phải đối chiếu PC/mobile và cả hai theme. Chạy `scripts/theme-qa.mjs` trong browser QA riêng để kiểm tra bốn trang ở 1440/768/390/320 px, giới hạn dialog, lưu theme và tương phản chữ; ảnh chụp ở `outputs/themes/`.
+
+Gồm bốn trang: Tài liệu của tôi, Ngân hàng câu hỏi (lọc nguồn/tìm kiếm/phân trang/sửa bằng modal/xác nhận), Ôn luyện & Thi thử (điều hướng từng câu và bảng câu hỏi), Lịch sử & Kết quả (điểm, lọc câu sai, luyện lại). Có giao diện sáng/tối và bố cục điện thoại. Giữ tương thích dữ liệu localStorage và OAuth Client ID từ các bản trước.
+
+`scripts/browser-qa.mjs` kiểm tra qua Chrome DevTools Protocol của browser QA riêng trên cổng 9223, web local cổng 8080. Script dùng dữ liệu kiểm thử trong profile riêng và chụp ảnh vào `outputs/`, không dùng profile Gmail của người dùng. `scripts/browser-ocr-qa.mjs` kiểm tra OCR thật trên 4 ảnh câu hỏi được vẽ bằng canvas, xác nhận không gọi thumbnail cho ảnh đơn. Các bài này không thay thế kiểm tra tài liệu private thực tế.
+
+## Nội dung tài liệu
+
+Trích câu hỏi có lựa chọn A. B. C. D., A) B), (A), [A], xuống dòng hoặc cùng dòng; hỗ trợ shape, group và table, OCR cho trang dạng ảnh. Đáp án đơn lấy từ speaker notes dạng `A` hoặc `Answer: A` hoặc `Đáp án: A`. Mọi câu nhập đều cần xác nhận trước khi thi. Báo các slide bị bỏ qua. Chưa hỗ trợ câu nhiều đáp án, tự sinh câu mới bằng AI hoặc giải thích bằng AI.
 
 Câu hỏi, Client ID, bài đang làm và tối đa 50 kết quả được lưu bằng localStorage trong trình duyệt hiện tại. Đồng hồ dựa trên deadline tuyệt đối, tự nộp khi hết giờ kể cả sau khi tải lại trang. Không dùng cho kỳ thi có giám sát; đáp án có trong trình duyệt để tự học. Dữ liệu không đồng bộ giữa thiết bị, và dùng chung trong cùng hồ sơ trình duyệt. Có thể xóa ngân hàng hoặc dữ liệu trang để xóa nội dung đã nhập.
 
 ## Kiểm tra
 
-`node --test tests/core.test.mjs`
+`npm test` hoặc `node --test tests/*.test.mjs`
 
 Tài liệu: https://developers.google.com/identity/oauth2/web/guides/use-token-model và https://developers.google.com/workspace/slides/api/guides/notes

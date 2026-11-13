@@ -1,4 +1,45 @@
-export function textOf(elements=[]){return elements.flatMap(e=>e.elementGroup?textOf(e.elementGroup.children):e.shape?[(e.shape.text?.textElements||[]).map(t=>t.textRun?.content||'').join('')]:e.table?e.table.tableRows.flatMap(r=>r.tableCells.map(c=>(c.text?.textElements||[]).map(t=>t.textRun?.content||'').join(''))):[]).join('\n');}
-export function parsePresentation(p){const questions=[],skipped=[];for(const [i,s] of (p.slides||[]).entries()){const text=textOf(s.pageElements).trim();const matches=[...text.matchAll(/(?:^|\n)\s*([A-H])[.)：:]\s*/g)];if(matches.length<2||matches[0][1]!=='A'||matches.some((m,j)=>m[1]!==String.fromCharCode(65+j))){skipped.push(i+1);continue;}const stem=text.slice(0,matches[0].index).trim();if(!stem){skipped.push(i+1);continue;}const options=matches.map((m,j)=>({id:m[1],text:text.slice(m.index+m[0].length,matches[j+1]?.index??text.length).trim()}));const np=s.slideProperties?.notesPage;const noteId=np?.notesProperties?.speakerNotesObjectId;const note=textOf((np?.pageElements||[]).filter(e=>e.objectId===noteId)).trim();const a=note.match(/^(?:(?:answer|correct answer|đáp án)\s*[:：-]?\s*)?([A-H])[.)]?\s*$/i);questions.push({id:crypto.randomUUID(),stem,options,answer:a&&options.some(o=>o.id===a[1].toUpperCase())?a[1].toUpperCase():'',verified:false,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});}return{questions,skipped};}
+export function normalizeSlideText(text){return String(text).normalize('NFKC').replace(/\r\n?|\v|\f|\u2028|\u2029/g,'\n').replace(/\u00a0/g,' ').replace(/[\u200b\ufeff]/g,'').trim();}
+export function textOf(elements=[]){
+ const ordered=[...elements].sort((a,b)=>(a.transform?.translateY??0)-(b.transform?.translateY??0)||(a.transform?.translateX??0)-(b.transform?.translateX??0));
+ return ordered.flatMap(e=>e.elementGroup?textOf(e.elementGroup.children):e.shape?[(e.shape.text?.textElements||[]).map(t=>t.textRun?.content||'').join('')]:e.table?e.table.tableRows.flatMap(r=>r.tableCells.map(c=>(c.text?.textElements||[]).map(t=>t.textRun?.content||'').join(''))):e.wordArt?[e.wordArt.renderedText||'']:[]).join('\n');
+}
+function optionParts(text){
+ // Prefer line starts; use inline labels only when the slide has no complete line-based set.
+ const patterns=[/(?:^|\n)[ \t]*(?:[•●▪][ \t]*)?(?:\(([A-Ha-h])\)|\[([A-Ha-h])\]|([A-Ha-h])[.)：:])[ \t]*/g,/(?:^|\s)(?:\(([A-Ha-h])\)|\[([A-Ha-h])\]|([A-Ha-h])[.)：:])[ \t]+/g];
+ for(const pattern of patterns){
+  const matches=[...text.matchAll(pattern)].map(m=>({index:m.index,end:m.index+m[0].length,id:(m[1]||m[2]||m[3]).toUpperCase()}));
+  if(matches.length<2||matches[0].id!=='A'||matches.some((m,j)=>m.id!==String.fromCharCode(65+j)))continue;
+  const stem=text.slice(0,matches[0].index).trim();
+  const options=matches.map((m,j)=>({id:m.id,text:text.slice(m.end,matches[j+1]?.index??text.length).trim()}));
+  if(stem&&options.every(o=>o.text))return {stem,options};
+ }
+ return null;
+}
+function imageCount(elements=[]){return elements.reduce((n,e)=>n+(e.image?1:0)+(e.elementGroup?imageCount(e.elementGroup.children):0),0)}
+export function parsePresentation(p){
+ const questions=[],skipped=[],pages=[];
+ for(const [i,s] of (p.slides||[]).entries()){
+  const text=normalizeSlideText(textOf(s.pageElements)),parts=optionParts(text);
+  const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
+  pages.push({slide:i+1,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
+  if(!parts){skipped.push(i+1);continue;}
+  const np=s.slideProperties?.notesPage,noteId=np?.notesProperties?.speakerNotesObjectId;
+  const note=normalizeSlideText(textOf((np?.pageElements||[]).filter(e=>e.objectId===noteId)));
+  const a=note.match(/^(?:(?:answer|correct answer|đáp án)\s*[:：-]?\s*)?\(?([A-H])\)?[.)]?\s*$/i);
+  questions.push({id:crypto.randomUUID(),...parts,answer:a&&parts.options.some(o=>o.id===a[1].toUpperCase())?a[1].toUpperCase():'',verified:false,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});
+ }
+ return {questions,skipped,diagnostics:{totalSlides:pages.length,textSlides:pages.filter(s=>s.textLength>0).length,imageSlides:pages.filter(s=>s.images>0).length,pages}};
+}
 export function shuffle(values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 export function grade(questions,answers){return questions.reduce((n,q)=>n+(answers[q.id]===q.answer?1:0),0);}
+export function answerQuestion(session,questionId,optionId,now=Date.now()){
+ if(session.done||(session.mode!=='study'&&now>=session.deadline))return false;
+ const question=session.questions.find(q=>q.id===questionId);
+ if(!question||!question.options.some(o=>o.id===optionId)||(session.mode==='study'&&session.answers[questionId]))return false;
+ session.answers[questionId]=optionId;return true;
+}
+export function optionState(session,question,optionId){
+ const selected=session.answers[question.id];
+ if(session.mode==='study'&&selected){if(optionId===question.answer)return 'correct';if(optionId===selected)return 'wrong';return '';}
+ return selected===optionId?'selected':'';
+}
