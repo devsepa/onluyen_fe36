@@ -72,3 +72,5 @@ Câu hỏi, Client ID, bài đang làm và tối đa 50 kết quả được lư
 Tài liệu: https://developers.google.com/identity/oauth2/web/guides/use-token-model và https://developers.google.com/workspace/slides/api/guides/notes
 
 Nội dung câu hỏi lọc riêng watermark “Hoàng Hoàng Buôn Source” (kể cả một số biến thể OCR có/không dấu). Áp dụng khi đọc slide, dùng lại cache OCR, nhập bộ JSON và tải lại ngân hàng/bài làm cũ; giữ nguyên nguồn slide, đáp án theo ID và kết quả chấm. Các từ “source” khác trong kiến thức vẫn được giữ.
+
+Nhập slide theo từng nhóm liên tiếp và ghép kết quả đúng thứ tự gốc, kể cả khi xen kẽ chữ và ảnh. Giới hạn số câu không ưu tiên câu chữ ở cuối tài liệu. Chi tiết nhập phân biệt trang đã đọc nhưng chưa nhận diện câu hỏi với trang chưa đọc do giới hạn/dừng sớm; mỗi trang chưa nhận diện có liên kết đến slide gốc. Có thể dùng khoảng slide để thử đọc lại.

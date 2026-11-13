@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-notes-9';
+import {parseWithOcr} from './ocr.mjs?v=20261113-order-10';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {answerFromNotes} from './core.mjs?v=20261113-notes-9';
+import {answerFromNotes} from './core.mjs?v=20261113-order-10';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -26,7 +26,15 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    const title=document.createElement('p');title.textContent=`${report.name}: ${report.totalSlides} slide, ${report.textSlides} slide có chữ, ${report.imageSlides} slide có ảnh.`;diagnosticsPanel.append(title);
    if(report.ocrAttempted){const help=document.createElement('p');help.textContent=`Đã đọc chữ từ ${report.ocrAttempted} trang ảnh, dùng lại ${report.ocrCached} trang đã lưu. ${report.ocrErrors} trang gặp lỗi.`;diagnosticsPanel.append(help)}
    for(const page of (report.pages||[]).filter(p=>p.ocrError).slice(0,5)){const error=document.createElement('p');error.textContent=`Slide ${page.slide}: ${page.ocrError}`;diagnosticsPanel.append(error)}
-   for(const page of (report.pages||[]).filter(p=>!p.recognized&&p.textLength>0).slice(0,3)){
+   const unresolved=(report.pages||[]).filter(p=>p.processed&&!p.recognized);
+   if(unresolved.length){
+    const help=document.createElement('p');help.textContent='Các trang đã đọc nhưng chưa nhận diện được câu trắc nghiệm (có thể là trang giới thiệu hoặc OCR chưa đọc đúng). Có thể chọn khoảng slide bên dưới để đọc lại.';diagnosticsPanel.append(help);
+    for(const page of unresolved){
+     const row=document.createElement('p'),link=document.createElement('a');link.textContent=`Slide ${page.slide}`;link.href=`https://docs.google.com/presentation/d/${encodeURIComponent(report.id)}/edit#slide=id.${encodeURIComponent(page.objectId)}`;link.target='_blank';link.rel='noopener noreferrer';
+     row.append(link,document.createTextNode(page.ocrError?' — Lỗi đọc trang':page.ocr?' — Chưa nhận diện câu hỏi từ ảnh':' — Chưa nhận diện câu hỏi từ chữ'));diagnosticsPanel.append(row);
+    }
+   }
+   for(const page of unresolved.filter(p=>p.preview).slice(0,3)){
     const label=document.createElement('p');label.textContent=`Chữ nhận được từ slide ${page.slide}:`;
     const preview=document.createElement('pre');preview.style.whiteSpace='pre-wrap';preview.textContent=page.preview;diagnosticsPanel.append(label,preview);
    }
@@ -165,8 +173,8 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    if(!onImport(result))return;
    const remaining=result.sources.reduce((n,s)=>n+s.remaining,0);
    status(`Đã sẵn sàng: ${result.questions.length} câu từ ${result.sources.length} tài liệu.${remaining?` Còn ${remaining} trang chưa đọc; tăng số câu hoặc chọn Đọc toàn bộ để nhập thêm.`:''}`);
-   const skipped=result.sources.filter(s=>s.skipped.length).map(s=>`${s.name}: bỏ qua slide ${s.skipped.join(', ')}`);
-   message(`Đã nhập ${result.questions.length} câu từ ${result.sources.length} tài liệu. Chỉ các nguồn này được dùng tạo đề. Kiểm tra và xác nhận đáp án trước khi luyện.${skipped.length?'\n'+skipped.join('\n'):''}`);
+   const skipped=result.sources.filter(s=>s.skipped.length).map(s=>`${s.name}: đã đọc nhưng chưa nhận diện câu hỏi ở slide ${s.skipped.join(', ')}. Xem Chi tiết nhập tài liệu để kiểm tra.`);
+   message(`Đã nhập ${result.questions.length} câu từ ${result.sources.length} tài liệu theo thứ tự slide gốc. Đáp án rõ ràng trong ghi chú được dùng ngay.${skipped.length?'\n'+skipped.join('\n'):''}`);
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
   finally{await recognizer.terminate();if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };

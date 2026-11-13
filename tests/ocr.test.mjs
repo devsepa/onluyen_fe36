@@ -67,3 +67,13 @@ test('direct image detection supports groups and zero crop defaults but preserve
  assert.equal(directImageUrl({pageElements:[{image:{...image.image,imageProperties:{cropProperties:{leftOffset:0.5}}}}]}),null);
  assert.equal(directImageUrl({pageElements:[image,image]}),null);
 });
+test('count limit reads earlier images before later native-text questions',async()=>{
+ const p={presentationId:'p',slides:[imageSlide('first'),{objectId:'later',pageElements:[shape('Later native?\nA. One\nB. Two')]}]};let reads=0;
+ const result=await parseWithOcr(p,{}, {maxQuestions:1,concurrency:2,request:async()=>({contentUrl:'image'}),recognize:async()=>{reads++;return{text:'First question?\nA. One\nB. Two'}}});
+ assert.equal(reads,1);assert.deepEqual(result.questions.map(q=>q.slide),[1]);assert.deepEqual(result.diagnostics.unread,[2]);assert.deepEqual(result.skipped,[]);
+});
+test('unrecognized pages are reported separately from unread pages and later questions retain slide numbers',async()=>{
+ const p={presentationId:'p',slides:[{objectId:'intro',pageElements:[shape('Welcome')]},imageSlide('bad'),imageSlide('good'),imageSlide('unread')]};let reads=0;
+ const result=await parseWithOcr(p,{}, {maxQuestions:1,request:async()=>({contentUrl:'image'}),recognize:async()=>({text:++reads===1?'Unreadable question':'Question?\nA. One\nB. Two'})});
+ assert.deepEqual(result.skipped,[1,2]);assert.deepEqual(result.diagnostics.unread,[4]);assert.deepEqual(result.questions.map(q=>q.slide),[3]);assert.equal(result.diagnostics.pages[1].objectId,'bad');
+});

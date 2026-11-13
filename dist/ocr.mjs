@@ -1,4 +1,4 @@
-import {parsePresentation,textOf} from './core.mjs?v=20261113-notes-9';
+import {parsePresentation,textOf} from './core.mjs?v=20261113-order-10';
 
 export function checkAbort(signal){if(signal?.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError')}
 export async function cacheKey(p,slide,resource={}){
@@ -24,13 +24,16 @@ export function directImageUrl(slide){
 export async function parseWithOcr(p,resource,{request,recognize,cache,signal,onProgress=()=>{},concurrency=1,maxQuestions=Infinity,startSlide=1,endSlide=Infinity,shouldStop=()=>false}){
  const original=parsePresentation(p),pages=original.diagnostics.pages;
  const inRange=page=>page.slide>=startSlide&&page.slide<=endSlide;
- const questions=original.questions.filter(inRange);
+ const questions=[],native=new Map(original.questions.map(q=>[q.slide,q]));
+ const orderedPages=pages.filter(inRange);
  const targets=pages.filter(page=>inRange(page)&&!page.recognized&&page.images>0);
- let completed=0,cached=0,cursor=0,failed=null;
+ let completed=0,cached=0,cursor=0;
  function progress(page,done=false){onProgress({slide:page?.slide,totalSlides:p.slides.length,completed,total:targets.length,found:Math.min(questions.length,maxQuestions),cached,done})}
  async function process(page){
   checkAbort(signal);const slide=p.slides[page.slide-1];
-  progress(page);
+  page.processed=true;
+  if(native.has(page.slide))return native.get(page.slide);
+  if(!page.images)return null;
   try{
    const key=await cacheKey(p,slide,resource);checkAbort(signal);
    let result=key?await cache?.get(key):null;
@@ -51,22 +54,27 @@ export async function parseWithOcr(p,resource,{request,recognize,cache,signal,on
    const parsed=parsePresentation({...p,slides:[{...slide,pageElements:[{shape:{text:{textElements:[{textRun:{content:result.text}}]}}}]}]});
    const q=parsed.questions[0];
    page.ocr=true;page.ocrConfidence=result.confidence;page.preview=result.text.slice(0,1200);
-   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrConfidence=result.confidence;questions.push(q);page.recognized=true;}
+   if(q){q.slide=page.slide;q.extraction='ocr';q.ocrConfidence=result.confidence;page.recognized=true;return q;}
   }catch(error){checkAbort(signal);if(error.ocrFatal)throw error;page.ocrError=error.message;}
-  completed++;progress(page);
+  return null;
  }
- async function runner(){
-  while(cursor<targets.length&&!failed&&!shouldStop()&&questions.length<maxQuestions){
-   const page=targets[cursor++];
-   try{await process(page)}catch(error){failed=error;return;}
+ // Read consecutive batches, then commit in original order, regardless of worker completion time.
+ // Native-text questions never jump ahead of earlier image questions at the count limit.
+ const size=Math.max(1,Math.min(4,Math.floor(concurrency)||1));
+ while(cursor<orderedPages.length&&!shouldStop()&&questions.length<maxQuestions){
+  checkAbort(signal);
+  const batch=orderedPages.slice(cursor,cursor+Math.min(size,maxQuestions-questions.length));cursor+=batch.length;
+  progress(batch[0]);
+  const results=await Promise.all(batch.map(process));
+  for(const [i,page] of batch.entries()){
+   if(results[i])questions.push(results[i]);
+   if(page.ocr||page.ocrError)completed++;
+   progress(page);
   }
  }
- // Each runner owns one job at a time; cap memory even when a caller requests too much concurrency.
- await Promise.all(Array.from({length:Math.max(1,Math.min(4,Math.floor(concurrency)||1))},()=>runner()));
- if(failed)throw failed;
  checkAbort(signal);
  questions.sort((a,b)=>a.slide-b.slide);
  progress(null,true);
  const remaining=targets.filter(page=>!page.ocr&&!page.ocrError).length;
- return {questions:questions.slice(0,maxQuestions),skipped:pages.filter(page=>inRange(page)&&!page.recognized&&(page.ocr||page.ocrError||!page.images)).map(page=>page.slide),diagnostics:{...original.diagnostics,ocrAttempted:completed,ocrRemaining:remaining,ocrCached:cached,ocrErrors:pages.filter(page=>page.ocrError).length,pages}};
+ return {questions:questions.slice(0,maxQuestions),skipped:pages.filter(page=>page.processed&&!page.recognized).map(page=>page.slide),diagnostics:{...original.diagnostics,ocrAttempted:completed,ocrRemaining:remaining,unread:orderedPages.filter(page=>!page.processed).map(page=>page.slide),ocrCached:cached,ocrErrors:pages.filter(page=>page.ocrError).length,pages}};
 }

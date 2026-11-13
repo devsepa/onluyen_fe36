@@ -49,7 +49,7 @@ export function parsePresentation(p){
  for(const [i,s] of (p.slides||[]).entries()){
   const text=cleanSlideContent(textOf(s.pageElements)),parts=optionParts(text);
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
-  pages.push({slide:i+1,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
+  pages.push({slide:i+1,objectId:s.objectId,textLength:text.length,images,recognized:!!parts,preview:text.slice(0,1200)});
   if(!parts){skipped.push(i+1);continue;}
   const answer=answerFromNotes(s,parts.options);
   questions.push({id:crypto.randomUUID(),...parts,answer,verified:!!answer,answerSource:answer?'speaker-notes':null,slide:i+1,url:`https://docs.google.com/presentation/d/${p.presentationId}/edit#slide=id.${s.objectId}`});

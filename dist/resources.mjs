@@ -40,7 +40,7 @@ export async function readSelectedResources(resources,request,parse,onProgress=(
    if(parsed.diagnostics)diagnostics.push({id:resource.id,name:p.title||resource.name,...parsed.diagnostics});
    if(!parsed.questions.length){const d=parsed.diagnostics;throw Error(d?`Đã đọc ${d.totalSlides} slide: ${d.textSlides} slide có chữ, ${d.imageSlides} slide có ảnh; chưa nhận diện được câu trắc nghiệm. Xem Chi tiết nhập tài liệu bên dưới để kiểm tra.`:'Không tìm được câu hỏi trắc nghiệm dạng chữ.');}
    const name=p.title||resource.name;
-   sources.push({id:resource.id,name,count:parsed.questions.length,skipped:parsed.skipped,remaining:parsed.diagnostics?.ocrRemaining||0});
+   sources.push({id:resource.id,name,count:parsed.questions.length,skipped:parsed.skipped,remaining:parsed.diagnostics?.unread?.length??parsed.diagnostics?.ocrRemaining??0});
    questions.push(...parsed.questions.map(q=>({...q,sourceId:resource.id,sourceName:name})));
   }catch(error){if(error.name==='AbortError')throw error;failures.push({id:resource.id,name:resource.name,error:error.message});}
  }

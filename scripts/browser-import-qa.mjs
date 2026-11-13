@@ -17,6 +17,7 @@ await evaluate(`(()=>{
  const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=700;const c=canvas.getContext('2d');c.fillStyle='white';c.fillRect(0,0,1400,700);c.fillStyle='black';c.font='34px Arial';['Which clause filters groups after aggregation?','A. WHERE','B. HAVING','C. ORDER BY','D. SELECT'].forEach((t,i)=>c.fillText(t,60,100+i*90));
  const image=canvas.toDataURL();const originalFetch=window.fetch;window.qaCalls=[];
  const presentation={presentationId:'qa_import',title:'SEMESTER_2_QA',slides:Array.from({length:4},(_,i)=>({objectId:'page'+i,pageElements:[{image:{contentUrl:image}}],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[{objectId:'note',shape:{text:{textElements:[{textRun:{content:'B'}}]}}}]}}}))};
+ presentation.slides.unshift({objectId:'intro',pageElements:[{shape:{text:{textElements:[{textRun:{content:'Welcome to the course'}}]}}}]});
  window.fetch=(url,options)=>{
   if(url==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa-user',name:'Người học QA',email:'qa@example.com'}));
   if(String(url).startsWith('https://www.googleapis.com/drive/v3/files?'))return Promise.resolve(Response.json({files:[{id:'qa_import',name:'SEMESTER_2_QA',mimeType:'application/vnd.google-apps.presentation',modifiedTime:'2026-11-13T00:00:00Z'},{id:'qa_not_selected',name:'Sever_1_SEMESTER_3_DBI202_Tai_lieu_khong_chon',mimeType:'application/vnd.google-apps.presentation',modifiedTime:'2026-11-13T00:00:00Z'}]}));
@@ -69,6 +70,9 @@ assert.equal(await evaluate(`document.querySelector('.nav.active').dataset.view`
 assert.equal(await evaluate(`document.querySelector('#message').hidden`),true,'source notices must not appear on history');
 await evaluate(`document.querySelector('[data-view="sources"]').click()`);
 assert.equal(await evaluate(`document.querySelector('#openImportedBank').hidden`),false);
+assert.equal(await evaluate(`document.querySelector('#message').textContent.includes('đã đọc nhưng chưa nhận diện')`),true);
+assert.equal(await evaluate(`document.querySelector('#importDiagnostics a').href`),'https://docs.google.com/presentation/d/qa_import/edit#slide=id.intro');
+assert.deepEqual(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).map(q=>q.slide)`),[2,3,4,5]);
 await evaluate(`document.querySelector('#openImportedBank').click()`);
 const result=await evaluate(`({active:document.querySelector('.nav.active').dataset.view,questions:document.querySelectorAll('.question-card').length,ready:document.querySelector('#ready').textContent,answers:JSON.parse(localStorage.getItem('sot-bank')).map(q=>q.answer),thumbnailCalls:qaCalls.length})`);
 assert.equal(result.active,'library');assert.equal(result.questions,4);assert.equal(result.ready,'4');assert.deepEqual(result.answers,['B','B','B','B']);assert.equal(result.thumbnailCalls,0);

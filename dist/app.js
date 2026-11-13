@@ -1,7 +1,7 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-notes-9';
-import {setupResources} from './resources-ui.js?v=20261113-notes-9';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-order-10';
+import {setupResources} from './resources-ui.js?v=20261113-order-10';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-notes-9';
+import {validateBank} from './banks.mjs?v=20261113-order-10';
 import {setupAccount} from './account-ui.js';
 
 const $=id=>document.getElementById(id);
