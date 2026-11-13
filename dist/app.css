@@ -331,6 +331,8 @@ body.quiz-active .feedback-inline-exp b{display:block;margin-bottom:4px;font-siz
 .history-actions{display:flex;align-items:center;gap:8px;margin-left:auto}
 .history-delete-btn{min-width:38px;min-height:38px;width:38px;height:38px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--muted);cursor:pointer;transition:all .15s ease}
 .history-delete-btn:hover{background:var(--red-bg);color:var(--red);border-color:var(--red);transform:scale(1.06)}
+#clearAllHistory{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid color-mix(in srgb,var(--red) 30%,transparent);background:color-mix(in srgb,var(--red) 10%,var(--panel2));color:var(--red);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s ease}
+#clearAllHistory:hover{background:color-mix(in srgb,var(--red) 22%,var(--panel2));border-color:var(--red);transform:translateY(-1px)}
 @media(max-width:760px){
   .history-actions{width:100%;justify-content:flex-end}
   .history-actions button{width:auto!important}
