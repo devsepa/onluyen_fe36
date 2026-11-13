@@ -1247,7 +1247,7 @@ function renderPractice() {
         <!-- Exam Minutes Selection -->
         <div id="wrongLimitSetting" class="form-group-v2" ${preferredMode==='study'?'':'hidden'}>
           <label class="form-label-v2" for="wrongAttemptLimit">Số lần sai được thử lại mỗi câu</label>
-          <select id="wrongAttemptLimit" class="select-control-v2">${[0,1,2,3,4,5].map(limit=>`<option value="${limit}" ${limit===wrongAttemptLimit?'selected':''}>${limit===0?'Hiện ngay khi sai':`${limit} lần · sai lần ${limit+1} mới hiện`}</option>`).join('')}</select>
+          <select id="wrongAttemptLimit" class="select-control-v2">${[0,1,2,3,4,5].map(limit=>`<option value="${limit}" ${limit===wrongAttemptLimit?'selected':''}>${limit===0?'Hiện ngay khi sai':`${limit} lần · sai lần ${limit+1} mới hiện${limit===2?' (Khuyên dùng)':''}`}</option>`).join('')}</select>
           <small class="muted">Chọn đúng sẽ hiện đáp án và giải thích ngay. Bạn tự bấm để chuyển câu.</small>
         </div>
         <div id="timeSetting" class="form-group-v2" ${preferredMode === "study" ? "hidden" : ""}>
@@ -1538,7 +1538,9 @@ function navItemClass(session, item, index, study) {
   return classes.join(" ");
 }
 let prefetchEnabled=read('sot-explanation-prefetch',true);
+// Cache-bust: 20261114-attempt-limit-default2
 let wrongAttemptLimit=read('sot-wrong-attempt-limit',2);if(!Number.isInteger(wrongAttemptLimit)||wrongAttemptLimit<0||wrongAttemptLimit>5)wrongAttemptLimit=2;
+if(localStorage.getItem('sot-wrong-attempt-limit')===null){wrongAttemptLimit=2;write('sot-wrong-attempt-limit',2);}
 if(session?.mode==='study'&&(!Number.isInteger(session.wrongAttemptLimit)||session.wrongAttemptLimit<0||session.wrongAttemptLimit>5))session.wrongAttemptLimit=wrongAttemptLimit;
 const generatedExplanationKeys=new Set(),localExplanationHits=new Set();
 const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},load:async(q,{signal})=>{
