@@ -1,4 +1,6 @@
-// No secrets, question text or Google tokens are logged or persisted by this worker.
+import {sharedDeckRoute} from './shared-decks.mjs';
+export {SharedDecks} from './shared-decks.mjs';
+// AI calls do not persist question text or tokens. Explicitly published decks use separate storage.
 const BATCH_LIMIT=5,MAX_BODY=3000000;
 const validAnswer=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 class ApiError extends Error{constructor(status,message,upstreamStatus=null){super(message);this.status=status;this.upstreamStatus=upstreamStatus}}
@@ -93,10 +95,11 @@ export class AIQuota{
 }
 export default {async fetch(request,env){
  const origin=request.headers.get('Origin')||'',allowed=(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim());
- const cors=allowed.includes(origin)?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'}:{};
+ const cors=allowed.includes(origin)?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'}:{};
  const reply=(body,status=200)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'60'}:{})}});
  if(!allowed.includes(origin))return reply({error:'Nguồn truy cập không được phép.'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+ if(new URL(request.url).pathname.startsWith('/v1/decks'))return sharedDeckRoute(request,env,cors);
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);
  if(!env.GEMINI_API_KEY||!env.AI_QUOTA)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);

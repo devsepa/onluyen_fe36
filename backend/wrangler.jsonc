@@ -9,6 +9,6 @@
     "USER_DAILY_QUESTIONS": "150",
     "GLOBAL_DAILY_QUESTIONS": "1000"
   },
-  "durable_objects": {"bindings": [{"name": "AI_QUOTA", "class_name": "AIQuota"}]},
-  "migrations": [{"tag": "v1", "new_sqlite_classes": ["AIQuota"]}]
+  "durable_objects": {"bindings": [{"name": "AI_QUOTA", "class_name": "AIQuota"},{"name": "SHARED_DECKS", "class_name": "SharedDecks"}]},
+  "migrations": [{"tag": "v1", "new_sqlite_classes": ["AIQuota"]},{"tag": "v2", "new_sqlite_classes": ["SharedDecks"]}]
 }

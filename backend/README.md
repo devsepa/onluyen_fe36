@@ -44,3 +44,7 @@ Source/manual answers remain preferred. Frontend automatic jobs check notes firs
 
 ## Original slide image input
 Notes are checked first. Missing answers use one original PNG/JPEG/WebP image per Worker request (about 2 MB maximum). Gemini receives image bytes and question labels, never Google access tokens or private slide URLs. Images are not persisted in the quota store or local question bank. Multiple correct labels (AD/ACE) are supported and AI proposals never overwrite source or manual answers. Existing authentication, quotas, stop/resume and AI provenance tags still apply.
+
+
+## Shared decks
+The SHARED_DECKS SQLite Durable Object binding (migration v2) stores explicitly published slide images, ordered labels, answers and explanations. The catalog and published images are readable without Google login from allowed web origins. Creation, upload, publication and removal require Google authentication; only the owner can modify/remove a deck. Drafts are private and expire after 24 hours. Published decks are immutable; publish a new deck to update content. Limits: 3 creations/account/day, 500 questions/deck, 800 KB/image, 100 MB/deck. Image bytes are chunked below Durable Object per-value limits. Google tokens, profile details and study history are never included in public metadata. Existing AI quota storage and Secrets remain separate. Storage now contains intentionally shared content and consumes the account Durable Object storage allowance.
