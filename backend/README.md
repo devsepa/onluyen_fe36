@@ -40,3 +40,7 @@ Official references: https://ai.google.dev/gemini-api/docs/structured-output and
 Source/manual answers remain preferred. Frontend automatic jobs check notes first and send only still-missing questions, with a visible opt-out and stop control. AI proposals can be practiced immediately but retain `verified=false` and an explicit AI-suggestion label; acceptance is optional. A failed automatic bank signature is not endlessly retried on every reload in the same tab.
 
 `scripts/select-gemini-model.mjs` selects an available stable Flash-Lite backup as `GEMINI_FALLBACK_MODEL` during CI. `generateWithFallback` tries it at most once after primary 503/timeout/404 or a response-configuration error; quota and credential errors are not retried. Model provenance reflects the model actually used. One reserved batch can result in two provider calls; application question quotas therefore do not equal a dollar spending cap. The live CI smoke test verifies the same fallback path as the deployed Worker.
+
+
+## Original slide image input
+Notes are checked first. Missing answers use one original PNG/JPEG/WebP image per Worker request (about 2 MB maximum). Gemini receives image bytes and question labels, never Google access tokens or private slide URLs. Images are not persisted in the quota store or local question bank. Multiple correct labels (AD/ACE) are supported and AI proposals never overwrite source or manual answers. Existing authentication, quotas, stop/resume and AI provenance tags still apply.

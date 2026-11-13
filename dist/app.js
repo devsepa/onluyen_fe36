@@ -1,12 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-fast-2';
-import {setupResources} from './resources-ui.js?v=20261113-fast-2';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-vision-1';
+import {setupResources} from './resources-ui.js?v=20261113-vision-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-fast-2';
-import {setupAccount} from './account-ui.js?v=20261113-fast-2';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-fast-2';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini} from './ai.mjs?v=20261113-fast-2';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-fast-2';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-fast-2';
+import {validateBank} from './banks.mjs?v=20261113-vision-1';
+import {setupAccount} from './account-ui.js?v=20261113-vision-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-vision-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-vision-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-vision-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-vision-1';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,6 +39,7 @@ function sourceReference(q,compact=false){
 }
 function refreshStats(){$('total').textContent=bank.length;$('ready').textContent=bank.filter(readyForPractice).length;$('navQuestionCount').textContent=bank.length}
 function aiBadge(q){return q.answerSource==='gemini'?'<span class="tag ai-answer-label">✦ Đáp án AI gợi ý</span>':''}
+function hasAiInput(q){return !!q.url||hasAiText(q)}
 function hasAiText(q){return q.stem?.trim()&&q.options.length>=2&&q.options.every(o=>typeof o.text==='string'&&o.text.trim())}
 const slideImages=createSlideImageStore(q=>resources.slideImage(q));window.addEventListener('pagehide',()=>slideImages.clear());
 function displayContent(q){
@@ -131,7 +132,7 @@ try{autoAi=localStorage.getItem('sot-ai-auto')!=='false'}catch{}
 const aiPanel=document.createElement('section');aiPanel.className='card ai-panel';aiPanel.setAttribute('aria-label','Bổ sung đáp án bằng AI');
 aiPanel.innerHTML='<div><span class="overline">TRỢ LÝ HỌC TẬP</span><h3>Tự động bổ sung đáp án</h3><p>Câu thiếu đáp án được gửi cho Gemini sau khi nhập. Đáp án AI có thể dùng để ôn và được ghi rõ là gợi ý; bạn vẫn có thể sửa hoặc xác nhận.</p></div><label class="check-label"><input id="aiAuto" type="checkbox"> Tự động xử lý câu thiếu đáp án bằng AI</label><div class="ai-actions"><button id="aiStart">✦ Thử lại các câu còn thiếu</button><button id="aiStop" class="secondary" hidden>Dừng xử lý</button><button id="aiAccept" class="secondary" hidden>Xác nhận đề xuất AI</button></div><p id="aiAvailability"></p><div id="aiProgress" role="status" aria-live="polite"></div><progress id="aiBar" max="1" value="0" hidden></progress>';
 $('library').insertBefore(aiPanel,$('library').querySelector('.library-toolbar'));
-const sourceAi=document.createElement('label');sourceAi.className='check-label source-auto-ai';sourceAi.innerHTML='<input id="sourceAutoAI" type="checkbox"> Tự động gửi câu thiếu đáp án và lựa chọn cho Gemini; giữ nguyên đáp án trong ghi chú.';
+const sourceAi=document.createElement('label');sourceAi.className='check-label source-auto-ai';sourceAi.innerHTML='<input id="sourceAutoAI" type="checkbox"> Tự động gửi ảnh slide của câu thiếu đáp án cho Gemini. Giữ nguyên đáp án trong ghi chú; có thể tắt bất cứ lúc nào.';
 $('sourceControls').querySelector('.import-options').after(sourceAi);
 function setAutoAi(value){autoAi=value;try{localStorage.setItem('sot-ai-auto',String(value))}catch{}$('aiAuto').checked=value;$('sourceAutoAI').checked=value;if(value)scheduleAutoAi();else{clearTimeout(autoAiTimer);aiController?.abort()}}
 $('aiAuto').checked=autoAi;$('sourceAutoAI').checked=autoAi;
@@ -141,7 +142,7 @@ function scheduleAutoAi(){
  autoAiTimer=setTimeout(()=>{
   if(!autoAi||aiRunning||!AI_API_BASE||session&&!session.done)return;
   if(resources.isBusy()){autoAiTimer=setTimeout(scheduleAutoAi,500);return}
-  const missing=bank.filter(q=>!q.answer&&hasAiText(q));if(!missing.length)return;
+  const missing=bank.filter(q=>!q.answer&&hasAiInput(q));if(!missing.length)return;
   try{resources.apiToken()}catch{return}
   const signature=JSON.stringify(missing.map(q=>[q.id,questionAutoKey(q)]));
   try{if(sessionStorage.getItem('sot-ai-auto-attempt')===signature)return;sessionStorage.setItem('sot-ai-auto-attempt',signature)}catch{}
@@ -150,10 +151,10 @@ function scheduleAutoAi(){
 }
 function questionAutoKey(q){return q.stem+'\n'+q.options.map(o=>o.id+o.text).join('\n')}
 function renderAi(){
- const missing=bank.filter(q=>!q.answer).length,proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified).length,incomplete=bank.filter(q=>!q.answer&&!hasAiText(q)).length;
+ const missing=bank.filter(q=>!q.answer).length,proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified).length,incomplete=bank.filter(q=>!q.answer&&!hasAiInput(q)).length;
  $('aiStart').disabled=aiRunning||missing===incomplete||!AI_API_BASE;$('aiStart').hidden=aiRunning;$('aiStop').hidden=!aiRunning;
  $('aiAccept').hidden=!proposed;$('aiAccept').disabled=aiRunning;
- $('aiAvailability').textContent=AI_API_BASE?`${missing} câu thiếu đáp án · ${proposed} đáp án AI gợi ý có thể dùng. ${incomplete?`${incomplete} câu chưa đọc được đầy đủ lựa chọn: cần đối chiếu ảnh hoặc sửa nội dung trước khi gửi AI. `:''}Xử lý mỗi lượt 5 câu; tiến độ được lưu sau từng lượt.`:'Tính năng AI đang được chuẩn bị. Bạn vẫn có thể lấy đáp án từ ghi chú và ôn luyện bình thường.';
+ $('aiAvailability').textContent=AI_API_BASE?`${missing} câu thiếu đáp án · ${proposed} đáp án AI gợi ý có thể dùng. ${incomplete?`${incomplete} câu chưa có ảnh hoặc nội dung đầy đủ. `:''}Đọc từng ảnh slide gốc; lưu kết quả sau mỗi câu. AI có thể sai.`:'Tính năng AI đang được chuẩn bị. Bạn vẫn có thể lấy đáp án từ ghi chú và ôn luyện bình thường.';
 }
 $('aiStop').onclick=()=>{setAutoAi(false);$('aiProgress').textContent='Đang dừng. Các đáp án đã lưu vẫn được giữ.'};
 $('aiAccept').onclick=()=>{
@@ -169,7 +170,7 @@ async function runAi({automatic=false}={}){
  let token;try{token=resources.apiToken()}catch(error){return message(error.message,'library')}
  aiRunning=true;aiController=new AbortController();let done=0,applied=0,uncertain=0,fromNotes=0;renderLibrary();$('aiBar').hidden=false;$('aiBar').max=pending.length;$('aiBar').value=0;
  try{
-  if(automatic){
+  {
    $('aiProgress').textContent='Đang kiểm tra ghi chú trước; chỉ gửi câu còn thiếu cho AI…';
    try{
     const result=await resources.readAnswers(pending);
@@ -180,19 +181,20 @@ async function runAi({automatic=false}={}){
    pending=pending.filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});refreshStats();renderLibrary();$('aiBar').max=pending.length||1;
    if(!pending.length){$('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú; không cần gọi AI.`;return}
   }
-  const incomplete=pending.filter(q=>!hasAiText(q)).length;pending=pending.filter(hasAiText);
+  const incomplete=pending.filter(q=>!hasAiInput(q)).length;pending=pending.filter(hasAiInput);
   if(!pending.length){$('aiProgress').textContent='Chưa đọc được đầy đủ lựa chọn. Hãy đối chiếu ảnh hoặc sửa đề; không gửi dữ liệu thiếu cho AI.';return}
   $('aiBar').max=pending.length;
   while(done<pending.length){
    if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');
-   const batch=pending.slice(done,done+5).filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});
-   $('aiProgress').textContent=`Đang xử lý ${done+1}–${Math.min(done+5,pending.length)} / ${pending.length} câu…`;
+   const batch=pending.slice(done,done+1).filter(q=>{const current=bank.find(current=>current.id===q.id);return current&&!current.answer});
+   $('aiProgress').textContent=`Đang xử lý ${done+1}–${Math.min(done+1,pending.length)} / ${pending.length} câu…`;
    if(batch.length){
+    for(const q of batch){if(q.url){const blob=await resources.slideBlob(q);if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');if(blob.size>2100000)throw Error('Slide image exceeds 2 MB.');q.image={mimeType:blob.type,data:await blobToBase64(blob)}}}
     const result=await solveBatch(AI_API_BASE,batch,resources.apiToken(),{signal:aiController.signal});
     const counts=applyAiResults(bank,batch,result.answers,result.model);applied+=counts.applied;uncertain+=counts.uncertain;
     if(!write('sot-bank',bank))throw Error('Không lưu được kết quả. Hãy xuất ngân hàng và kiểm tra dung lượng trình duyệt trước khi tiếp tục.');
    }
-   done=Math.min(done+5,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();
+   done=Math.min(done+1,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();
   }
   $('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú và lưu ${applied} đáp án AI gợi ý, có thể ôn luyện ngay. ${uncertain} câu AI chưa xác định được vẫn để trống.${incomplete?` ${incomplete} câu thiếu lựa chọn chưa gửi AI.`:''}`;
  }catch(error){$('aiProgress').textContent=error.name==='AbortError'?`Đã dừng và giữ ${applied} đề xuất. Bấm AI bổ sung đáp án để tiếp tục các câu còn thiếu.`:`${error.message} Đã giữ ${applied} đề xuất; có thể tiếp tục sau.`}
