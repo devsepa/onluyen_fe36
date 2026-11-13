@@ -27,18 +27,20 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
   e.preventDefault();if(controller||!canChange()||!$('publishRights').checked)return;
   let token;try{token=getToken()}catch(error){$('publishStatus').textContent=error.message;return}
   const questions=structuredClone(getBank().filter(readyForPractice));if(!questions.length||questions.length>500)return;
-  controller=new AbortController();const signal=controller.signal;let draft=null;
+  controller=new AbortController();const signal=controller.signal;let draft=null,published=false;
   $('publishSubmit').disabled=true;$('closePublish').disabled=true;$('stopPublish').hidden=false;$('publishBar').hidden=false;$('publishBar').max=questions.length;$('publishBar').value=0;
   try{
    draft=await(await deckRequest(base,'/v1/decks',{method:'POST',token,body:{title:$('deckTitle').value.trim(),count:questions.length,rights:true},signal})).json();
-   for(let i=0;i<questions.length;i++){
+   let cursor=0,done=0;
+   const upload=async()=>{while(cursor<questions.length){const i=cursor++;
     if(signal.aborted)throw new DOMException('Stopped','AbortError');$('publishStatus').textContent=`Đang tải ảnh ${i+1}/${questions.length}. Bộ đề chưa công khai.`;
     const blob=await getBlob(questions[i]);if(blob.size>819200)throw Error(`Ảnh slide ${questions[i].slide} lớn hơn 800 KB; chưa đăng bộ đề.`);
-    const image={mimeType:blob.type,data:await blobToBase64(blob)},q=questions[i],question=Object.fromEntries(['stem','options','answer','explanation','verified','answerSource','slide','url','sourceName'].map(key=>[key,q[key]]));await deckRequest(base,`/v1/decks/${draft.id}/questions/${i}`,{method:'PUT',token:getToken(),body:{question,image},signal});$('publishBar').value=i+1;
-   }
-   await deckRequest(base,`/v1/decks/${draft.id}/publish`,{method:'POST',token:getToken(),body:{},signal});const ids=owned();ids.push(draft.id);try{localStorage.setItem('sot-published-decks',JSON.stringify(ids))}catch{}draft=null;$('publishStatus').textContent='Đã đăng bộ đề. Mọi người có thể chọn trong Kho đề chung.';await load();
-  }catch(error){$('publishStatus').textContent=error.name==='AbortError'?'Đã dừng. Bộ đề chưa được công khai.':error.message;if(draft)try{await deckRequest(base,'/v1/decks/'+draft.id,{method:'DELETE',token:getToken()})}catch{}}
-  finally{controller=null;$('publishSubmit').disabled=false;$('closePublish').disabled=false;$('stopPublish').hidden=true}
+    const image={mimeType:blob.type,data:await blobToBase64(blob)},q=questions[i],question=Object.fromEntries(['stem','options','answer','explanation','verified','answerSource','slide','url','sourceName'].map(key=>[key,q[key]]));await deckRequest(base,`/v1/decks/${draft.id}/questions/${i}`,{method:'PUT',token:getToken(),body:{question,image},signal});$('publishBar').value=++done;
+   }};
+   await Promise.all(Array.from({length:Math.min(3,questions.length)},upload));
+   await deckRequest(base,`/v1/decks/${draft.id}/publish`,{method:'POST',token:getToken(),body:{},signal});const ids=owned();ids.push(draft.id);try{localStorage.setItem('sot-published-decks',JSON.stringify(ids))}catch{}draft=null;published=true;$('publishStatus').textContent='Đã đăng bộ đề. Mọi người có thể chọn trong Kho đề chung.';await load();
+  }catch(error){controller.abort();$('publishStatus').textContent=error.name==='AbortError'?'Đã dừng. Bộ đề chưa được công khai.':error.message;if(draft)try{await deckRequest(base,'/v1/decks/'+draft.id,{method:'DELETE',token:getToken()})}catch{}}
+  finally{controller=null;$('publishSubmit').disabled=published;$('closePublish').disabled=false;$('stopPublish').hidden=true}
  };
  return {load,isPublishing:()=>!!controller};
 }
