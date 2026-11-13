@@ -1,4 +1,5 @@
 import {blobToBase64,readyForPractice} from './ai.mjs?v=20261113-fast-cache-1';
+import {askConfirm} from './confirm-dialog.mjs';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function sharedImagePath(q){if(!/^[a-f0-9-]{36}$/.test(q.sharedDeck)||!Number.isInteger(q.sharedIndex)||q.sharedIndex<0)throw Error('Ảnh trong kho không hợp lệ.');return `/v1/decks/${q.sharedDeck}/images/${q.sharedIndex}`}
 export async function deckRequest(base,path,{method='GET',token,uploadToken,body,signal,fetcher=fetch}={}){
@@ -24,8 +25,8 @@ const owned=()=>{try{return JSON.parse(localStorage.getItem('sot-published-decks
  section.addEventListener('click',async e=>{
   const use=e.target.closest('[data-use-deck]'),remove=e.target.closest('[data-delete-deck]');if(!use&&!remove)return;if(!canChange())return;const button=use||remove,id=use?.dataset.useDeck||remove.dataset.deleteDeck;button.disabled=true;
   try{
-   if(remove){if(!confirm('Gỡ bộ đề khỏi kho chung? Ảnh của bộ đề sẽ không còn truy cập được.'))return;await deckRequest(base,'/v1/decks/'+id,{method:'DELETE',token:getToken()});await load();return}
-   if(getBank().length&&!confirm('Dùng bộ đề này thay ngân hàng hiện tại? Lịch sử bài làm vẫn được giữ.'))return;
+   if(remove){if(!await askConfirm('Gỡ bộ đề khỏi kho chung? Ảnh của bộ đề sẽ không còn truy cập được.',{title:'Gỡ bộ đề',danger:true,okText:'Gỡ bộ đề'}))return;await deckRequest(base,'/v1/decks/'+id,{method:'DELETE',token:getToken()});await load();return}
+   if(getBank().length&&!await askConfirm('Dùng bộ đề này thay ngân hàng hiện tại? Lịch sử bài làm vẫn được giữ.',{title:'Chọn bộ đề ôn tập',okText:'Dùng bộ đề'}))return;
    const deck=await(await deckRequest(base,'/v1/decks/'+id)).json();onUse(deck);
   }catch(error){$('deckStatus').textContent=error.message}finally{button.disabled=false}
  });

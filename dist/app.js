@@ -1,3 +1,4 @@
+import { askConfirm } from "./confirm-dialog.mjs";
 import { practiceSubjects, subjectKey } from "./subjects.mjs";
 import { nextUnanswered, explanationFromResult } from "./study-flow.mjs";
 import {
@@ -575,7 +576,7 @@ $("questions").onchange = (e) => {
     saveBank();
   }
 };
-$("questions").onclick = (e) => {
+$("questions").onclick = async (e) => {
   const toggleBtn = e.target.closest("[data-toggle-text]");
   if (toggleBtn) {
     const t = toggleBtn
@@ -596,19 +597,20 @@ $("questions").onclick = (e) => {
     q.verified = !q.verified;
   }
   if (button.dataset.delete) {
-    if (!confirm("Xóa câu hỏi này khỏi ngân hàng?")) return;
+    if (!await askConfirm("Xóa câu hỏi này khỏi ngân hàng?", { title: "Xóa câu hỏi", danger: true, okText: "Xóa" })) return;
     bank = bank.filter((q) => q.id !== id);
   }
   saveBank();
 };
-$("verifyPage").onclick = () => {
+$("verifyPage").onclick = async () => {
   const qs = filteredQuestions()
     .slice((page - 1) * pageSize, page * pageSize)
     .filter((q) => q.answer && !q.verified);
   if (!qs.length) return;
   if (
-    confirm(
+    await askConfirm(
       `Bạn đã kiểm tra nội dung và đáp án của ${qs.length} câu trong trang này? Xác nhận để đưa các câu này vào đề luyện.`,
+      { title: "Xác nhận trang câu hỏi", okText: "Xác nhận" }
     )
   ) {
     qs.forEach((q) => (q.verified = true));
@@ -705,7 +707,7 @@ $("aiStop").onclick = () => {
   setAutoAi(false);
   $("aiProgress").textContent = "Đang dừng. Các đáp án đã lưu vẫn được giữ.";
 };
-$("aiAccept").onclick = () => {
+$("aiAccept").onclick = async () => {
   if (session && !session.done)
     return message(
       "Hoàn thành bài đang làm trước khi cập nhật đáp án.",
@@ -716,8 +718,9 @@ $("aiAccept").onclick = () => {
   );
   if (
     !proposed.length ||
-    !confirm(
+    !await askConfirm(
       `Dùng ${proposed.length} đáp án AI đề xuất cho ôn luyện và thi thử? AI có thể sai. Hãy kiểm tra các câu quan trọng trước khi xác nhận.`,
+      { title: "Xác nhận đáp án AI", okText: "Đồng ý" }
     )
   )
     return;
@@ -920,10 +923,11 @@ notesButton.onclick = async () => {
     scheduleAutoAi();
   }
 };
-$("clear").onclick = () => {
+$("clear").onclick = async () => {
   if (
-    confirm(
+    await askConfirm(
       "Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.",
+      { title: "Xóa ngân hàng câu hỏi", danger: true, okText: "Xóa tất cả" }
     )
   ) {
     bank = [];
@@ -1033,8 +1037,9 @@ $("bankFile").onchange = async (e) => {
     const imported = validateBank(JSON.parse(await file.text()));
     if (
       bank.length &&
-      !confirm(
+      !await askConfirm(
         `Thay ngân hàng hiện tại bằng ${imported.length} câu từ file này?`,
+        { title: "Nhập bộ câu hỏi", okText: "Thay thế" }
       )
     )
       return;
@@ -1295,10 +1300,11 @@ function renderQuiz() {
     write("sot-session", session);
     switchView("practice");
   };
-  $("submit").onclick = () => {
+  $("submit").onclick = async () => {
     if (
-      confirm(
+      await askConfirm(
         `${study ? "Kết thúc buổi học" : "Nộp bài thi"}? Bạn đã trả lời ${Object.keys(session.answers).length}/${qs.length} câu.`,
+        { title: study ? "Kết thúc buổi học" : "Nộp bài thi", okText: study ? "Kết thúc" : "Nộp bài" }
       )
     )
       finish();

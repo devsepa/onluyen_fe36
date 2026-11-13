@@ -137,7 +137,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
   if(!active())return message('Hãy kết nối lại Google để nhập tài liệu.');
   const startSlide=Number($('ocrStart').value||1),endSlide=Number($('ocrEnd').value||Infinity);
   if(!Number.isInteger(startSlide)||startSlide<1||(Number.isFinite(endSlide)&&(!Number.isInteger(endSlide)||endSlide<startSlide)))return message('Khoảng slide không hợp lệ. Trang bắt đầu phải từ 1 và không lớn hơn trang kết thúc.');
-  if(document.getElementById('total').textContent!=='0'&&!confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.'))return;
+  if(document.getElementById('total').textContent!=='0'&&!await (window.askConfirm ? window.askConfirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.',{title:'Thay đổi ngân hàng',okText:'Thay thế'}) : confirm('Dùng các tài liệu đã chọn làm ngân hàng câu hỏi hiện tại? Ngân hàng trước sẽ được thay thế; lịch sử bài làm vẫn giữ.')))return;
   const maxQuestions=Number($('ocrLimit').value)||Infinity;
   backgroundId++;classifying=false;controller?.abort();const run=epoch;controller=new AbortController();setBusy(true);finishEarly=false;progressPanel.hidden=false;stopButton.textContent='Dừng nhập';
   $('useReady').hidden=true;$('useReady').disabled=false;$('ocrBar').value=0;$('ocrPercent').textContent='0%';
@@ -162,7 +162,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrHeadline').textContent='Đã hoàn tất lọc slide câu hỏi';$('ocrTime').textContent=`Hoàn tất trong ${Math.round((Date.now()-started)/1000)} giây`;
    showDiagnostics(result.diagnostics);
    if(!result.questions.length&&!result.deferred?.length){status('Chưa thay đổi ngân hàng câu hỏi.');return message('Chưa tìm thấy slide đủ điều kiện câu hỏi – lựa chọn. Trang quảng cáo, hướng dẫn và ảnh chưa xác định không được nhập. '+result.failures.map(f=>`${f.name}: ${f.error}`).join('\n'))}
-   if(result.failures.length&&!confirm(`Có ${result.failures.length} tài liệu chưa đọc được:\n${result.failures.map(f=>`${f.name}: ${f.error}`).join('\n')}\n\nTiếp tục dùng ${result.sources.length} tài liệu đã đọc được?`)){status('Đã giữ ngân hàng trước.');return}
+   if(result.failures.length&&!await (window.askConfirm ? window.askConfirm(`Có ${result.failures.length} tài liệu chưa đọc được:\n${result.failures.map(f=>`${f.name}: ${f.error}`).join('\n')}\n\nTiếp tục dùng ${result.sources.length} tài liệu đã đọc được?`,{title:'Tài liệu chưa đọc được',danger:true,okText:'Tiếp tục'}) : confirm(`Có ${result.failures.length} tài liệu chưa đọc được:\n${result.failures.map(f=>`${f.name}: ${f.error}`).join('\n')}\n\nTiếp tục dùng ${result.sources.length} tài liệu đã đọc được?`))){status('Đã giữ ngân hàng trước.');return}
    if(!onImport(result))return;
    const remaining=result.sources.reduce((n,s)=>n+s.remaining,0);
    status(`Đã sẵn sàng: ${result.questions.length} câu từ ${result.sources.length} tài liệu.${remaining?` Còn ${remaining} trang chưa đọc; tăng số câu hoặc chọn Đọc toàn bộ để nhập thêm.`:''}`);
