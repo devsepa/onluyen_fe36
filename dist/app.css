@@ -611,3 +611,7 @@ body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important
 
 
 .quiz-leave{display:none !important;}
+
+.shared-status-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:12px;flex-wrap:wrap;}
+.shared-status-bar p{margin:0;color:var(--muted);font-size:13px;}
+.refresh-decks-btn{padding:7px 14px;font-size:12px;border-radius:8px;}

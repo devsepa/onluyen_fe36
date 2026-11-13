@@ -82,7 +82,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
  $('publishDeck').addEventListener('click',()=>{if(dialog.open)$('publishSubmit').textContent=readDraft()?'Tiếp tục tải lên':'Đăng bộ đề'});
 
  function cards(){
-  const term=$('deckSearch').value.trim().toLocaleLowerCase(),filtered=items.filter(d=>d.title.toLocaleLowerCase().includes(term));
+  const searchEl=$('deckSearch'),term=searchEl?searchEl.value.trim().toLocaleLowerCase():'',filtered=term?items.filter(d=>d.title.toLocaleLowerCase().includes(term)):items;
    $('deckList').innerHTML=(filtered.length?filtered.map(d=>{
    const isOwner=owned().includes(d.id);
    return `<article class="card shared-deck ${isOwner?'is-owner-deck':''}">
@@ -119,7 +119,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
   catch(error){$('deckStatus').textContent=error.message}
   finally{loading=false}
  }
- $('refreshDecks').onclick=load;$('deckSearch').oninput=cards;
+ if($('refreshDecks'))$('refreshDecks').onclick=load;if($('deckSearch'))$('deckSearch').oninput=cards;
  section.addEventListener('click',async e=>{
   const useLocal=e.target.closest('[data-use-local]');
   if(useLocal){
