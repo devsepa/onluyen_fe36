@@ -115,7 +115,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
-  try{items=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(items))throw Error('Không đọc được danh sách bộ đề.');cards();$('deckStatus').textContent=`${items.length} bộ đề công khai. Chọn bộ đề để ôn ngay, không cần quét lại.`}
+  try{items=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(items))throw Error('Không đọc được danh sách bộ đề.');cards();$('deckStatus').textContent=''}
   catch(error){$('deckStatus').textContent=error.message}
   finally{loading=false}
  }
