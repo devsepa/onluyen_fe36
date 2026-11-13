@@ -12,3 +12,7 @@ test('rejects external sources and duplicate answer labels',()=>{
 test('missing answers cannot be marked as verified after import',()=>{
  const result=validateBank({format:'slide-on-thi/v1',questions:[{...question(),answer:'D'}]});assert.equal(result[0].verified,false);assert.equal(result[0].answer,'');
 });
+test('exported AI proposals retain provenance and remain unverified',()=>{
+ const result=validateBank({format:'slide-on-thi/v1',questions:[{...question(),answerSource:'gemini',aiModel:'qa',explanation:'AI explanation',verified:false}]});
+ assert.equal(result[0].answerSource,'gemini');assert.equal(result[0].verified,false);assert.equal(result[0].explanation,'AI explanation');assert.equal(result[0].aiModel,'qa');
+});

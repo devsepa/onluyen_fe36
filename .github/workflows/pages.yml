@@ -6,8 +6,10 @@ on:
     paths:
       - 'dist/**'
       - 'tests/**'
+      - 'backend/**'
       - 'package.json'
       - 'scripts/check-static.mjs'
+      - 'scripts/configure-ai.mjs'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -48,7 +50,11 @@ jobs:
       - uses: actions/checkout@v6
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload website only
+      - name: Configure public AI endpoint
+        env:
+          AI_API_BASE: ${{ vars.AI_API_BASE }}
+        run: node scripts/configure-ai.mjs
+      - name: Upload website artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: dist

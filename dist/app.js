@@ -1,8 +1,10 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-notes-12';
-import {setupResources} from './resources-ui.js?v=20261113-notes-12';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion} from './core.mjs?v=20261113-ai-13';
+import {setupResources} from './resources-ui.js?v=20261113-ai-13';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-notes-12';
-import {setupAccount} from './account-ui.js?v=20261113-notes-12';
+import {validateBank} from './banks.mjs?v=20261113-ai-13';
+import {setupAccount} from './account-ui.js?v=20261113-ai-13';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-ai-13';
+import {solveBatch,applyAiResults} from './ai.mjs?v=20261113-ai-13';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -53,11 +55,11 @@ document.addEventListener('click',event=>{const action=event.target.closest('[da
 const account=setupAccount({onConnect:options=>{
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi đổi tài khoản Google.');
  resources.connect(options);
-},onDisconnect:()=>resources.disconnect()});
+},onDisconnect:()=>{aiController?.abort();resources.disconnect()}});
 const resources=setupResources({onAccountChange:profile=>{
  account.update(profile);$('sourceAccessNotice').hidden=!!profile;$('sourceControls').hidden=!profile;
 },onAccountError:text=>message(text),message:text=>message(text,'sources'),hasActiveSession:()=>!!session&&!session.done,onImport:result=>{
- if(session&&!session.done){message('Hoàn thành bài đang làm trước khi thay ngân hàng câu hỏi.','sources');return false}
+ if(aiRunning||session&&!session.done){message('Dừng AI và hoàn thành bài đang làm trước khi thay ngân hàng câu hỏi.','sources');return false}
  if(!write('sot-bank',result.questions))return false;
  bank=result.questions;sourceSummary=result.sources.map(s=>s.name).join(' · ');write('sot-source',sourceSummary);page=1;refreshStats();if(view==='library')renderLibrary();$('openImportedBank').hidden=false;$('openImportedBank').textContent=`Kiểm tra ${bank.length} câu hỏi đã nhập →`;return true;
 }});
@@ -68,13 +70,14 @@ function renderLibrary(){
  const chosen=$('sourceFilter').value;$('sourceFilter').innerHTML='<option value="">Tất cả tài liệu</option>'+sources().map(([id,name])=>`<option value="${esc(id)}">${esc(name)}</option>`).join('');if(sources().some(([id])=>id===chosen))$('sourceFilter').value=chosen;
  const all=filteredQuestions(),pages=Math.max(1,Math.ceil(all.length/pageSize));page=Math.max(1,Math.min(page,pages));const qs=all.slice((page-1)*pageSize,page*pageSize);
  $('questionCount').textContent=`${all.length} câu hỏi${all.length?` · Hiển thị ${(page-1)*pageSize+1}–${Math.min(page*pageSize,all.length)}`:''}`;
- $('exportBank').disabled=!bank.length;$('verifyPage').disabled=!qs.some(q=>q.answer&&!q.verified);$('clear').disabled=!bank.length;
- $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.verified?'✓ Đã xác nhận':'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="question-title">${esc(q.stem)}</div><div class="options">${q.options.map(o=>`<div class="option"><span class="letter">${esc(o.id)}</span><span>${esc(o.text)}</span></div>`).join('')}</div><div class="question-bottom"><label>Đáp án đúng<select data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}"><option value="">Chưa biết</option>${q.options.map(o=>`<option ${q.answer===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button><button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
+ $('exportBank').disabled=!bank.length;$('verifyPage').disabled=!qs.some(q=>q.answer&&!q.verified);$('clear').disabled=!bank.length||aiRunning;
+ renderAi();
+ $('questions').innerHTML=qs.length?qs.map((q,i)=>`<article class="card question-card"><div class="question-top"><div class="question-source">CÂU ${(page-1)*pageSize+i+1} · ${esc(q.sourceName||'Tài liệu đã nhập')}<br><a href="${esc(q.url)}" target="_blank" rel="noopener">Slide ${q.slide} ↗</a> ${q.extraction==='ocr'?' · Nhận dạng từ ảnh':''}</div><span class="tag ${q.verified?'ok':''}">${q.answerSource==='gemini'?(q.verified?'✓ AI · Đã chấp nhận':'✦ AI đề xuất'):q.verified?'✓ Đã xác nhận':'Chờ kiểm tra'}</span></div>${sourceReference(q)}<div class="question-title">${esc(q.stem)}</div><div class="options">${q.options.map(o=>`<div class="option"><span class="letter">${esc(o.id)}</span><span>${esc(o.text)}</span></div>`).join('')}</div>${q.answerSource==='gemini'&&q.explanation?`<details class="note-explanation"><summary>Giải thích AI · cần kiểm tra</summary><p>${esc(q.explanation)}</p></details>`:''}${q.aiStatus==='uncertain'?`<p class="muted">AI chưa xác định: ${esc(q.aiReason)}</p>`:''}<div class="question-bottom"><label>Đáp án đúng<select data-answer="${esc(q.id)}" aria-label="Đáp án đúng của câu ${(page-1)*pageSize+i+1}"><option value="">Chưa biết</option>${q.options.map(o=>`<option ${q.answer===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label><div class="row"><button class="${q.verified?'secondary':''}" data-verify="${esc(q.id)}">${q.verified?'Bỏ xác nhận':'✓ Xác nhận'}</button><button class="secondary" data-edit="${esc(q.id)}">Sửa câu hỏi</button><button class="text-button danger" data-delete="${esc(q.id)}">Xóa</button></div></div></article>`).join(''):empty(bank.length?'Không có câu hỏi phù hợp':'Ngân hàng đang chờ tài liệu',bank.length?'Thử từ khóa khác hoặc bỏ bộ lọc để xem thêm câu hỏi.':'Nhập bộ slide của bạn. Các câu hỏi nhận diện được sẽ xuất hiện ở đây để kiểm tra.');
  $('pagination').innerHTML=all.length?`<button class="secondary" data-page="${page-1}" ${page===1?'disabled':''}>← Trước</button><span>Trang ${page} / ${pages}</span><button class="secondary" data-page="${page+1}" ${page===pages?'disabled':''}>Sau →</button>`:'';
 }
 for(const id of ['search','sourceFilter','unverified'])$(id).addEventListener(id==='search'?'input':'change',()=>{page=1;renderLibrary()});
 $('pagination').onclick=e=>{const target=e.target.closest('[data-page]');if(target){page=Number(target.dataset.page);renderLibrary();$('library').scrollIntoView({behavior:'smooth',block:'start'})}};
-$('questions').onchange=e=>{const q=bank.find(q=>q.id===e.target.dataset.answer);if(q){q.answer=e.target.value;q.verified=false;saveBank()}};
+$('questions').onchange=e=>{const q=bank.find(q=>q.id===e.target.dataset.answer);if(q){q.answer=e.target.value;q.answerSource='manual';q.aiStatus=null;q.verified=false;saveBank()}};
 $('questions').onclick=e=>{const button=e.target.closest('button');if(!button)return;const id=button.dataset.verify||button.dataset.edit||button.dataset.delete,q=bank.find(q=>q.id===id);if(!q)return;
  if(button.dataset.edit)return editQuestion(q);
  if(button.dataset.verify){if(!q.answer)return message('Chọn đáp án đúng trước khi xác nhận.');q.verified=!q.verified}
@@ -82,7 +85,48 @@ $('questions').onclick=e=>{const button=e.target.closest('button');if(!button)re
 };
 $('verifyPage').onclick=()=>{const qs=filteredQuestions().slice((page-1)*pageSize,page*pageSize).filter(q=>q.answer&&!q.verified);if(!qs.length)return;if(confirm(`Bạn đã kiểm tra nội dung và đáp án của ${qs.length} câu trong trang này? Xác nhận để đưa các câu này vào đề luyện.`)){qs.forEach(q=>q.verified=true);saveBank()}};
 const notesButton=document.createElement('button');notesButton.className='secondary';notesButton.textContent='Lấy đáp án từ ghi chú';$('verifyPage').before(notesButton);
+let aiRunning=false,aiController=null;
+const aiPanel=document.createElement('section');aiPanel.className='card ai-panel';aiPanel.setAttribute('aria-label','Bổ sung đáp án bằng AI');
+aiPanel.innerHTML='<div><span class="overline">TRỢ LÝ HỌC TẬP</span><h3>Bổ sung đáp án còn thiếu</h3><p>Chỉ gửi nội dung câu đang thiếu đáp án và các lựa chọn cho Gemini. AI có thể sai; kết quả được ghi là đề xuất để bạn xem lại.</p></div><div class="ai-actions"><button id="aiStart">✦ AI bổ sung đáp án</button><button id="aiStop" class="secondary" hidden>Dừng xử lý</button><button id="aiAccept" class="secondary" hidden>Dùng các đề xuất AI</button></div><p id="aiAvailability"></p><div id="aiProgress" role="status" aria-live="polite"></div><progress id="aiBar" max="1" value="0" hidden></progress>';
+$('library').insertBefore(aiPanel,$('library').querySelector('.library-toolbar'));
+function renderAi(){
+ const missing=bank.filter(q=>!q.answer).length,proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified).length;
+ $('aiStart').disabled=aiRunning||!missing||!AI_API_BASE;$('aiStart').hidden=aiRunning;$('aiStop').hidden=!aiRunning;
+ $('aiAccept').hidden=!proposed;$('aiAccept').disabled=aiRunning;
+ $('aiAvailability').textContent=AI_API_BASE?`${missing} câu thiếu đáp án · ${proposed} đề xuất AI chờ xem lại. Xử lý toàn bộ ngân hàng, mỗi lượt 5 câu; tiến độ được lưu sau từng lượt.`:'Tính năng AI đang được chuẩn bị. Bạn vẫn có thể lấy đáp án từ ghi chú và ôn luyện bình thường.';
+}
+$('aiStop').onclick=()=>{aiController?.abort();$('aiProgress').textContent='Đang dừng. Các đáp án đã lưu vẫn được giữ.'};
+$('aiAccept').onclick=()=>{
+ if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi cập nhật đáp án.','library');
+ const proposed=bank.filter(q=>q.answerSource==='gemini'&&q.answer&&!q.verified);
+ if(!proposed.length||!confirm(`Dùng ${proposed.length} đáp án AI đề xuất cho ôn luyện và thi thử? AI có thể sai. Hãy kiểm tra các câu quan trọng trước khi xác nhận.`))return;
+ proposed.forEach(q=>q.verified=true);saveBank();message(`Đã cho phép dùng ${proposed.length} đề xuất AI. Nguồn đáp án AI vẫn được ghi rõ.`,'library');
+};
+$('aiStart').onclick=async()=>{
+ if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi bổ sung đáp án.','library');
+ if(aiRunning||!AI_API_BASE)return;
+ const pending=structuredClone(bank.filter(q=>!q.answer));if(!pending.length)return;
+ let token;try{token=resources.apiToken()}catch(error){return message(error.message,'library')}
+ if(!confirm(`Gửi ${pending.length} câu thiếu đáp án và lựa chọn cho Google Gemini để đề xuất đáp án? Không gửi toàn bộ slide hay đáp án đã có. Kết quả cần xem lại trước khi dùng.`))return;
+ aiRunning=true;aiController=new AbortController();let done=0,applied=0,uncertain=0;renderLibrary();$('aiBar').hidden=false;$('aiBar').max=pending.length;$('aiBar').value=0;
+ try{
+  while(done<pending.length){
+   if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');
+   const batch=pending.slice(done,done+5).filter(q=>!bank.find(current=>current.id===q.id)?.answer);
+   $('aiProgress').textContent=`Đang xử lý ${done+1}–${Math.min(done+5,pending.length)} / ${pending.length} câu…`;
+   if(batch.length){
+    const result=await solveBatch(AI_API_BASE,batch,resources.apiToken(),{signal:aiController.signal});
+    const counts=applyAiResults(bank,batch,result.answers,result.model);applied+=counts.applied;uncertain+=counts.uncertain;
+    if(!write('sot-bank',bank))throw Error('Không lưu được kết quả. Hãy xuất ngân hàng và kiểm tra dung lượng trình duyệt trước khi tiếp tục.');
+   }
+   done=Math.min(done+5,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();
+  }
+  $('aiProgress').textContent=`Đã lưu ${applied} đề xuất. ${uncertain} câu AI chưa xác định được; giữ trống để kiểm tra. Bấm “Dùng các đề xuất AI” sau khi xem lại.`;
+ }catch(error){$('aiProgress').textContent=error.name==='AbortError'?`Đã dừng và giữ ${applied} đề xuất. Bấm AI bổ sung đáp án để tiếp tục các câu còn thiếu.`:`${error.message} Đã giữ ${applied} đề xuất; có thể tiếp tục sau.`}
+ finally{aiRunning=false;aiController=null;renderLibrary()}
+};
 notesButton.onclick=async()=>{
+ if(aiRunning)return message('Dừng AI trước khi đọc lại ghi chú.','library');
  if(session&&!session.done)return message('Hoàn thành bài đang làm trước khi cập nhật đáp án.');
  const snapshot=bank;notesButton.disabled=true;notesButton.textContent='Đang đọc ghi chú…';
  try{
@@ -96,11 +140,11 @@ notesButton.onclick=async()=>{
 $('clear').onclick=()=>{if(confirm('Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.')){bank=[];sourceSummary='';write('sot-source','');saveBank()}};
 function editQuestion(q){editing=q.id;$('editFields').innerHTML=`<label>Nội dung câu hỏi<textarea name="stem" required>${esc(q.stem)}</textarea></label>${q.options.map(o=>`<label>Lựa chọn ${esc(o.id)}<textarea name="option-${o.id}" required>${esc(o.text)}</textarea></label>`).join('')}<label>Đáp án đúng<select name="answer"><option value="">Chưa biết</option>${q.options.map(o=>`<option ${q.answer===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>`;$('editQuestion').showModal()}
 for(const id of ['closeEdit','cancelEdit'])$(id).onclick=()=>$('editQuestion').close();
-$('editForm').onsubmit=e=>{e.preventDefault();const q=bank.find(q=>q.id===editing);if(!q)return;const fields=new FormData(e.target),stem=fields.get('stem').trim(),texts=q.options.map(o=>String(fields.get('option-'+o.id)||'').trim());if(!stem||texts.some(t=>!t))return message('Nội dung câu hỏi và lựa chọn không được để trống.');q.stem=stem;q.options.forEach((o,i)=>o.text=texts[i]);q.answer=fields.get('answer');q.verified=false;saveBank();$('editQuestion').close()};
+$('editForm').onsubmit=e=>{e.preventDefault();const q=bank.find(q=>q.id===editing);if(!q)return;const fields=new FormData(e.target),stem=fields.get('stem').trim(),texts=q.options.map(o=>String(fields.get('option-'+o.id)||'').trim());if(!stem||texts.some(t=>!t))return message('Nội dung câu hỏi và lựa chọn không được để trống.');q.stem=stem;q.options.forEach((o,i)=>o.text=texts[i]);q.answer=fields.get('answer');q.answerSource='manual';q.aiStatus=null;q.verified=false;saveBank();$('editQuestion').close()};
 
-$('exportBank').onclick=()=>{if(!bank.length)return;const data={format:'slide-on-thi/v1',exportedAt:new Date().toISOString(),questions:bank.map(({id,stem,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation})=>({id,stem,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation}))};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='slide-on-thi-ngan-hang.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
+$('exportBank').onclick=()=>{if(!bank.length)return;const data={format:'slide-on-thi/v1',exportedAt:new Date().toISOString(),questions:bank.map(({id,stem,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation,answerSource,aiStatus,aiReason,aiModel})=>({id,stem,options,answer,verified,sourceId,sourceName,slide,url,extraction,explanation,answerSource,aiStatus,aiReason,aiModel}))};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})),link=document.createElement('a');link.href=url;link.download='slide-on-thi-ngan-hang.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)};
 for(const id of ['importBank'])$(id).onclick=()=>$('bankFile').click();
-$('bankFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(session&&!session.done)throw Error('Hãy hoàn thành bài đang làm trước khi nhập bộ câu hỏi.');if(file.size>10*1024*1024)throw Error('File lớn hơn 10 MB.');const imported=validateBank(JSON.parse(await file.text()));if(bank.length&&!confirm(`Thay ngân hàng hiện tại bằng ${imported.length} câu từ file này?`))return;if(!write('sot-bank',imported))return;bank=imported;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);lastResult=null;page=1;switchView('library');message(`Đã nhập ${bank.length} câu từ bộ đã lưu. Không cần đọc lại ảnh; hãy kiểm tra nguồn và đáp án trước khi dùng.`)}catch(error){message(error instanceof SyntaxError?'File JSON không đọc được. Hãy dùng file xuất từ Slide Ôn Thi.':error.message)}finally{e.target.value=''}};
+$('bankFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{if(aiRunning)throw Error('Dừng AI trước khi thay ngân hàng.');if(session&&!session.done)throw Error('Hãy hoàn thành bài đang làm trước khi nhập bộ câu hỏi.');if(file.size>10*1024*1024)throw Error('File lớn hơn 10 MB.');const imported=validateBank(JSON.parse(await file.text()));if(bank.length&&!confirm(`Thay ngân hàng hiện tại bằng ${imported.length} câu từ file này?`))return;if(!write('sot-bank',imported))return;bank=imported;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);lastResult=null;page=1;switchView('library');message(`Đã nhập ${bank.length} câu từ bộ đã lưu. Không cần đọc lại ảnh; hãy kiểm tra nguồn và đáp án trước khi dùng.`)}catch(error){message(error instanceof SyntaxError?'File JSON không đọc được. Hãy dùng file xuất từ Slide Ôn Thi.':error.message)}finally{e.target.value=''}};
 
 function renderPractice(){
  if(session&&!session.done)return renderQuiz();
@@ -109,9 +153,9 @@ function renderPractice(){
  const pool=()=>eligible.filter(q=>!$('practiceSource').value||q.sourceId===$('practiceSource').value);
  $('practiceSource').onchange=()=>{const count=pool().length;$('poolCount').textContent=count;$('count').max=count;$('count').value=Math.min(20,count)||1;$('start').disabled=!count};
  document.querySelectorAll('[name=mode]').forEach(input=>input.onchange=()=>{preferredMode=input.value;$('timeSetting').hidden=preferredMode==='study';$('start').textContent=(preferredMode==='study'?'Bắt đầu ôn luyện':'Bắt đầu thi thử')+' →'});
- $('start').onclick=()=>{const questions=pool(),count=Number($('count').value),mins=Number($('minutes').value);if(!Number.isInteger(count)||count<1||count>questions.length||(preferredMode==='exam'&&(!Number.isInteger(mins)||mins<1||mins>180)))return message('Kiểm tra lại số câu và thời gian.');session={mode:preferredMode,questions:shuffle(questions).slice(0,count).map(q=>({...q,options:[...q.options]})),answers:{},flags:[],current:0,started:Date.now(),deadline:preferredMode==='exam'?Date.now()+mins*60000:null,done:false};write('sot-session',session);message('');renderQuiz()};
+ $('start').onclick=()=>{if(aiRunning)return message('Dừng AI trước khi bắt đầu làm bài.');const questions=pool(),count=Number($('count').value),mins=Number($('minutes').value);if(!Number.isInteger(count)||count<1||count>questions.length||(preferredMode==='exam'&&(!Number.isInteger(mins)||mins<1||mins>180)))return message('Kiểm tra lại số câu và thời gian.');session={mode:preferredMode,questions:shuffle(questions).slice(0,count).map(q=>({...q,options:[...q.options]})),answers:{},flags:[],current:0,started:Date.now(),deadline:preferredMode==='exam'?Date.now()+mins*60000:null,done:false};write('sot-session',session);message('');renderQuiz()};
 }
-function noteExplanation(q){return q.explanation?`<div class="note-explanation"><b>Giải thích từ ghi chú</b><p>${esc(q.explanation)}</p></div>`:""}
+function noteExplanation(q){return q.explanation?`<div class="note-explanation"><b>${q.answerSource==='gemini'?'Giải thích AI · cần kiểm tra':'Giải thích từ ghi chú'}</b><p>${esc(q.explanation)}</p></div>`:""}
 function renderQuiz(){
  const study=session.mode==='study',qs=session.questions;session.current=Math.max(0,Math.min(session.current||0,qs.length-1));const q=qs[session.current],answered=session.answers[q.id];
  document.body.classList.toggle('exam-active',!study);pageHeading.hidden=true;

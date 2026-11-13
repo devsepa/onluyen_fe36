@@ -1,0 +1,36 @@
+name: Deploy AI backend
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ai-backend
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+      - name: Check deployment credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$CF_TOKEN" || { echo 'Add CLOUDFLARE_API_TOKEN in repository Secrets.'; exit 1; }
+          test -n "$CF_ACCOUNT" || { echo 'Add CLOUDFLARE_ACCOUNT_ID in repository Secrets.'; exit 1; }
+          test -n "$GEMINI_KEY" || { echo 'Add GEMINI_API_KEY in repository Secrets.'; exit 1; }
+      - name: Deploy Worker and private Gemini key
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: backend
+          secrets: |
+            GEMINI_API_KEY
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

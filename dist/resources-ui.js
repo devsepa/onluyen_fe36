@@ -1,8 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {parseWithOcr} from './ocr.mjs?v=20261113-notes-12';
+import {parseWithOcr} from './ocr.mjs?v=20261113-ai-13';
 import {createBrowserPool,createOcrCache} from './ocr-browser.js';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-notes-12';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-ai-13';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -213,5 +213,6 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
    setTimeout(()=>{if(active())scan()},0);
   }else sessionStorage.removeItem(sessionKey);
  }catch{try{sessionStorage.removeItem(sessionKey)}catch{}}
- return {connect,disconnect,readAnswers};
+ function apiToken(){if(!active())throw Error('Kết nối Google ở ảnh đại diện để sử dụng AI. Câu đã lưu vẫn ôn được mà không cần đăng nhập.');return token}
+ return {connect,disconnect,readAnswers,apiToken};
 }
