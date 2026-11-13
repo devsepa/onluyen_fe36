@@ -83,31 +83,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
 
  function cards(){
   const term=$('deckSearch').value.trim().toLocaleLowerCase(),filtered=items.filter(d=>d.title.toLocaleLowerCase().includes(term));
-  const localReady=getBank().filter(readyForPractice);
-  let localCardHtml='';
-  if(localReady.length && (!term || 'ngân hàng của bạn hiện tại máy bộ đề'.includes(term))){
-   localCardHtml=`<article class="card shared-deck local-deck-card">
-     <div class="shared-deck-topbar">
-       <span class="deck-type-tag local-tag">💻 Bộ đề trên máy của bạn</span>
-       <span class="shared-deck-date">Sẵn sàng ôn luyện</span>
-     </div>
-     <div class="shared-deck-main">
-       <h3 class="shared-deck-title">Ngân hàng câu hỏi đã nạp</h3>
-       <div class="shared-deck-badges">
-         <span class="shared-badge count">📚 <b>${localReady.length}</b> câu sẵn sàng</span>
-         <span class="shared-badge">📁 Đã nạp từ slide</span>
-         <span class="shared-badge">⚡ Thiết bị này</span>
-       </div>
-     </div>
-     <div class="shared-deck-footer shared-deck-actions">
-       <button class="btn-deck-use shared-use-btn" data-use-local="true">
-         <span>Vào ôn luyện ngay</span>
-         <span class="btn-arrow">→</span>
-       </button>
-     </div>
-   </article>`;
-  }
-  $('deckList').innerHTML=(localCardHtml+(filtered.length?filtered.map(d=>{
+   $('deckList').innerHTML=(filtered.length?filtered.map(d=>{
    const isOwner=owned().includes(d.id);
    return `<article class="card shared-deck ${isOwner?'is-owner-deck':''}">
      <div class="shared-deck-topbar">
@@ -135,7 +111,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
        </button>`:''}
      </div>
    </article>`;
-  }).join(''):(localCardHtml?'':'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>')));
+   }).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>');
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
