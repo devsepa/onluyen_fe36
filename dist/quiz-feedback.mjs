@@ -136,7 +136,7 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
  }else if(state.status==='no-auth'&&!question.explanation){
   const status=add(feedback,'div','study-explanation-status');
-  add(status,'span','','Chưa có giải thích sẵn cho câu này. Đăng nhập Google ở góc trên để AI tạo giải thích mới.');
+  add(status,'span','','Đang chuẩn bị giải thích AI cho câu này…');onRetry?.(question);
  }
  return feedback;
 }

@@ -89,7 +89,9 @@ Nhiệm vụ:
 }
 export async function solveBatch(base,questions,token,{signal,fetcher=fetch,purpose}={}){
  const url=new URL(base);if(url.protocol!=='https:'&&!(url.protocol==='http:'&&['127.0.0.1','localhost'].includes(url.hostname)))throw Error('Dịch vụ AI chưa sẵn sàng.');
- const response=await fetcher(new URL('/v1/answers',url),{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({...(purpose?{purpose}:{}),questions:questions.map(q=>({id:q.id,stem:q.stem,options:q.options,...(q.image?{image:q.image}:{})}))}),signal});
+ const headers={'Content-Type':'application/json'};
+ if(token)headers['Authorization']=`Bearer ${token}`;
+ const response=await fetcher(new URL('/v1/answers',url),{method:'POST',headers,body:JSON.stringify({...(purpose?{purpose}:{}),questions:questions.map(q=>({id:q.id,stem:q.stem,options:q.options,...(q.image?{image:q.image}:{})}))}),signal});
  let data;try{data=await response.json()}catch{throw Error('Không đọc được phản hồi AI. Kết quả trước đó vẫn được giữ.')}
  if(!response.ok){const error=Error(typeof data.error==='string'?data.error:'AI đang bận. Hãy tiếp tục sau.');error.status=response.status;if(['AI_IMAGE_INVALID','AI_KEY_INVALID','AI_PROJECT_RESTRICTED','AI_CONFIG_UNSUPPORTED','AI_REQUEST_INVALID'].includes(data.code))error.code=data.code;throw error}
  const ids=new Set(questions.map(q=>q.id)),seen=new Set();

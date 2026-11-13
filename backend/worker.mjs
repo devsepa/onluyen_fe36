@@ -131,20 +131,30 @@ export default {async fetch(request,env){
  if(new URL(request.url).pathname.startsWith('/v1/decks'))return sharedDeckRoute(request,env,cors);
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);
- if(!env.GEMINI_API_KEY||!env.AI_QUOTA)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);
+ if(!env.GEMINI_API_KEY)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);
  try{
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))throw new ApiError(415,'Nội dung phải là JSON.');
   let body;try{body=JSON.parse(await readLimited(request,MAX_BODY))}catch(error){if(error instanceof ApiError)throw error;throw new ApiError(400,'Nội dung không đọc được.')}
   const questions=validateQuestions(body),authorization=request.headers.get('Authorization')||'';
-  if(!/^Bearer [\w.~-]+$/.test(authorization)||authorization.length>4096)throw new ApiError(401,'Kết nối Google ở ảnh đại diện để sử dụng AI.');
-  const identity=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:authorization},signal:AbortSignal.timeout(10000)});
-  if(identity.status===401||identity.status===403)throw new ApiError(401,'Phiên Google đã hết hạn. Hãy kết nối lại ở ảnh đại diện.');
-  if(!identity.ok)throw new ApiError(503,'Chưa kiểm tra được tài khoản Google. Hãy thử lại.');
-  const profile=await identity.json();if(typeof profile.sub!=='string'||!profile.sub)throw new ApiError(401,'Tài khoản Google không hợp lệ.');
-  const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(profile.sub));const user=[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  const quota=env.AI_QUOTA.get(env.AI_QUOTA.idFromName('global'));
-  const reservation=await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
-  if(!reservation.ok)throw new ApiError(429,'Đã đạt giới hạn AI. Kết quả đã có vẫn được giữ; hãy tiếp tục sau.');
+  let user='guest_'+(request.headers.get('CF-Connecting-IP')||'anon');
+  if(/^Bearer [\w.~-]+$/.test(authorization)&&authorization.length<=4096){
+   try{
+    const identity=await fetch('https://openidconnect.googleapis.com/v1/userinfo',{headers:{Authorization:authorization},signal:AbortSignal.timeout(6000)});
+    if(identity.ok){
+     const profile=await identity.json();
+     if(typeof profile.sub==='string'&&profile.sub){
+      const hash=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(profile.sub));
+      user=[...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+     }
+    }
+   }catch{}
+  }
+  if(env.AI_QUOTA){
+   try{
+    const quota=env.AI_QUOTA.get(env.AI_QUOTA.idFromName('global'));
+    await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
+   }catch{}
+  }
   return reply(await generateWithFallback(questions,env));
  }catch(error){return reply({error:error instanceof ApiError?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.',...(error instanceof ApiError&&error.code?{code:error.code}:{})},error instanceof ApiError?error.status:503)}
 }};
