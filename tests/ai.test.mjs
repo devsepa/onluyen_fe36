@@ -31,6 +31,11 @@ test('Gemini request uses server-only key, structured schema and safe model vali
  await assert.rejects(()=>generateAnswers([q()],{},async()=>Response.json({}, {status:429})),/hạn mức/);
  await assert.rejects(()=>generateAnswers([q()],{},async()=>Response.json({candidates:[{finishReason:'MAX_TOKENS'}]})),/đầy đủ/);
 });
+test('distinguishes overload, quota, permission, missing model and request errors without leaking upstream text',async()=>{
+ for(const [status,expected] of [[503,'quá tải tạm thời (503)'],[429,'hạn mức'],[403,'quyền truy cập'],[404,'Model Gemini'],[400,'cấu hình yêu cầu']]){
+  await assert.rejects(()=>generateAnswers([q()],{GEMINI_API_KEY:'private-test'},async()=>Response.json({error:{message:'private-test must not reach the client'}},{status})),error=>error.message.includes(expected)&&!error.message.includes('private-test'));
+ }
+});
 test('public Worker rejects foreign origins, missing config, and unauthenticated calls without invoking AI',async()=>{
  const env={ALLOWED_ORIGINS:'https://devsepa.github.io',GEMINI_API_KEY:'fake',AI_QUOTA:{}};
  const request=(origin,headers={})=>new Request('https://ai.example/v1/answers',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...headers},body:JSON.stringify({questions:[q()]})});
