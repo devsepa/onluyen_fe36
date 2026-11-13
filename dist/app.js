@@ -1,11 +1,11 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-cluster-3';
-import {setupResources} from './resources-ui.js?v=20261113-cluster-3';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion} from './core.mjs?v=20261113-cluster-4';
+import {setupResources} from './resources-ui.js?v=20261113-cluster-4';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-cluster-3';
-import {setupAccount} from './account-ui.js?v=20261113-cluster-3';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-cluster-3';
-import {solveBatch,applyAiResults,readyForPractice} from './ai.mjs?v=20261113-cluster-3';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-cluster-3';
+import {validateBank} from './banks.mjs?v=20261113-cluster-4';
+import {setupAccount} from './account-ui.js?v=20261113-cluster-4';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-cluster-4';
+import {solveBatch,applyAiResults,readyForPractice} from './ai.mjs?v=20261113-cluster-4';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-cluster-4';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -96,6 +96,8 @@ async function loadLibrarySlideImages(qs){
    if(current)current.innerHTML=`<img src="${url}" alt="Slide ${q.slide}" class="library-slide-img" data-preview-slide="${esc(q.id)}" title="Bấm để phóng to">`;
   }catch{
    container.remove();
+   const card=document.querySelector(`[data-lib-slide="${CSS.escape(q.id)}"]`)?.closest('.question-card')||container.closest('.question-card');
+   card?.querySelector('.question-title')?.classList.remove('collapsed-text');
   }
  }
 }

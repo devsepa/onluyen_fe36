@@ -1,5 +1,5 @@
 import {presentationIdFromLink} from './resources.mjs';
-import {cleanQuestion,normalizeAnswer} from './core.mjs?v=20261113-cluster-3';
+import {cleanQuestion,normalizeAnswer} from './core.mjs?v=20261113-cluster-4';
 export function validateBank(data){
  if(data?.format!=='slide-on-thi/v1'||!Array.isArray(data.questions)||!data.questions.length||data.questions.length>5000)throw Error('File không phải bộ câu hỏi Slide Ôn Thi hợp lệ (tối đa 5.000 câu).');
  return data.questions.map((q,index)=>{
