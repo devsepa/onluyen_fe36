@@ -13,7 +13,7 @@ export function validateSharedQuestion(input){
  const valid=image.mimeType==='image/png'?bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71:image.mimeType==='image/jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:String.fromCharCode(...bytes.slice(0,4))==='RIFF'&&String.fromCharCode(...bytes.slice(8,12))==='WEBP';
  if(!valid||bytes.length>819200)throw Error('Định dạng ảnh slide không hợp lệ.');
  let url='';try{const parsed=new URL(q.url);if(parsed.protocol==='https:'&&parsed.hostname==='docs.google.com'&&/^\/presentation\/d\/[\w-]+\/edit$/.test(parsed.pathname))url=parsed.href}catch{}
- return {question:{stem:q.stem,options,answer:q.answer,explanation:String(q.explanation||'').slice(0,6000),verified:q.verified===true,answerSource:['gemini','speaker-notes','manual'].includes(q.answerSource)?q.answerSource:'manual',slide:Number.isInteger(q.slide)&&q.slide>0?q.slide:1,url,sourceName:String(q.sourceName||'').slice(0,200),extraction:'ocr'},bytes,mimeType:image.mimeType};
+ return {question:{stem:q.stem,options,answer:q.answer,explanation:String(q.explanation||'').slice(0,6000),explanationSource:q.explanationSource==='gemini'?'gemini':null,verified:q.verified===true,answerSource:['gemini','speaker-notes','manual'].includes(q.answerSource)?q.answerSource:'manual',slide:Number.isInteger(q.slide)&&q.slide>0?q.slide:1,url,sourceName:String(q.sourceName||'').slice(0,200),extraction:'ocr'},bytes,mimeType:image.mimeType};
 }
 // Storage is private until all images are uploaded and the owner explicitly publishes.
 export class SharedDecks{

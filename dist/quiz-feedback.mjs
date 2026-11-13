@@ -31,8 +31,11 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   const status=add(feedback,'div','study-explanation-status');add(status,'span','',state.error);
   if([401,403].includes(state.statusCode))add(status,'span','', ' Đăng nhập Google ở ảnh đại diện rồi bấm Thử lại.');
   const retry=add(status,'button','secondary explanation-retry','Thử lại');retry.type='button';retry.onclick=()=>{onRead();onRetry?.(question)};
- }else if(['queued','loading','idle'].includes(state.status)&&!question.explanation){
+ }else if(['queued','loading'].includes(state.status)&&!question.explanation){
   add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
+ }else if(state.status==='no-auth'&&!question.explanation){
+  const status=add(feedback,'div','study-explanation-status');
+  add(status,'span','','Chưa có giải thích sẵn cho câu này. Đăng nhập Google ở góc trên để AI tạo giải thích mới.');
  }
  return feedback;
 }

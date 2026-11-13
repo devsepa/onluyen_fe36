@@ -19,7 +19,8 @@ export function normalizeExplanation(q,result){
  if([...q.answer].some(id=>!options.some(o=>o.id===id)))throw Error('AI chưa đọc đủ nội dung đáp án đúng.');
  return {answer:q.answer,reason:result.explanation.trim(),options};
 }
-export function hasNoteExplanation(q){return !!q.explanation&&q.explanationSource!=='gemini'&&q.answerSource!=='gemini'}
+export function hasNoteExplanation(q){return typeof q?.explanation==='string'&&q.explanation.trim().length>0}
+export function hasSpeakerNoteExplanation(q){return !!q?.explanation&&q.explanationSource!=='gemini'&&q.answerSource!=='gemini'}
 export function upcomingExplanationQuestions(session,count=3){
  if(!session||session.done||session.mode!=='study')return [];
  const questions=[session.questions[session.current]];

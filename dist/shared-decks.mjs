@@ -134,7 +134,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse}
      const prepared=await Promise.all(batch.map(async({q,index})=>{
       const blob=await getBlob(q,{signal,maxBytes:819200,onWait:info=>!signal.aborted&&updateProgress({status:`Google điều tiết tải ảnh. Tự chờ ${Math.ceil(info.ms/1000)}s · đã giữ ${done}/${questions.length} ảnh.`,current:done,total:questions.length,isRunning:true})});
       if(blob.size>819200)throw Error(`Ảnh slide ${q.slide} lớn hơn 800 KB; phần đã tải vẫn được giữ.`);
-      return {index,image:{mimeType:blob.type,data:await blobToBase64(blob)},question:Object.fromEntries(['stem','options','answer','explanation','verified','answerSource','slide','url','sourceName'].map(key=>[key,q[key]]))};
+      return {index,image:{mimeType:blob.type,data:await blobToBase64(blob)},question:Object.fromEntries(['stem','options','answer','explanation','explanationSource','verified','answerSource','slide','url','sourceName'].map(key=>[key,q[key]]))};
      }));
      if(draft.uploadToken)await deckRequest(base,`/v1/decks/${draft.id}/questions-batch`,{method:'PUT',uploadToken:draft.uploadToken,body:{items:prepared},signal});
      else for(const item of prepared)await deckRequest(base,`/v1/decks/${draft.id}/questions/${item.index}`,{method:'PUT',token:getToken(),body:{question:item.question,image:item.image},signal});

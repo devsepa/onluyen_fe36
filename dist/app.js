@@ -1,6 +1,6 @@
 import {createExplanationQueue} from './explanation-queue.mjs';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs';
-import {renderQuizFeedback} from './quiz-feedback.mjs';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=20261114-cache-exp';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-cache-exp';
 import {setupVersionUpdates} from './version-updates.mjs';
 import { askConfirm } from "./confirm-dialog.mjs";
 import { practiceSubjects, subjectKey } from "./subjects.mjs";
@@ -1175,7 +1175,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  }catch(error){if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
 },onChange:(question,state)=>{
  if(state.status==='ready'){
-  const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key||hasNoteExplanation(q))return false;if(q.explanation===state.details.reason&&q.explanationSource==='gemini')return false;q.explanation=state.details.reason;q.explanationSource='gemini';return true};
+  const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key)return false;if(hasSpeakerNoteExplanation(q))return false;if(q.explanation===state.details.reason&&q.explanationSource==='gemini')return false;q.explanation=state.details.reason;q.explanationSource='gemini';return true};
   let bankChanged=false;for(const q of bank)bankChanged=apply(q)||bankChanged;if(bankChanged)write('sot-bank',bank);
   let sessionChanged=false;for(const q of session?.questions||[])sessionChanged=apply(q)||sessionChanged;if(sessionChanged)write('sot-session',session);
  }
@@ -1184,20 +1184,15 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  }
 }});
 function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
-function feedbackState(q){return hasNoteExplanation(q)?{status:'note'}:explanationQueue.state(q)}
+function feedbackState(q){if(hasNoteExplanation(q))return {status:'note'};let connected=false;try{connected=!!resources.apiToken()}catch{};if(!connected)return {status:'no-auth'};return explanationQueue.state(q)}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
  renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:feedbackState(q),onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});
 }
 function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
-function primeStudyExplanations(){
- if(!session||session.done||session.mode!=='study'||view!=='practice')return;
- const q=session.questions[session.current];let connected=false;try{connected=!!resources.apiToken()}catch{}
- const targets=prefetchEnabled&&connected?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];
- const needed=targets.filter(q=>!hasNoteExplanation(q));explanationQueue.retain(needed);
- for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});
-}
+function primeStudyExplanations(){if(!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];let connected=false;try{connected=!!resources.apiToken()}catch{};if(!connected)return;const targets=prefetchEnabled?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
+
 function refreshQuizState(){
  if(!session||session.done||view!=='practice')return;
  const root=$('practice'),q=session.questions[session.current],study=session.mode==='study',answer=session.answers[q.id];
