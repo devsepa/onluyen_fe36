@@ -9,6 +9,50 @@
     "USER_DAILY_QUESTIONS": "150",
     "GLOBAL_DAILY_QUESTIONS": "1000"
   },
-  "durable_objects": {"bindings": [{"name": "AI_QUOTA", "class_name": "AIQuota"},{"name": "SHARED_DECKS", "class_name": "SharedDecks"},{"name":"PRIVATE_LIBRARY","class_name":"PrivateLibrary"}]},
-  "migrations": [{"tag": "v1", "new_sqlite_classes": ["AIQuota"]},{"tag": "v2", "new_sqlite_classes": ["SharedDecks"]},{"tag":"v3-private-library","new_sqlite_classes":["PrivateLibrary"]}]
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "AI_QUOTA",
+        "class_name": "AIQuota"
+      },
+      {
+        "name": "SHARED_DECKS",
+        "class_name": "SharedDecks"
+      },
+      {
+        "name": "PRIVATE_LIBRARY",
+        "class_name": "PrivateLibrary"
+      },
+      {
+        "name": "EXPLANATION_CACHE",
+        "class_name": "ExplanationCache"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "AIQuota"
+      ]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": [
+        "SharedDecks"
+      ]
+    },
+    {
+      "tag": "v3-private-library",
+      "new_sqlite_classes": [
+        "PrivateLibrary"
+      ]
+    },
+    {
+      "tag": "v4-explanation-cache",
+      "new_sqlite_classes": [
+        "ExplanationCache"
+      ]
+    }
+  ]
 }

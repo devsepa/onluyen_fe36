@@ -1,9 +1,10 @@
 import {sharedDeckRoute} from './shared-decks.mjs';
+import {StoredExplanationCache,explainWithSharedCache} from './explanation-cache.mjs';
 import {privateLibraryRoute} from './private-library.mjs';
 export {PrivateLibrary} from './private-library.mjs';
 import {validateOptionReasons} from '../dist/explanation-data.mjs';
 export {SharedDecks} from './shared-decks.mjs';
-// AI calls do not persist question text or tokens. Explicitly published decks use separate storage.
+// Only validated study explanations are retained by a separate content-addressed cache; never tokens or original images.
 const BATCH_LIMIT=5,MAX_BODY=3000000;
 const validAnswer=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 class ApiError extends Error{constructor(status,message,upstreamStatus=null){super(message);this.status=status;this.upstreamStatus=upstreamStatus}}
@@ -155,6 +156,9 @@ export default {async fetch(request,env){
     await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
    }catch{}
   }
-  return reply(await generateWithFallback(questions,env));
+  return reply(await (body.purpose==='explanation'?explainWithSharedCache(questions,env,generateWithFallback):generateWithFallback(questions,env)));
  }catch(error){return reply({error:error instanceof ApiError?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.',...(error instanceof ApiError&&error.code?{code:error.code}:{})},error instanceof ApiError?error.status:503)}
 }};
+export class ExplanationCache extends StoredExplanationCache{
+ constructor(state,env){super(state,env,generateWithFallback,validateResults)}
+}

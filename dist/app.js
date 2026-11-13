@@ -4,7 +4,7 @@ import {createBankTracker} from './library-data.mjs';
 import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
 import {createExplanationQueue} from './explanation-queue.mjs';
 import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=20261114-cache-exp';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-smart-tip-2';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-sound-footer-2';
 import {setupVersionUpdates} from './version-updates.mjs';
 import { askConfirm } from "./confirm-dialog.mjs";
 import { practiceSubjects, subjectKey } from "./subjects.mjs";
@@ -41,7 +41,7 @@ import {
   sharedImagePath,
 } from "./shared-decks.mjs?v=merge-practice-1";
 import { fitQuizScreen } from "./quiz-screen.mjs?v=study-speed-1";
-import { createQuizSound } from "./quiz-sound.mjs";
+import { createQuizSound } from "./quiz-sound.mjs?v=20261114-sound-footer-2";
 import { setupSidebar } from "./sidebar.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -322,6 +322,20 @@ function switchView(next, mode) {
   if (view === "result") renderResult(lastResult);
 }
 document.addEventListener("click", (event) => {
+  const target = event.target;
+  const clickable = target.closest("button, .nav, a, .choice-pill, input[type='checkbox'], input[type='radio'], #themeToggle");
+  if (clickable) {
+    if (clickable.classList.contains("choice-pill")) {
+      quizSound.select();
+    } else if (clickable.closest(".quiz-navigation, .nav-btn, .quiz-answer-next") || clickable.dataset.index !== undefined) {
+      quizSound.nav();
+    } else if (clickable.type === "checkbox" || clickable.type === "radio" || clickable.id === "themeToggle") {
+      quizSound.toggle();
+    } else {
+      quizSound.click();
+    }
+  }
+
   const action = event.target.closest("[data-view]");
   if (action) {
     event.preventDefault();
@@ -1506,7 +1520,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  }
 }});
 function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
-function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready')return cached;if(hasNoteExplanation(q))return {status:'note'};return cached;}
+function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready')return cached;if(hasNoteExplanation(q))return {status:'note'};if(cached.status==='idle'){explanationQueue.request(q,{priority:true});return {status:'queued'};}return cached;}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
@@ -1810,6 +1824,7 @@ function finish() {
   write("sot-session", null);
   session = null;
   resultFilter = "all";
+  quizSound.celebrate();
   switchView("result");
   message("Đã lưu kết quả buổi học trên thiết bị này.");
 }
