@@ -10,8 +10,8 @@
  </script>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
- <meta name="app-version" content="2026.11.14.7">
- <link rel="stylesheet" href="app.css?v=20261114-deck-card-v2"><link rel="stylesheet" href="study-enhancements.css?v=20261114-deck-card-v2"><link rel="stylesheet" href="library-manager.css?v=20261114-deck-card-v2"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="app.js?v=20261114-subject-filter-v1"></script>
+ <meta name="app-version" content="2026.11.14.8">
+ <link rel="stylesheet" href="app.css?v=20261114-footer-redesign-1"><link rel="stylesheet" href="study-enhancements.css?v=20261114-footer-redesign-1"><link rel="stylesheet" href="library-manager.css?v=20261114-footer-redesign-1"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="app.js?v=20261114-footer-redesign-1"></script>
 </head>
 <body>
  <aside class="sidebar">
@@ -44,18 +44,33 @@
    <section id="library" hidden><div class="library-counts"><span><strong id="total">0</strong> câu trong ngân hàng</span><span><strong id="ready">0</strong> câu sẵn sàng ôn</span></div><div class="section-heading"><div><p id="source"></p></div><div class="row"><button id="exportBank" class="secondary">↓ Xuất bộ câu hỏi</button><button id="importBank" class="secondary">↑ Nhập bộ câu hỏi</button></div></div><p class="muted">Thêm môn mới vẫn giữ môn cũ. Sao lưu ZIP để giữ cả ảnh; dùng đồng bộ riêng tư để học trên nhiều thiết bị.</p><div class="library-toolbar card"><input id="search" type="search" placeholder="Tìm nội dung câu hỏi…" aria-label="Tìm câu hỏi"><select id="sourceFilter" aria-label="Lọc theo tài liệu"><option value="">Tất cả tài liệu</option></select><label class="check-label"><input id="unverified" type="checkbox"> Chưa xác nhận</label></div><div class="library-actions"><span id="questionCount"></span><div class="row"><button id="verifyPage" class="text-button">Xác nhận đáp án trong trang</button><button id="clear" class="text-button danger">Xóa ngân hàng</button></div></div><div id="questions"></div><div id="pagination" class="pagination"></div></section>
    <section id="shared" hidden><div class="card shared-toolbar"><label>Tìm bộ đề<input id="deckSearch" type="search" placeholder="Tên môn hoặc bộ đề…"></label><button id="refreshDecks" class="secondary">↻ Tải lại</button></div><p id="deckStatus" role="status"></p><div id="deckList" class="shared-grid"></div></section>
    <section id="practice" hidden></section><section id="history" hidden></section><section id="result" hidden></section>
-       <footer class="app-footer">
-      <div class="footer-col-left">
-        <div class="footer-brand-wrap">
-          <span class="footer-logo-symbol">S</span>
-          <span class="footer-brand-name">Slide Ôn Thi</span>
+  </div>
+  <footer class="app-footer">
+    <div class="footer-container">
+      <div class="footer-primary-row">
+        <div class="footer-brand-block">
+          <div class="footer-brand-title">
+            <span class="footer-logo-box">S</span>
+            <span class="footer-brand-name">Slide Ôn Thi</span>
+          </div>
+          <p class="footer-motto">“Biến slide bài giảng thành ngân hàng tri thức · Vững vàng làm chủ mọi kỳ thi”</p>
         </div>
-        <div class="footer-status-badge">
-          <span class="pulse-indicator"></span>
-          <span class="status-caption">Dữ liệu lưu an toàn trên trình duyệt</span>
+
+        <div class="footer-author-block">
+          <div class="footer-dev-badge">
+            <span class="dev-prefix">Phát triển bởi:</span>
+            <a href="https://github.com/devsepa" target="_blank" rel="noopener" class="dev-link">devsepa</a>
+          </div>
+          <div class="footer-status-pill">
+            <span class="pulse-indicator"></span>
+            <span class="status-caption">Dữ liệu lưu an toàn trên trình duyệt</span>
+          </div>
         </div>
       </div>
-      <div class="footer-col-center">
+
+      <div class="footer-divider"></div>
+
+      <div class="footer-secondary-row">
         <div class="footer-shortcuts-hint">
           <span class="hint-label">⌨️ Phím tắt:</span>
           <kbd>A</kbd>-<kbd>D</kbd><span>Chọn</span>
@@ -63,10 +78,10 @@
           <kbd>F</kbd><span>Đánh dấu</span>
           <kbd>Z</kbd><span>Phóng to</span>
         </div>
+        <div class="footer-col-right"></div>
       </div>
-      <div class="footer-col-right"></div>
-    </footer>
-  </div>
+    </div>
+  </footer>
  </main>
  <input id="bankFile" type="file" accept=".json,application/json" hidden>
  <dialog id="filePicker"><form method="dialog"><div class="modal-heading"><h2>Chọn tài liệu Google Slides</h2><button class="secondary" value="close">Xong</button></div><p>Chọn một hoặc nhiều tài liệu làm nguồn ôn luyện.</p><input id="resourceSearch" type="search" placeholder="Tìm theo tên tài liệu…" aria-label="Tìm tài liệu"><p id="pickerCount"></p><div id="fileList"></div></form></dialog>

@@ -356,26 +356,50 @@ body.quiz-active .feedback-inline-exp b{display:block;margin-bottom:4px;font-siz
   .history-actions{width:100%;justify-content:flex-end}
   .history-actions button{width:auto!important}
 }
-/* Fixed Modern App Footer */
-.app-footer{position:fixed;bottom:0;left:252px;right:0;height:48px;min-height:48px;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 28px;margin:0;background:color-mix(in srgb,var(--panel) 92%,transparent);border-top:1px solid var(--line);box-shadow:0 -4px 20px rgba(0,0,0,0.15);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);font-size:11.5px;color:var(--muted);user-select:none}
+/* ==========================================================================
+   STATIC END-OF-PAGE FOOTER (NẰM CUỐI TRANG WEB)
+   ========================================================================== */
+main{margin-left:252px;min-height:100vh;display:flex;flex-direction:column;padding-bottom:0!important}
+.page-content{flex:1 0 auto;padding:34px 40px 40px;max-width:1840px;margin:0 auto;width:100%}
+
+.app-footer{margin-top:auto;width:100%;background:var(--panel);border-top:1px solid var(--line);padding:30px 40px 24px;position:static!important;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;user-select:none}
 body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important}
-.footer-col-left{display:flex;align-items:center;gap:12px;flex:none}
-.footer-brand-wrap{display:flex;align-items:center;gap:7px;font-weight:700;color:var(--text);font-size:12px;letter-spacing:-.2px}
-.footer-logo-symbol{width:20px;height:20px;border-radius:5px;background:var(--accent);color:var(--accent-text,#fff);display:inline-grid;place-items:center;font-size:11px;font-weight:800}
-.footer-status-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--success) 12%,var(--panel2));border:1px solid color-mix(in srgb,var(--success) 24%,transparent);font-size:11px;color:var(--success);font-weight:500}
-.pulse-indicator{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(16,185,129,0.6);animation:footerPulse 2s infinite cubic-bezier(.4,0,.6,1)}
+
+.footer-container{max-width:1760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.footer-primary-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
+
+.footer-brand-block{display:flex;flex-direction:column;gap:6px}
+.footer-brand-title{display:flex;align-items:center;gap:10px}
+.footer-logo-box{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent) 0%,#4338ca 100%);color:#fff;display:inline-grid;place-items:center;font-size:15px;font-weight:800;box-shadow:0 4px 12px rgba(99,102,241,0.35);flex:none}
+.footer-brand-name{font-size:16.5px;font-weight:800;color:var(--text);letter-spacing:-.3px}
+.footer-motto{margin:0;font-size:12.5px;color:var(--muted);font-style:italic;line-height:1.5}
+
+.footer-author-block{display:flex;align-items:center;flex-wrap:wrap;gap:14px}
+.footer-dev-badge{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);background:var(--panel2);padding:5px 12px;border-radius:8px;border:1px solid var(--line)}
+.footer-dev-badge .dev-link{font-weight:700;color:var(--accent);text-decoration:none;transition:color .15s ease}
+.footer-dev-badge .dev-link:hover{text-decoration:underline;color:#818cf8}
+
+.footer-status-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:8px;background:color-mix(in srgb,var(--success) 12%,var(--panel2));border:1px solid color-mix(in srgb,var(--success) 24%,transparent);font-size:12px;color:var(--success);font-weight:600}
+.pulse-indicator{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 0 rgba(16,185,129,0.6);animation:footerPulse 2s infinite cubic-bezier(.4,0,.6,1)}
 @keyframes footerPulse{0%{transform:scale(0.95);box-shadow:0 0 0 0 rgba(16,185,129,0.6)}70%{transform:scale(1);box-shadow:0 0 0 5px rgba(16,185,129,0)}100%{transform:scale(0.95);box-shadow:0 0 0 0 rgba(16,185,129,0)}}
-.footer-col-center{display:flex;align-items:center;justify-content:center;flex:1;min-width:0}
-.footer-shortcuts-hint{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);background:var(--panel2);padding:4px 12px;border-radius:99px;border:1px solid var(--line)}
+
+.footer-divider{width:100%;height:1px;background:var(--line);opacity:.6}
+
+.footer-secondary-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.footer-shortcuts-hint{display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:11.5px;color:var(--muted)}
 .footer-shortcuts-hint .hint-label{font-weight:600;color:var(--text);margin-right:2px}
-.footer-shortcuts-hint kbd{display:inline-block;padding:1px 5px;font-size:10px;font-weight:700;border-radius:4px;background:var(--panel);border:1px solid var(--line);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.1)}
-.footer-shortcuts-hint span{margin-right:4px}
-.footer-col-right{display:flex;align-items:center;gap:10px;flex:none}
-.footer-col-right .app-update-control{padding:5px 12px;font-size:11px;font-weight:600;border-radius:8px;height:28px;min-height:28px;background:var(--panel2);border:1px solid var(--line);color:var(--text);transition:all .15s ease}
+.footer-shortcuts-hint kbd{display:inline-block;padding:2px 6px;font-size:10.5px;font-weight:700;border-radius:5px;background:var(--panel2);border:1px solid var(--line);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.1)}
+.footer-shortcuts-hint span{margin-right:6px}
+
+.footer-col-right .app-update-control{padding:5px 14px;font-size:11.5px;font-weight:600;border-radius:8px;height:32px;background:var(--panel2);border:1px solid var(--line);color:var(--text);cursor:pointer;transition:all .15s ease}
 .footer-col-right .app-update-control:hover{background:var(--soft);border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
-main{padding-bottom:95px!important}
-@media(max-width:960px){.footer-col-center{display:none}}
-@media(max-width:760px){.app-footer{left:0!important;padding:0 14px!important;height:44px;min-height:44px}.footer-brand-wrap{font-size:11px}.footer-status-badge{font-size:10px;padding:2px 7px}.footer-status-badge .status-caption{display:none}.footer-col-right .app-update-control{font-size:10px;padding:4px 8px}}
+
+@media(max-width:760px){
+  .app-footer{padding:20px 18px 24px}
+  .footer-primary-row{flex-direction:column;align-items:flex-start;gap:14px}
+  .footer-secondary-row{flex-direction:column;align-items:flex-start;gap:12px}
+  .footer-shortcuts-hint{display:none}
+}
 
 /* ==========================================================================
    HƯỚNG 1: MODERN TECH / LINEAR & VERCEL SAAS REDESIGN (ÔN LUYỆN & THI THỬ)
