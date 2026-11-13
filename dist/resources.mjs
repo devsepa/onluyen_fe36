@@ -41,7 +41,7 @@ export async function readSelectedResources(resources,request,parse,onProgress=(
    if(!parsed.questions.length){const d=parsed.diagnostics;throw Error(d?`Đã đọc ${d.totalSlides} slide: ${d.textSlides} slide có chữ, ${d.imageSlides} slide có ảnh; chưa nhận diện được câu trắc nghiệm. Xem Chi tiết nhập tài liệu bên dưới để kiểm tra.`:'Không tìm được câu hỏi trắc nghiệm dạng chữ.');}
    const name=p.title||resource.name;
    sources.push({id:resource.id,name,count:parsed.questions.length,skipped:parsed.skipped,remaining:parsed.diagnostics?.unread?.length??parsed.diagnostics?.ocrRemaining??0});
-   questions.push(...parsed.questions.map(q=>({...q,sourceId:resource.id,sourceName:name})));
+   questions.push(...parsed.questions.map(q=>({...q,sourceId:resource.id,sourceName:name,sourceVersion:p.revisionId||resource.modifiedTime||null})));
   }catch(error){if(error.name==='AbortError')throw error;failures.push({id:resource.id,name:resource.name,error:error.message});}
  }
  return {questions,sources,failures,diagnostics};

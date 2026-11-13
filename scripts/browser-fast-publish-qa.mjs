@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile,mkdir} from 'node:fs/promises';
+import {GOOGLE_CLIENT_ID} from '../dist/site-config.mjs';
+const pages=await(await fetch('http://127.0.0.1:9223/json/list')).json(),page=pages.find(p=>p.type==='page'&&p.url.startsWith('http://localhost:8080/'));
+const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);let id=0;const pending=new Map(),errors=[];
+const call=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}))});
+const config=(await readFile('dist/site-config.mjs','utf8')).replace("AI_API_BASE=''","AI_API_BASE='https://qa-ai.example'"),png=(await readFile('tests/fixtures/vision-smoke.png')).toString('base64');
+ws.onmessage=async event=>{const m=JSON.parse(event.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Fetch.requestPaused'){const image=m.params.request.url.includes('qa-images.example');await call('Fetch.fulfillRequest',{requestId:m.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:image?'image/png':'text/javascript'}],body:image?png:Buffer.from(config).toString('base64')})}else if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails.exception?.description||m.params.exceptionDetails.text);else if(m.method==='Page.javascriptDialogOpening')await call('Page.handleJavaScriptDialog',{accept:true})};
+const evaluate=async expression=>{const r=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value};
+const pause=ms=>new Promise(r=>setTimeout(r,ms));async function waitFor(expression){for(let i=0;i<100;i++){try{if(await evaluate(expression))return}catch(error){if(!/context|navigat|null/i.test(error.message))throw error}await pause(100)}throw Error('Timed out: '+expression)}
+await call('Page.enable');await call('Runtime.enable');await call('Fetch.enable',{patterns:[{urlPattern:'*site-config.mjs*'},{urlPattern:'https://qa-images.example/*'}]});
+const mock=await call('Page.addScriptToEvaluateOnNewDocument',{source:`
+ window.aiCalls=[];window.imageFetches=0;window.thumbnailCalls=0;window.presentationCalls=0;window.uploadCalls=0;window.google={accounts:{oauth2:{revoke:()=>{}}}};const original=fetch,shape=text=>({shape:{text:{textElements:[{textRun:{content:text}}]}}}),slide=(n,text='',note='',image=true)=>({objectId:'s'+n,pageElements:[...(text?[shape(text)]:[]),...(image?[{image:{contentUrl:'https://qa-images.example/'+n+'.png'}}]:[])],slideProperties:{notesPage:{notesProperties:{speakerNotesObjectId:'note'},pageElements:[{...shape(note),objectId:'note'}]}}});
+ const presentation={presentationId:'qa_filter',title:'SEMESTER_3_QA',slides:[slide(1,'Welcome','',false),slide(2,'Link tìm hiểu 2NF: https://youtu.be/abc'),slide(3,'Các khóa học · Link website ForUser'),slide(4),slide(5),slide(6,'','BC\\nNotes explanation'),slide(7,'Which SQL?\\nA. SELECT 1\\nB. SELECT 2','A'),slide(8),slide(9,'','D\\n日本語の説明')]};
+ window.fetch=(url,init={})=>{
+ if(String(url).startsWith('https://www.googleapis.com/drive/'))return Promise.resolve(Response.json({files:[{id:'qa_filter',name:'SEMESTER_3_QA',mimeType:'application/vnd.google-apps.presentation'}]}));
+ if(String(url)==='https://slides.googleapis.com/v1/presentations/qa_filter'){presentationCalls++;return Promise.resolve(Response.json(presentation))}
+ if(String(url).includes('/thumbnail?')){thumbnailCalls++;const match=String(url).match(/pages\\/s(\\d+)\\//);return Promise.resolve(Response.json({contentUrl:'https://qa-images.example/'+match[1]+'.png'}))}
+ if(String(url).startsWith('https://qa-images.example/')){imageFetches++;return Promise.resolve(new Response(Uint8Array.from(atob(${JSON.stringify(png)}),c=>c.charCodeAt(0)),{headers:{'Content-Type':'image/png'}}));}
+ if(String(url).startsWith('https://qa-ai.example/v1/decks')){if(init.method==='PUT')uploadCalls++;return Promise.resolve(Response.json((init.method||'GET')==='GET'?[]:String(url).endsWith('/v1/decks')?{id:'11111111-1111-4111-8111-111111111111'}:{ok:true}))}
+ if(String(url).startsWith('https://qa-ai.example/')){const q=JSON.parse(init.body).questions[0],n=Number(q.stem.match(/\\d+/)?.[0]);aiCalls.push(n);const kind=n===5?'question':n===8?'uncertain':'other';return Promise.resolve(Response.json({model:'qa-vision',answers:[{id:q.id,kind,labels:kind==='question'?['A','B','C','D']:[],status:kind==='question'?'answered':'uncertain',answer:kind==='question'?'B':'',explanation:kind==='question'?'AI explanation':'Not a question'}]}))}
+ return original(url,init)};
+`});
+try{
+ await evaluate(`(async()=>{await caches.delete('sot-private-slide-images-v1');localStorage.clear();sessionStorage.clear();sessionStorage.setItem('sot-google-session',JSON.stringify({token:'qa-token',expires:Date.now()+3600000,clientId:${JSON.stringify(GOOGLE_CLIENT_ID)},profile:{name:'QA',email:'fast-cache-qa@example.invalid'}}));location.reload()})()`);await waitFor(`document.querySelectorAll('#selectedResources input').length===1`);
+ await evaluate(`document.querySelector('[data-view="sources"]').click();document.querySelector('#selectedResources input').click();document.querySelector('#useResources').click()`);await waitFor(`JSON.parse(localStorage.getItem('sot-bank')||'[]').length===4`);
+ assert.deepEqual(await evaluate(`JSON.parse(localStorage.getItem('sot-bank')).map(q=>q.slide)`),[5,6,7,9]);assert.deepEqual(await evaluate('aiCalls'),[4,5,8]);assert.equal(await evaluate(`JSON.parse(localStorage.getItem('sot-bank'))[1].answer`),'BC');assert.equal(await evaluate(`document.querySelector('#ocrPercent').textContent`),'100%');
+ assert.ok((await evaluate(`document.querySelector('#message').textContent`)).includes('bỏ 4 trang'));assert.ok((await evaluate(`document.querySelector('#message').textContent`)).includes('1 ảnh chưa xác định'));
+ await mkdir('outputs/filter',{recursive:true});
+ for(const theme of ['light','dark'])for(const width of [1440,390,320]){
+  await call('Emulation.setDeviceMetricsOverride',{width,height:950,deviceScaleFactor:1,mobile:width<700});await evaluate(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);await pause(60);assert.equal(await evaluate(`document.documentElement.scrollWidth>innerWidth`),false);assert.ok(await evaluate(`innerWidth<=${width}+1`),'mobile viewport must not expand to fit overflowing text');const screenshot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/filter/import-${theme}-${width}.png`,Buffer.from(screenshot.data,'base64'));
+ }
+ await evaluate(`document.querySelector('[data-view="library"]').click()`);await waitFor(`document.querySelectorAll('.question-card').length===4`);assert.equal(await evaluate(`document.querySelectorAll('.question-card .question-top .tag.ok').length`),3);
+
+ await waitFor(`document.querySelectorAll('.library-slide-img').length===4&&[...document.querySelectorAll('.library-slide-img')].every(image=>image.naturalWidth>0)`);
+ assert.equal(await evaluate('presentationCalls'),1);assert.equal(await evaluate('thumbnailCalls'),1,'only the composed slide needs a thumbnail');
+ await evaluate(`location.reload()`);await waitFor(`document.querySelectorAll('.library-slide-img').length===4&&[...document.querySelectorAll('.library-slide-img')].every(image=>image.naturalWidth>0)`);
+ assert.equal(await evaluate('presentationCalls'),0);assert.equal(await evaluate('thumbnailCalls'),0);assert.equal(await evaluate('imageFetches'),0,'stored bytes survive reload');
+ await evaluate(`document.querySelector('#publishDeck').click();document.querySelector('#publishRights').checked=true;document.querySelector('#publishForm').requestSubmit()`);await waitFor(`document.querySelector('#publishStatus').textContent.includes('Đã đăng bộ đề')`);
+ assert.equal(await evaluate('uploadCalls'),4);assert.equal(await evaluate('presentationCalls+thumbnailCalls+imageFetches'),0,'publishing cached questions performs no Google reads');assert.deepEqual(errors,[]);
+ console.log(JSON.stringify({result:'passed',checks:['one presentation read','standalone images bypass thumbnails','bytes survive reload','publish cached deck without any Google reads','PC/mobile light/dark']}));
+}finally{await call('Page.removeScriptToEvaluateOnNewDocument',{identifier:mock.identifier});await call('Fetch.disable');ws.close()}

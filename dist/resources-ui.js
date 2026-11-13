@@ -1,8 +1,10 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
 import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs';
-import {solveBatch,blobToBase64} from './ai.mjs?v=20261113-retry-1';
-import {selectQuestionSlides} from './question-slides.mjs?v=20261113-retry-1';
+import {solveBatch,blobToBase64} from './ai.mjs?v=20261113-fast-cache-1';
+import {selectQuestionSlides} from './question-slides.mjs?v=20261113-fast-cache-1';
 import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs';
+import {createSlideBlobCache} from './slide-blob-cache.mjs';
+import {directSlideImage} from './direct-slide-image.mjs';
 import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-filter-1';
 
 const $=id=>document.getElementById(id);
@@ -13,8 +15,9 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  const sessionKey='sot-google-session';
  function saveConnection(){try{if(token&&expires>Date.now())sessionStorage.setItem(sessionKey,JSON.stringify({token,expires,profile:accountProfile,clientId:resolveGoogleClientId()}));else sessionStorage.removeItem(sessionKey)}catch{}}
  function updateProfile(profile){accountProfile=profile;saveConnection();onAccountChange(profile)}
- const thumbnailCache=new Map(),thumbnailQueue=createGoogleReadQueue();
- function expireConnection(){thumbnailCache.clear();token=null;expires=0;updateProfile(null)}
+ const thumbnailCache=new Map(),presentations=new Map(),thumbnailQueue=createGoogleReadQueue(),slideBytes=createSlideBlobCache({owner:()=>accountProfile?.email,load:loadSlideBlob});
+ function rememberPresentation(p){presentations.set(p.presentationId,{created:Date.now(),promise:Promise.resolve(p)})}
+ function expireConnection(){thumbnailCache.clear();presentations.clear();slideBytes.clear();token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
  const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Chỉ nhập slide có câu hỏi và lựa chọn. Giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc. Bỏ trang quảng cáo, giới thiệu và danh sách link.';
@@ -141,6 +144,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const signal=controller.signal,started=Date.now();let foundBefore=0;
   try{
    const result=await readSelectedResources([...selected.values()],request,async(p,resource)=>{
+    rememberPresentation(p);
     return selectQuestionSlides(p,{startSlide,endSlide,maxQuestions,signal,shouldStop:()=>finishEarly,
      inspect:AI_API_BASE&&document.getElementById('sourceAutoAI')?.checked?async q=>{
       const blob=await slideBlob(q);if(signal.aborted)throw new DOMException('Stopped','AbortError');
@@ -206,17 +210,23 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   apiToken();
   const source=presentationIdFromLink(q.url),url=new URL(q.url),objectId=new URLSearchParams(url.hash.slice(1)).get('slide')?.replace(/^id\./,'');
   if(!source||q.sourceId&&q.sourceId!==source||!objectId||! /^[\w.-]+$/.test(objectId))throw Error('Không xác định được slide gốc của câu này.');
-  const cached=thumbnailCache.get(q.url);if(cached&&Date.now()-cached.created<5*60000)return abortableResult(cached.promise,options.signal);
+  const cached=thumbnailCache.get(q.url);if(!options.forceThumbnail&&cached&&Date.now()-cached.created<5*60000)return abortableResult(cached.promise,options.signal);
   const run=epoch;
+  if(!options.forceThumbnail){
+   let snapshot=presentations.get(source);if(!snapshot||Date.now()-snapshot.created>=5*60000){snapshot={created:Date.now(),promise:request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}`,options)};presentations.set(source,snapshot);snapshot.promise.catch(()=>{if(presentations.get(source)===snapshot)presentations.delete(source)})}
+   try{const p=await abortableResult(snapshot.promise,options.signal);if(run!==epoch||!active())throw Error('Tài khoản Google đã thay đổi.');const direct=directSlideImage(p.slides?.find(slide=>slide.objectId===objectId));if(direct){thumbnailCache.set(q.url,{created:Date.now(),promise:Promise.resolve(direct)});return direct}}catch(error){if(error.name==='AbortError'||run!==epoch)throw error}
+  }
   const promise=request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(source)}/pages/${encodeURIComponent(objectId)}/thumbnail?thumbnailProperties.thumbnailSize=LARGE`,options).then(thumbnail=>{if(run!==epoch||!active())throw Error('Tài khoản Google đã thay đổi.');const imageUrl=new URL(thumbnail.contentUrl);if(imageUrl.protocol!=='https:')throw Error('Google chưa trả ảnh slide hợp lệ.');return thumbnail.contentUrl}).catch(error=>{thumbnailCache.delete(q.url);throw error});
   thumbnailCache.set(q.url,{created:Date.now(),promise});return abortableResult(promise,options.signal);
  }
- async function slideBlob(q,options={}){
+ function slideBlob(q,options={}){apiToken();return abortableResult(slideBytes.get(q,options),options.signal)}
+ async function loadSlideBlob(q,options={}){
   const url=await slideImage(q,options);
-  let response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal});
-  if([401,403,404].includes(response.status)){thumbnailCache.delete(q.url);response=await fetch(await slideImage(q,options),{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}
+  let response;try{response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}catch(error){if(error.name==='AbortError')throw error}
+  if(!response||[401,403,404].includes(response.status)){thumbnailCache.delete(q.url);response=await fetch(await slideImage(q,{...options,forceThumbnail:true}),{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}
   if(!response.ok)throw Error('Chưa tải được ảnh gốc.');
   const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
+  if(options.maxBytes&&blob.size>options.maxBytes&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   return blob;
  }
  return {connect,disconnect,readAnswers,apiToken,slideImage,slideBlob,isBusy:()=>busy};

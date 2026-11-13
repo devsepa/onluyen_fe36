@@ -1,4 +1,4 @@
-import {blobToBase64,readyForPractice} from './ai.mjs?v=20261113-retry-1';
+import {blobToBase64,readyForPractice} from './ai.mjs?v=20261113-fast-cache-1';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function sharedImagePath(q){if(!/^[a-f0-9-]{36}$/.test(q.sharedDeck)||!Number.isInteger(q.sharedIndex)||q.sharedIndex<0)throw Error('Ảnh trong kho không hợp lệ.');return `/v1/decks/${q.sharedDeck}/images/${q.sharedIndex}`}
 export async function deckRequest(base,path,{method='GET',token,body,signal,fetcher=fetch}={}){
@@ -41,15 +41,16 @@ const owned=()=>{try{return JSON.parse(localStorage.getItem('sot-published-decks
     catch(error){if(error.status!==404)throw error;saveDraft(null)}
    }
    if(!draft){draft=await(await deckRequest(base,'/v1/decks',{method:'POST',token,body:{title:$('deckTitle').value.trim(),count:questions.length,rights:true},signal})).json();saveDraft({id:draft.id,signature,title:$('deckTitle').value.trim()})}
-   let done=completed.length;$('publishBar').value=done;
-   for(let i=0;i<questions.length;i++){
+   let done=completed.length,cursor=0;$('publishBar').value=done;
+   const upload=async()=>{while(cursor<questions.length){const i=cursor++;
     if(completed.includes(i))continue;
     if(signal.aborted)throw new DOMException('Stopped','AbortError');
     $('publishStatus').textContent=`Đang tải ảnh ${done+1}/${questions.length}. Bộ đề chưa công khai.`;
-    const blob=await getBlob(questions[i],{signal,onWait:info=>{$('publishStatus').textContent=`${info.reason==='quota'?'Google đang giới hạn tải ảnh.':'Đang điều tiết tốc độ tải ảnh.'} Tự chờ ${Math.ceil(info.ms/1000)} giây · đã giữ ${done}/${questions.length} ảnh.`;}});if(blob.size>819200)throw Error(`Ảnh slide ${questions[i].slide} lớn hơn 800 KB; phần đã tải vẫn được giữ.`);
+    const blob=await getBlob(questions[i],{signal,maxBytes:819200,onWait:info=>{$('publishStatus').textContent=`${info.reason==='quota'?'Google đang giới hạn tải ảnh.':'Đang điều tiết tốc độ tải ảnh.'} Tự chờ ${Math.ceil(info.ms/1000)} giây · đã giữ ${done}/${questions.length} ảnh.`;}});if(blob.size>819200)throw Error(`Ảnh slide ${questions[i].slide} lớn hơn 800 KB; phần đã tải vẫn được giữ.`);
     const image={mimeType:blob.type,data:await blobToBase64(blob)},q=questions[i],question=Object.fromEntries(['stem','options','answer','explanation','verified','answerSource','slide','url','sourceName'].map(key=>[key,q[key]]));
     await deckRequest(base,`/v1/decks/${draft.id}/questions/${i}`,{method:'PUT',token:getToken(),body:{question,image},signal});$('publishBar').value=++done;
-   }
+   }};
+   await Promise.all(Array.from({length:Math.min(3,questions.length)},upload));
    await deckRequest(base,`/v1/decks/${draft.id}/publish`,{method:'POST',token:getToken(),body:{},signal});const ids=owned();ids.push(draft.id);try{localStorage.setItem('sot-published-decks',JSON.stringify(ids))}catch{}saveDraft(null);draft=null;published=true;$('publishStatus').textContent='Đã đăng bộ đề. Mọi người có thể chọn trong Kho đề chung.';await load();
   }catch(error){controller.abort();$('publishStatus').textContent=(error.name==='AbortError'?'Đã tạm dừng.':error.message)+' Các ảnh đã tải được giữ trong bản riêng tối đa 24 giờ. Bấm Tiếp tục để tải phần còn lại.';}
   finally{controller=null;$('publishSubmit').disabled=published;if(!published&&readDraft())$('publishSubmit').textContent='Tiếp tục tải lên';$('closePublish').disabled=false;$('stopPublish').hidden=true}

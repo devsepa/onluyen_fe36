@@ -1,13 +1,13 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-retry-1';
-import {setupResources} from './resources-ui.js?v=20261113-retry-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-fast-cache-1';
+import {setupResources} from './resources-ui.js?v=20261113-fast-cache-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-retry-1';
-import {setupAccount} from './account-ui.js?v=20261113-retry-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-retry-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-retry-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-retry-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-retry-1';
-import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-retry-1';
+import {validateBank} from './banks.mjs?v=20261113-fast-cache-1';
+import {setupAccount} from './account-ui.js?v=20261113-fast-cache-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-fast-cache-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-fast-cache-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-fast-cache-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-fast-cache-1';
+import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs?v=20261113-fast-cache-1';
 import {fitQuizScreen} from './quiz-screen.mjs';
 import {createQuizSound} from './quiz-sound.mjs';
 import {setupSidebar} from './sidebar.mjs';
@@ -52,7 +52,7 @@ function aiBadge(q){return q.answerSource==='gemini'?'<span class="tag ai-answer
 function hasAiInput(q){return !!q.url||hasAiText(q)}
 function hasAiText(q){return q.stem?.trim()&&q.options.length>=2&&q.options.every(o=>typeof o.text==='string'&&o.text.trim())}
 async function questionBlob(q,options={}){return q.sharedDeck?(await deckRequest(AI_API_BASE,sharedImagePath(q),{signal:options.signal})).blob():resources.slideBlob(q,options)}
-async function questionImage(q){return q.sharedDeck?URL.createObjectURL(await questionBlob(q)):resources.slideImage(q)}
+async function questionImage(q){return URL.createObjectURL(await questionBlob(q))}
 const slideImages=createSlideImageStore(questionImage,{limit:300});window.addEventListener('pagehide',()=>slideImages.clear());
 async function preloadSlideImage(q){
  if(!q?.url&&!q?.sharedDeck)return;
