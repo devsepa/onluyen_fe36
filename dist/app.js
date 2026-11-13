@@ -95,7 +95,7 @@ if (
   session?.questions.some((q) => !q.sourceId && !presentationIdFromLink(q.url))
 )
   session = null;
-let view = bank.length ? "library" : "shared",
+let view = "shared",
   lastResult = null,
   preferredMode = "study",
   preferredSubject = read("sot-practice-subject") || "",
@@ -274,6 +274,11 @@ function empty(
 function switchView(next, mode) {
   clearTimeout(window._autoAdvanceTimer);
   if (!pageInfo[next]) return;
+  if ((next === "sources" || next === "library") && !resources?.active?.()) {
+    message("Hãy đăng nhập Google ở góc phải để nạp tài liệu và quản lý câu hỏi.");
+    next = "shared";
+    setTimeout(() => $("accountButton")?.click(), 300);
+  }
   if (
     session &&
     !session.done &&
@@ -343,6 +348,11 @@ const resources = setupResources({
     libraryProfile=profile;setTimeout(()=>libraryManager?.account(profile),0);
     $("sourceAccessNotice").hidden = !!profile;
     $("sourceControls").hidden = !profile;
+    const adminNav = $("navAdminGroup");
+    if (adminNav) adminNav.hidden = !profile;
+    if (!profile && (view === "sources" || view === "library")) {
+      switchView("shared");
+    }
     setTimeout(()=>{if(profile){scheduleAutoAi();explanationQueue.resume();primeStudyExplanations()}else explanationQueue.cancel()},0);
   },
   onAccountError: (text) => message(text),
@@ -1958,6 +1968,7 @@ setTimeout(scheduleAutoAi, 0);
 setInterval(updateTimer, 1000);
 document.addEventListener("visibilitychange", updateTimer);
 refreshStats();
+if ($("navAdminGroup")) $("navAdminGroup").hidden = !resources.active();
 switchView(session && !session.done ? "practice" : view);
 if (session && !session.done) startSessionPreload(session.questions);
 // Theme toggle
