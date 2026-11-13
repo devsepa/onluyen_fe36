@@ -1,6 +1,8 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
-import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-shared-1';
+import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs';
+import {solveBatch,blobToBase64} from './ai.mjs';
+import {selectQuestionSlides} from './question-slides.mjs';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=20261113-filter-1';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -13,6 +15,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
  function expireConnection(){token=null;expires=0;updateProfile(null)}
  function scheduleExpiry(){clearTimeout(expiryTimer);expiryTimer=setTimeout(expireConnection,Math.max(0,expires-Date.now()))}
  function status(text){$('resourceStatus').textContent=text}
+ const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Chỉ nhập slide có câu hỏi và lựa chọn. Giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc. Bỏ trang quảng cáo, giới thiệu và danh sách link.';
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
  const stopButton=document.createElement('button');stopButton.className='secondary';stopButton.type='button';stopButton.textContent='Dừng nhập';stopButton.hidden=true;$('resourceStatus').after(stopButton);
@@ -26,7 +29,7 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   diagnosticsPanel.replaceChildren();diagnosticsPanel.hidden=!reports.length;
   const heading=document.createElement('summary');heading.textContent='Chi tiết nhập tài liệu';diagnosticsPanel.append(heading);
   for(const report of reports){
-   const title=document.createElement('p');title.textContent=`${report.name}: ${report.totalSlides} slide, ${report.textSlides||0} slide có chữ, ${report.imageSlides||report.totalSlides} slide ảnh.`;diagnosticsPanel.append(title);
+   const title=document.createElement('p');title.textContent=`${report.name}: ${report.totalSlides} slide · bỏ ${report.excluded||0} trang không phải câu hỏi · ${report.unresolved||0} trang chưa xác định, chưa nhập.`;diagnosticsPanel.append(title);
   }
  }
  function active(){return token&&Date.now()<expires}
@@ -137,57 +140,30 @@ export function setupResources({message,onImport,hasActiveSession,onAccountChang
   const signal=controller.signal,started=Date.now();let foundBefore=0;
   try{
    const result=await readSelectedResources([...selected.values()],request,async(p,resource)=>{
-    const allSlides=p.slides||[];
-    const original=parsePresentation(p);
-    const nativeMap=new Map(original.questions.map(q=>[q.slide,q]));
-    const questions=[],pages=[],skipped=[];
-    for(let i=0;i<allSlides.length;i++){
-     if(signal.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError');
-     if(questions.length>=maxQuestions||finishEarly)break;
-     const slideNum=i+1;
-     if(slideNum<startSlide||slideNum>endSlide)continue;
-     const slide=allSlides[i];
-     if(nativeMap.has(slideNum)){
-      const nativeQ=nativeMap.get(slideNum);
-      questions.push({...nativeQ,extraction:'ocr'});
-      pages.push({slide:slideNum,objectId:slide.objectId,textLength:nativeQ.stem.length,images:1,recognized:true});
-      continue;
+    return selectQuestionSlides(p,{startSlide,endSlide,maxQuestions,signal,shouldStop:()=>finishEarly,
+     inspect:AI_API_BASE&&document.getElementById('sourceAutoAI')?.checked?async q=>{
+      const blob=await slideBlob(q);if(signal.aborted)throw new DOMException('Stopped','AbortError');
+      if(blob.size>2100000)throw Error('Slide image exceeds 2 MB');
+      const response=await solveBatch(AI_API_BASE,[{...q,image:{mimeType:blob.type,data:await blobToBase64(blob)}}],apiToken(),{signal});
+      return {result:response.answers[0],model:response.model};
+     }:null,
+     onProgress:progress=>{
+      $('ocrBar').value=progress.slide/progress.totalSlides*100;$('ocrPercent').textContent=Math.round(progress.slide/progress.totalSlides*100)+'%';
+      $('ocrHeadline').textContent=p.title+' - slide '+progress.slide+'/'+progress.totalSlides;
+      $('ocrCount').textContent=`${progress.found} câu · bỏ ${progress.skipped} trang khác · ${progress.unresolved} trang chưa xác định`;
      }
-     const possibleOptions='ABCDEFGH'.split('').map(id=>({id,text:''}));
-     const {answer,explanation}=detailsFromNotes(slide,possibleOptions);
-     const lastLabel=Math.max(3,...[...(answer||'')].map(label=>label.charCodeAt(0)-65));
-     const defaultOptions=possibleOptions.slice(0,lastLabel+1);
-     const url=`https://docs.google.com/presentation/d/${encodeURIComponent(p.presentationId)}/edit#slide=id.${encodeURIComponent(slide.objectId)}`;
-     const q={
-      id:crypto.randomUUID(),
-      stem:`Câu hỏi Slide ${slideNum}`,
-      content:'',
-      options:defaultOptions,
-      answer:answer||'',
-      explanation:explanation||'',
-      verified:!!answer,
-      answerSource:answer?'speaker-notes':null,
-      slide:slideNum,
-      url,
-      extraction:'ocr'
-     };
-     questions.push(q);
-     pages.push({slide:slideNum,objectId:slide.objectId,textLength:0,images:1,recognized:true});
-    }
-    status(p.title);$('ocrHeadline').textContent='Đã hoàn tất nhập ảnh từng slide';
-    $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrCount').textContent=`${questions.length} slide đã nhập`;
-    foundBefore+=questions.length;
-    return {questions,skipped,diagnostics:{totalSlides:allSlides.length,textSlides:original.diagnostics.textSlides,imageSlides:questions.length,pages}};
+    });
    },(i,n,name)=>status(`Đang đọc ${i}/${n}: ${name}`),()=>finishEarly);
    if(run!==epoch)return;
+   $('ocrBar').value=100;$('ocrPercent').textContent='100%';$('ocrHeadline').textContent='Đã hoàn tất lọc slide câu hỏi';$('ocrTime').textContent=`Hoàn tất trong ${Math.round((Date.now()-started)/1000)} giây`;
    showDiagnostics(result.diagnostics);
-   if(!result.questions.length){status('Chưa thay đổi ngân hàng câu hỏi.');return message(result.failures.map(f=>`${f.name}: ${f.error}`).join('\n'))}
+   if(!result.questions.length){status('Chưa thay đổi ngân hàng câu hỏi.');return message('Chưa tìm thấy slide đủ điều kiện câu hỏi – lựa chọn. Trang quảng cáo, hướng dẫn và ảnh chưa xác định không được nhập. '+result.failures.map(f=>`${f.name}: ${f.error}`).join('\n'))}
    if(result.failures.length&&!confirm(`Có ${result.failures.length} tài liệu chưa đọc được:\n${result.failures.map(f=>`${f.name}: ${f.error}`).join('\n')}\n\nTiếp tục dùng ${result.sources.length} tài liệu đã đọc được?`)){status('Đã giữ ngân hàng trước.');return}
    if(!onImport(result))return;
    const remaining=result.sources.reduce((n,s)=>n+s.remaining,0);
    status(`Đã sẵn sàng: ${result.questions.length} câu từ ${result.sources.length} tài liệu.${remaining?` Còn ${remaining} trang chưa đọc; tăng số câu hoặc chọn Đọc toàn bộ để nhập thêm.`:''}`);
-   const skipped=result.sources.filter(s=>s.skipped.length).map(s=>`${s.name}: đã đọc nhưng chưa nhận diện câu hỏi ở slide ${s.skipped.join(', ')}. Xem Chi tiết nhập tài liệu để kiểm tra.`);
-   message(`Đã nhập ${result.questions.length} câu từ ${result.sources.length} tài liệu theo thứ tự slide gốc (lấy chuẩn ảnh từng slide). Đáp án rõ ràng trong ghi chú được dùng ngay.${skipped.length?'\n'+skipped.join('\n'):''}`);
+   const excluded=result.diagnostics.reduce((n,d)=>n+(d.excluded||0),0),unknown=result.diagnostics.reduce((n,d)=>n+(d.unresolved||0),0);
+   message(`Đã nhập ${result.questions.length} câu, giữ nguyên ảnh và số slide gốc. Đã bỏ ${excluded} trang không phải câu hỏi.${unknown?` ${unknown} ảnh chưa xác định chưa được nhập; có thể bật AI và thử lại.`:''}`);
   }catch(error){if(run===epoch&&error.name!=='AbortError')message(error.message)}
   finally{if(run===epoch){setBusy(false);$('useReady').hidden=true}}
  };

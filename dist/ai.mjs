@@ -8,6 +8,11 @@ export function applyAiResults(bank,submitted,results,model){
   const original=sent.get(result.id),q=bank.find(q=>q.id===result.id);
   if(!original||!q||q.answer||seen.has(q.id)||questionFingerprint(q)!==questionFingerprint(original))continue;
   seen.add(q.id);
+  if(original.image&&result.kind==='other'){bank.splice(bank.indexOf(q),1);continue}
+  if(original.image&&result.kind==='question'){
+   q.slideKind='question';
+   if(Array.isArray(result.labels)&&result.labels.length>=2)q.options=result.labels.map(id=>q.options.find(o=>o.id===id)||{id,text:''});
+  }
   if(result.status==='answered'&&validSet(result.answer,original)&&typeof result.explanation==='string'){
    if(original.image&&[...result.answer].some(label=>!q.options.some(o=>o.id===label))){const last=Math.max(...[...result.answer].map(c=>c.charCodeAt(0)-65),q.options.length-1);q.options=Array.from({length:last+1},(_,i)=>q.options.find(o=>o.id===String.fromCharCode(65+i))||{id:String.fromCharCode(65+i),text:''})}
    q.answer=result.answer;q.explanation=result.explanation.slice(0,3000);q.verified=false;q.answerSource='gemini';q.aiModel=model;q.aiStatus='proposed';applied++;
@@ -87,6 +92,7 @@ export async function solveBatch(base,questions,token,{signal,fetcher=fetch}={})
  const ids=new Set(questions.map(q=>q.id)),seen=new Set();
  if(!Array.isArray(data.answers)||data.answers.length!==questions.length||typeof data.model!=='string')throw Error('AI trả kết quả thiếu hoặc không hợp lệ.');
  for(const a of data.answers){const q=questions.find(q=>q.id===a.id);if(!ids.has(a.id)||seen.has(a.id)||typeof a.explanation!=='string'||!['answered','uncertain'].includes(a.status)||(a.status==='answered'&&!validSet(a.answer,q))||(a.status==='uncertain'&&a.answer!==''))throw Error('AI trả đáp án không hợp lệ.');seen.add(a.id)}
+ for(const a of data.answers)if(a.kind!==undefined&&(!questions.find(q=>q.id===a.id)?.image||!['question','other','uncertain'].includes(a.kind)||!Array.isArray(a.labels)||a.labels.length>8||a.labels.some((label,i)=>label!==String.fromCharCode(65+i))||(a.kind==='question'&&a.labels.length<2)||(a.kind!=='question'&&(a.status!=='uncertain'||a.answer!==''))||(a.status==='answered'&&[...a.answer].some(label=>!a.labels.includes(label)))))throw Error('AI chưa phân loại được ảnh slide.');
  return data;
 }
 

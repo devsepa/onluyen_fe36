@@ -1,12 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-shared-1';
-import {setupResources} from './resources-ui.js?v=20261113-shared-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-filter-1';
+import {setupResources} from './resources-ui.js?v=20261113-filter-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-shared-1';
-import {setupAccount} from './account-ui.js?v=20261113-shared-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-shared-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-shared-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-shared-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-shared-1';
+import {validateBank} from './banks.mjs?v=20261113-filter-1';
+import {setupAccount} from './account-ui.js?v=20261113-filter-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-filter-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-filter-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-filter-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-filter-1';
 import {setupSharedDecks,deckRequest,sharedImagePath} from './shared-decks.mjs';
 
 const $=id=>document.getElementById(id);
@@ -178,7 +178,7 @@ try{autoAi=localStorage.getItem('sot-ai-auto')!=='false'}catch{}
 const aiPanel=document.createElement('section');aiPanel.className='card ai-panel';aiPanel.setAttribute('aria-label','Bổ sung đáp án bằng AI');
 aiPanel.innerHTML='<div><span class="overline">TRỢ LÝ HỌC TẬP</span><h3>Tự động bổ sung đáp án</h3><p>Câu thiếu đáp án được gửi cho Gemini sau khi nhập. Đáp án AI có thể dùng để ôn và được ghi rõ là gợi ý; bạn vẫn có thể sửa hoặc xác nhận.</p></div><label class="check-label"><input id="aiAuto" type="checkbox"> Tự động xử lý câu thiếu đáp án bằng AI</label><div class="ai-actions"><button id="aiStart">✦ Thử lại các câu còn thiếu</button><button id="aiStop" class="secondary" hidden>Dừng xử lý</button><button id="aiAccept" class="secondary" hidden>Xác nhận đề xuất AI</button></div><p id="aiAvailability"></p><div id="aiProgress" role="status" aria-live="polite"></div><progress id="aiBar" max="1" value="0" hidden></progress>';
 $('library').insertBefore(aiPanel,$('library').querySelector('.library-toolbar'));
-const sourceAi=document.createElement('label');sourceAi.className='check-label source-auto-ai';sourceAi.innerHTML='<input id="sourceAutoAI" type="checkbox"> Tự động gửi ảnh slide của câu thiếu đáp án cho Gemini. Giữ nguyên đáp án trong ghi chú; có thể tắt bất cứ lúc nào.';
+const sourceAi=document.createElement('label');sourceAi.className='check-label source-auto-ai';sourceAi.innerHTML='<input id="sourceAutoAI" type="checkbox"> Dùng Gemini kiểm tra ảnh chưa rõ có phải câu hỏi và gợi ý đáp án còn thiếu. Giữ nguyên đáp án trong ghi chú; có thể tắt bất cứ lúc nào.';
 $('sourceControls').querySelector('.import-options').after(sourceAi);
 function setAutoAi(value){autoAi=value;try{localStorage.setItem('sot-ai-auto',String(value))}catch{}$('aiAuto').checked=value;$('sourceAutoAI').checked=value;if(value)scheduleAutoAi();else{clearTimeout(autoAiTimer);aiController?.abort()}}
 $('aiAuto').checked=autoAi;$('sourceAutoAI').checked=autoAi;
@@ -214,7 +214,7 @@ async function runAi({automatic=false}={}){
  if(aiRunning||!AI_API_BASE)return;
  let pending=structuredClone(bank.filter(q=>!q.answer));if(!pending.length)return;
  let token;try{token=resources.apiToken()}catch(error){return message(error.message,'library')}
- aiRunning=true;aiController=new AbortController();let done=0,applied=0,uncertain=0,fromNotes=0;renderLibrary();$('aiBar').hidden=false;$('aiBar').max=pending.length;$('aiBar').value=0;
+ aiRunning=true;aiController=new AbortController();let done=0,applied=0,uncertain=0,fromNotes=0,removed=0;renderLibrary();$('aiBar').hidden=false;$('aiBar').max=pending.length;$('aiBar').value=0;
  try{
   {
    $('aiProgress').textContent='Đang kiểm tra ghi chú trước; chỉ gửi câu còn thiếu cho AI…';
@@ -237,12 +237,12 @@ async function runAi({automatic=false}={}){
    if(batch.length){
     for(const q of batch){if(q.url){const blob=await questionBlob(q);if(aiController.signal.aborted)throw new DOMException('Stopped','AbortError');if(blob.size>2100000)throw Error('Slide image exceeds 2 MB.');q.image={mimeType:blob.type,data:await blobToBase64(blob)}}}
     const result=await solveBatch(AI_API_BASE,batch,resources.apiToken(),{signal:aiController.signal});
-    const counts=applyAiResults(bank,batch,result.answers,result.model);applied+=counts.applied;uncertain+=counts.uncertain;
+    const before=bank.length,counts=applyAiResults(bank,batch,result.answers,result.model);removed+=before-bank.length;applied+=counts.applied;uncertain+=counts.uncertain;
     if(!write('sot-bank',bank))throw Error('Không lưu được kết quả. Hãy xuất ngân hàng và kiểm tra dung lượng trình duyệt trước khi tiếp tục.');
    }
    done=Math.min(done+1,pending.length);$('aiBar').value=done;refreshStats();renderLibrary();
   }
-  $('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú và lưu ${applied} đáp án AI gợi ý, có thể ôn luyện ngay. ${uncertain} câu AI chưa xác định được vẫn để trống.${incomplete?` ${incomplete} câu thiếu lựa chọn chưa gửi AI.`:''}`;
+  $('aiProgress').textContent=`Đã lấy ${fromNotes} đáp án từ ghi chú và lưu ${applied} đáp án AI gợi ý, có thể ôn luyện ngay. ${uncertain} câu AI chưa xác định được vẫn để trống. Đã loại ${removed} slide không phải câu hỏi.${incomplete?` ${incomplete} câu thiếu lựa chọn chưa gửi AI.`:''}`;
  }catch(error){$('aiProgress').textContent=error.name==='AbortError'?`Đã dừng và giữ ${applied} đề xuất. Bấm AI bổ sung đáp án để tiếp tục các câu còn thiếu.`:`${error.message} Đã giữ ${applied} đề xuất; có thể tiếp tục sau.`}
  finally{aiRunning=false;aiController=null;renderLibrary()}
 }
