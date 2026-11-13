@@ -10,3 +10,5 @@
 - Display choices vertically in original A/B/C/D order throughout the library, study, exam and results. Do not shuffle choices. Filter the specific “Hoàng Hoàng Buôn Source” watermark from question content, including cached/imported questions, without removing unrelated uses of the word “source”.
 - Record browser verification and any limits honestly. Use an isolated QA browser profile and synthetic data; never clear or overwrite the user's browser storage for tests.
 - Quiz content must retain only the original English stem and ordered choices. Do not attach Vietnamese translations/explanations from speaker notes to imported questions; read notes only for the answer letter. Remove the full branding signature even when OCR misspells it (for example Hoàng Hoàng Buén Sourge), and standalone FORU/LEARN TO KNOW logo text, including existing banks/sessions/history. Preserve legitimate English terms and SQL literals rather than globally stripping accented text.
+
+- During study and mock exams, show only a compact original slide number and Open slide link. Omit the source label, document name and full source banner from the active quiz.

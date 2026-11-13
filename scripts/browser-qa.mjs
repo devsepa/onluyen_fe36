@@ -35,7 +35,7 @@ await evaluate(`document.querySelector('[data-view="practice"]').click()`);await
 await evaluate(`document.querySelector('#count').value=2;document.querySelector('#start').click();document.querySelector('[data-o="A"]').click()`);
 assert.equal(await evaluate(`!!document.querySelector('.feedback.incorrect')`),true);
 assert.equal(await evaluate(`document.querySelectorAll('[data-q]:disabled').length`),4);
-assert.equal(await evaluate(`(()=>{const q=JSON.parse(localStorage.getItem('sot-session')).questions[0];const ref=document.querySelector('.quiz-question .source-reference');return Number(ref.dataset.slide)===q.slide&&ref.querySelector('a').href===q.url&&ref.textContent.includes(q.sourceName)})()`),true,'study source must retain original slide after randomization');
+assert.equal(await evaluate(`(()=>{const q=JSON.parse(localStorage.getItem('sot-session')).questions[0];const ref=document.querySelector('.quiz-question .source-reference');return Number(ref.dataset.slide)===q.slide&&ref.querySelector('a').href===q.url&&!ref.querySelector('.source-document,.source-label')})()`),true,'study source must retain original slide after randomization');
 await screenshot('study-mobile',390,844);
 await evaluate(`location.reload()`);await sleep(300);await waitFor(`!!document.querySelector('.feedback.incorrect')`);
 await evaluate(`document.querySelector('[data-index="1"]').click();document.querySelector('[data-o="B"]').click();document.querySelector('#submit').click()`);
