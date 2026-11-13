@@ -1,4 +1,4 @@
-export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,autoAdvance,onAutoAdvance,prefetchEnabled,onPrefetchChange}){
+export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,prefetchEnabled,onPrefetchChange}){
  document.body.classList.add('quiz-active');
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),layout=root.querySelector('.quiz-layout'),aside=layout?.querySelector('aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';
@@ -7,11 +7,6 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
 
  const multi=card.querySelector('.multi-hint');
  if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
- if(study&&!head.querySelector('.study-auto-toggle')){
-  const label=document.createElement('label');label.className='study-auto-toggle';
-  const input=document.createElement('input');input.type='checkbox';input.checked=autoAdvance;input.onchange=()=>onAutoAdvance(input.checked);
-  label.append(input,'Tự chuyển · 5 giây');head.append(label);
- }
 
  function paginateMap(container,onSelect){
   const grid=container.querySelector('.quiz-navigation');
@@ -53,7 +48,6 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   dialog.querySelector('.close-map-btn').onclick=()=>dialog.close();
   paginateMap(dialog.querySelector('.quiz-map-card'),()=>dialog.close());
   if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=aside?.querySelector('.study-prefetch-toggle input')?.checked??prefetchEnabled;input.onchange=()=>onPrefetchChange(input.checked);label.append(input,'Chuẩn bị trước giải thích AI');dialog.append(label)}
-  if(study){const label=document.createElement('label');label.className='check-label study-prefetch-toggle';const input=document.createElement('input');input.type='checkbox';input.checked=head.querySelector('.study-auto-toggle input')?.checked;input.onchange=()=>{const original=head.querySelector('.study-auto-toggle input');original.checked=input.checked;onAutoAdvance(input.checked)};label.append(input,'Tự chuyển sau 5 giây');dialog.append(label)}
   root.append(dialog);
   dialog.showModal();
  }

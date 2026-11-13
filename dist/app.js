@@ -284,7 +284,7 @@ function empty(
   return `<div class="empty"><span class="empty-icon">▱</span><h2>${esc(title)}</h2><p>${esc(description)}</p><button data-view="${target}">${esc(label)}</button></div>`;
 }
 function switchView(next, mode) {
-  clearTimeout(window._autoAdvanceTimer);
+
   if (!pageInfo[next]) return;
   if ((next === "sources" || next === "library") && !resources?.active?.()) {
     message("Hãy đăng nhập Google ở góc phải để nạp tài liệu và quản lý câu hỏi.");
@@ -1245,6 +1245,11 @@ function renderPractice() {
         </div>
 
         <!-- Exam Minutes Selection -->
+        <div id="wrongLimitSetting" class="form-group-v2" ${preferredMode==='study'?'':'hidden'}>
+          <label class="form-label-v2" for="wrongAttemptLimit">Số lần sai được thử lại mỗi câu</label>
+          <select id="wrongAttemptLimit" class="select-control-v2">${[0,1,2,3,4,5].map(limit=>`<option value="${limit}" ${limit===wrongAttemptLimit?'selected':''}>${limit===0?'Hiện ngay khi sai':`${limit} lần · sai lần ${limit+1} mới hiện`}</option>`).join('')}</select>
+          <small class="muted">Chọn đúng sẽ hiện đáp án và giải thích ngay. Bạn tự bấm để chuyển câu.</small>
+        </div>
         <div id="timeSetting" class="form-group-v2" ${preferredMode === "study" ? "hidden" : ""}>
           <div class="form-label-row">
             <label class="form-label-v2" for="minutes">Thời gian làm bài</label>
@@ -1371,6 +1376,7 @@ function renderPractice() {
   };
 
   // Slider & Number input sync
+  $("wrongAttemptLimit").onchange=()=>{wrongAttemptLimit=Number($("wrongAttemptLimit").value);write('sot-wrong-attempt-limit',wrongAttemptLimit)};
   $("selectionStrategy").onchange=()=>{selectionStrategy=$("selectionStrategy").value;write('sot-selection-strategy',selectionStrategy);renderPractice()};
   $("resetSelection").onclick=async()=>{if(await askConfirm('Bắt đầu vòng mới cho môn / nguồn đang chọn? Các môn khác giữ nguyên tiến độ.',{title:'Ôn vòng tiếp theo',okText:'Bắt đầu vòng mới'})){try{studySelection.reset(allPool());renderPractice()}catch{message('Không lưu được tiến độ. Hãy kiểm tra dung lượng trình duyệt.')}}};
   $("countSlider").oninput = (e) => {
@@ -1453,6 +1459,7 @@ function renderPractice() {
         else seg.classList.remove("active");
       });
       $("timeSetting").hidden = preferredMode === "study";
+      $("wrongLimitSetting").hidden = preferredMode !== "study";
       const startBtn = $("start");
       const btnText = startBtn.querySelector(".btn-text");
       if (btnText) btnText.textContent = preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử";
@@ -1475,6 +1482,7 @@ function renderPractice() {
       return message("Kiểm tra lại số câu và thời gian.");
     session = {
       mode: preferredMode,
+      ...(preferredMode==='study'?{wrongAttemptLimit}:{}),
       questions: studySelection.select(questions,count,selectionStrategy)
         .map((q) => ({ ...q, options: [...q.options] })),
       answers: {},
@@ -1529,7 +1537,9 @@ function navItemClass(session, item, index, study) {
   }
   return classes.join(" ");
 }
-let autoAdvance=read('sot-auto-advance',true),prefetchEnabled=read('sot-explanation-prefetch',true),readingExplanation=null;
+let prefetchEnabled=read('sot-explanation-prefetch',true);
+let wrongAttemptLimit=read('sot-wrong-attempt-limit',2);if(!Number.isInteger(wrongAttemptLimit)||wrongAttemptLimit<0||wrongAttemptLimit>5)wrongAttemptLimit=2;
+if(session?.mode==='study'&&(!Number.isInteger(session.wrongAttemptLimit)||session.wrongAttemptLimit<0||session.wrongAttemptLimit>5))session.wrongAttemptLimit=wrongAttemptLimit;
 const generatedExplanationKeys=new Set(),localExplanationHits=new Set();
 const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},load:async(q,{signal})=>{
  if(!AI_API_BASE)throw Error('Giải thích AI đang được chuẩn bị. Hãy thử lại sau.');
@@ -1549,16 +1559,16 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
   let sessionChanged=false;for(const q of session?.questions||[])sessionChanged=apply(q)||sessionChanged;if(sessionChanged)write('sot-session',session);
  }
  if(view==='practice'&&session&&!session.done&&session.mode==='study'&&explanationKey(session.questions[session.current])===explanationKey(question)){
-  refreshQuizState();if(state.status==='ready')scheduleStudyAdvance();
+  refreshQuizState();
  }
 }});
 function invalidateSharedExplanation(question){const key=explanationKey(question);explanationQueue.invalidate(question);for(const q of [...bank,...(session?.questions||[])])if(explanationKey(q)===key){delete q.explanationDetails;if(q.explanationSource==='gemini'){q.explanation='';delete q.explanationSource}}write('sot-bank',bank);if(session)write('sot-session',session);if(view==='practice'&&session?.mode==='study')refreshQuizState()}
-function readExplanation(){clearTimeout(window._autoAdvanceTimer);if(session)readingExplanation=explanationKey(session.questions[session.current])}
+function readExplanation(){}
 function feedbackState(q){if(hasSpeakerNoteExplanation(q))return {status:'note'};const cached=explanationQueue.state(q);if(cached.status==='ready'){quality?.checkFresh(q,cached.details,invalidateSharedExplanation);const key=explanationKey(q);if(!generatedExplanationKeys.has(key)&&!localExplanationHits.has(key)){localExplanationHits.add(key);telemetry.record('local_hit')}return cached;}if(cached.status==='idle'){explanationQueue.request(q,{priority:true});return {status:'queued'};}return cached;}
 function drawStudyFeedback(){
  if(!session||session.done||view!=='practice')return;
  const q=session.questions[session.current];
- const _fb=renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:feedbackState(q),onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});if(_fb&&session.answers[q.id])renderAiTutor(_fb,q,()=>typeof token!=='undefined'?token:null);
+ const _fb=renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:session.mode==='study'&&session.answers[q.id]?feedbackState(q):{status:'idle'},onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});if(_fb&&session.answers[q.id])renderAiTutor(_fb,q,()=>typeof token!=='undefined'?token:null);
 }
 function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
 function primeStudyExplanations(){if(!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];const targets=prefetchEnabled?upcomingExplanationQuestions(session,3):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasSpeakerNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
@@ -1575,20 +1585,10 @@ function refreshQuizState(){
  const count=Object.keys(session.answers).length,pct=Math.round(count/session.questions.length*100),track=root.querySelector('.quiz-progress-track');track.title='Tiến độ: '+count+'/'+session.questions.length+' ('+pct+'%)';track.firstElementChild.style.width=pct+'%';
  drawStudyFeedback();updateTimer();
 }
-function scheduleStudyAdvance(){
- clearTimeout(window._autoAdvanceTimer);
- const active=session,current=active?.current,q=active?.questions[current];
- if(!autoAdvance||!active||active.done||active.mode!=='study'||!active.answers[q.id]||nextUnanswered(active)<0||readingExplanation===explanationKey(q))return;
- if(['queued','loading','error'].includes(feedbackState(q).status))return;
- window._autoAdvanceTimer=setTimeout(()=>{
-  if(session!==active||session.done||view!=='practice'||session.current!==current||!autoAdvance||document.querySelector('dialog[open]')||readingExplanation===explanationKey(q))return;
-  const next=nextUnanswered(session);if(next<0)return;session.current=next;write('sot-session',session);renderQuiz();
- },5000);
-}
 function renderQuiz() {
   disposeSlideFitting($('practice'));
   accountHome.append(quizAccountControl);
-  readingExplanation=null;
+
   const study = session.mode === "study",
     qs = session.questions;
   session.current = Math.max(0, Math.min(session.current || 0, qs.length - 1));
@@ -1618,14 +1618,7 @@ function renderQuiz() {
     isCorrect,
     navItemClass,
     sound: quizSound,
-    autoAdvance,
     prefetchEnabled,onPrefetchChange:setExplanationPrefetch,
-    onAutoAdvance: (value) => {
-      autoAdvance = value;
-      write("sot-auto-advance", value);
-      if (value) scheduleStudyAdvance();
-      else clearTimeout(window._autoAdvanceTimer);
-    },
   });
   drawStudyFeedback();
   primeStudyExplanations();
@@ -1660,7 +1653,7 @@ function renderQuiz() {
   }, 0);
 }
 $('practice').onclick = (e) => {
- if(e.target.closest('#checkMultiple')&&session&&!session.done){const q=session.questions[session.current];if(confirmQuestion(session,q.id)){quizSound.play(isCorrect(q,session.answers[q.id]));write('sot-session',session);refreshQuizState();primeStudyExplanations();scheduleStudyAdvance()}return}
+ if(e.target.closest('#checkMultiple')&&session&&!session.done){const q=session.questions[session.current];if(confirmQuestion(session,q.id)){quizSound.play(isCorrect(q,session.answers[q.id]));write('sot-session',session);refreshQuizState();primeStudyExplanations()}return}
 
   const toggleBtn = e.target.closest("[data-toggle-text]");
   if (toggleBtn) {
@@ -1674,7 +1667,7 @@ $('practice').onclick = (e) => {
   if (indexButton && session && !session.done) {
     if (session.mode !== "study" && Date.now() >= session.deadline)
       return finish();
-    clearTimeout(window._autoAdvanceTimer);
+
     session.current = Number(indexButton.dataset.index);
     write("sot-session", session);
     renderQuiz();
@@ -1682,17 +1675,15 @@ $('practice').onclick = (e) => {
   }
   const answer = e.target.closest("[data-q]");
   if (answer && session && !session.done) {
-    clearTimeout(window._autoAdvanceTimer);
+
     if (answerQuestion(session, answer.dataset.q, answer.dataset.o)) {
       const currentQ = session.questions.find((q) => q.id === answer.dataset.q);
       const correct = isCorrect(currentQ, session.answers[answer.dataset.q]);
-      if (session.mode === "study" && session.answers[answer.dataset.q])
+      if (session.mode === "study" && currentQ.answer.length===1)
         quizSound.play(correct);
       write("sot-session", session);
       refreshQuizState();
       primeStudyExplanations();
-      if (session.mode === "study" && session.answers[currentQ.id])
-        scheduleStudyAdvance();
     } else updateTimer();
   }
 };
@@ -1715,7 +1706,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") {
     if (session.current > 0) {
       e.preventDefault();
-      clearTimeout(window._autoAdvanceTimer);
+
       session.current--;
       write("sot-session", session);
       renderQuiz();
@@ -1725,7 +1716,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") {
     if (session.current < session.questions.length - 1) {
       e.preventDefault();
-      clearTimeout(window._autoAdvanceTimer);
+
       session.current++;
       write("sot-session", session);
       renderQuiz();
@@ -1770,7 +1761,7 @@ window.addEventListener("keydown", (e) => {
       session.current < session.questions.length - 1
     ) {
       e.preventDefault();
-      clearTimeout(window._autoAdvanceTimer);
+
       session.current++;
       write("sot-session", session);
       renderQuiz();
@@ -1817,13 +1808,13 @@ window.addEventListener(
     const dy = touch.clientY - touchStartY;
     if (Math.abs(dx) > 55 && Math.abs(dy) < 45) {
       if (dx < 0 && session.current < session.questions.length - 1) {
-        clearTimeout(window._autoAdvanceTimer);
+
         session.current++;
         write("sot-session", session);
         quizSound.nav();
         renderQuiz();
       } else if (dx > 0 && session.current > 0) {
-        clearTimeout(window._autoAdvanceTimer);
+
         session.current--;
         write("sot-session", session);
         quizSound.nav();
@@ -1850,6 +1841,7 @@ function updateTimer() {
 function finish() {
   if (!session || session.done) return;
   explanationQueue.cancel();
+  if(session.mode==='study')for(const q of session.questions){const last=session.wrongAttempts?.[q.id]?.at(-1);if(last&&!session.answers[q.id])session.answers[q.id]=last}
   session.done = true;
   lastResult = {
     ...session,
@@ -1900,7 +1892,7 @@ function renderResult(r) {
       )
       .join(
         "",
-      )}</div>${visible.length ? visible.map((q) => `<article class="card question-card"><div class="question-top"><span>CÂU ${r.questions.indexOf(q) + 1}</span><span class="tag ${isCorrect(q, r.answers[q.id]) ? "ok" : ""}">${isCorrect(q, r.answers[q.id]) ? "✓ Đúng" : r.answers[q.id] ? "Sai" : "Chưa trả lời"}</span></div>${sourceReference(q)}${aiBadge(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-result">${q.options.map((o, i) => `<div class="choice-pill ${q.answer.includes(o.id) ? "correct" : (r.answers[q.id] || "").includes(o.id) ? "wrong" : ""}">${esc(o.id)}</div>`).join("")}</div><div class="result-answer-row"><span>Đáp án đúng: <strong class="badge-answer ok">${esc(q.answer)}</strong></span><span>Bạn chọn: <strong class="badge-answer ${isCorrect(q, r.answers[q.id]) ? "ok" : r.answers[q.id] ? "danger" : "muted"}">${esc(r.answers[q.id] || "Chưa trả lời")}</strong></span></div>${noteExplanation(q)}<button class="secondary" data-report-question="${esc(q.id)}">Báo lỗi câu hỏi</button></article>`).join("") : empty("Không có câu hỏi trong nhóm này", "Thử chọn Tất cả để xem toàn bộ bài làm.", "history", "Về lịch sử →")}`;
+      )}</div>${visible.length ? visible.map((q) => `<article class="card question-card"><div class="question-top"><span>CÂU ${r.questions.indexOf(q) + 1}</span><span class="tag ${isCorrect(q, r.answers[q.id]) ? "ok" : ""}">${isCorrect(q, r.answers[q.id]) ? "✓ Đúng" : r.answers[q.id] ? "Sai" : "Chưa trả lời"}</span></div>${sourceReference(q)}${aiBadge(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-result">${q.options.map((o, i) => `<div class="choice-pill ${q.answer.includes(o.id) ? "correct" : (r.answers[q.id] || "").includes(o.id) ? "wrong" : ""}">${esc(o.id)}</div>`).join("")}</div><div class="result-answer-row"><span>Đáp án đúng: <strong class="badge-answer ok">${esc(q.answer)}</strong></span><span>Bạn chọn: <strong class="badge-answer ${isCorrect(q, r.answers[q.id]) ? "ok" : r.answers[q.id] ? "danger" : "muted"}">${esc(r.answers[q.id] || "Chưa trả lời")}</strong></span></div>${noteExplanation(q)}${r.wrongAttempts?.[q.id]?.length?`<p class="muted">Số lần thử sai: ${r.wrongAttempts[q.id].length}</p>`:""}<button class="secondary" data-report-question="${esc(q.id)}">Báo lỗi câu hỏi</button></article>`).join("") : empty("Không có câu hỏi trong nhóm này", "Thử chọn Tất cả để xem toàn bộ bài làm.", "history", "Về lịch sử →")}`;
   setTimeout(() => loadLibrarySlideImages(visible), 0);
   $("again").onclick = () => {
     lastResult = null;
@@ -1922,6 +1914,7 @@ function renderResult(r) {
     if (!qs.length) return;
     session = {
       mode: "study",
+      wrongAttemptLimit,
       questions: shuffle(qs),
       answers: {},
       flags: [],

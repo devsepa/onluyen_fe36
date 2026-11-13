@@ -13,7 +13,7 @@ function isGenericTip(str) {
 export function getSmartTip(question, details) {
  if (question.tip && !isGenericTip(question.tip)) return question.tip.trim();
  if (details?.tip && !isGenericTip(details.tip)) return details.tip.trim();
- 
+
  const rawText = (details?.reason || question.explanation || '');
  const match = rawText.match(/(?:mẹo|gợi ý|tip|lưu ý|bí quyết|chú ý|quy tắc|công thức)[\s:]+([^\n\r]+)/i);
  if (match && match[1]?.trim().length > 10 && !isGenericTip(match[1])) {
@@ -25,13 +25,16 @@ export function getSmartTip(question, details) {
 
 export function renderQuizFeedback({root,session,question,isCorrect,state={status:'idle'},onRetry,onRead=()=>{}}){
  const card=root.querySelector('.quiz-question'),answered=session.answers[question.id];
- if(session.mode!=='study'||!answered){card.querySelector('.feedback')?.remove();return}
+ if(session.mode!=='study'){card.querySelector('.feedback')?.remove();return}
+ const wrongCount=session.wrongAttempts?.[question.id]?.length||0;
+ if(!answered){card.querySelector('.feedback')?.remove();if(wrongCount){const feedback=add(card,'div','feedback incorrect study-retry-feedback');feedback.setAttribute('role','status');add(feedback,'strong','',`Chưa đúng · đã sai ${wrongCount} lần.`);add(feedback,'div','',`Bạn có thể chọn lại. Đáp án sẽ hiện nếu sai lần thứ ${(session.wrongAttemptLimit||0)+1}, hoặc ngay khi chọn đúng.`);return feedback}return}
  let feedback=card.querySelector('.feedback');
  if(!feedback){feedback=document.createElement('div');feedback.className='feedback';const before=card.querySelector('.quiz-shortcuts-hint');before?before.before(feedback):card.append(feedback)}
  const scroll=feedback.querySelector('.feedback-inline-exp')?.scrollTop||0;
  feedback.className='feedback '+(isCorrect(question,answered)?'right':'incorrect');feedback.setAttribute('role','status');feedback.replaceChildren();
  const row=add(feedback,'div','feedback-main-row');add(row,'strong','',(isCorrect(question,answered)?'✓ Đúng':'✕ Chưa đúng')+' · Đáp án: '+question.answer);
  const report=add(row,'button','secondary quality-report-button','Báo lỗi');report.type='button';report.dataset.reportQuestion=question.id;
+ if(wrongCount)add(feedback,'small','',`Đã thử sai ${wrongCount} lần trước khi chốt câu này.`);
  const details=state.details;
  if(details||question.explanation){
   const box=add(feedback,'div','feedback-inline-exp');box.tabIndex=0;box.setAttribute('role','region');box.setAttribute('aria-label','Giải thích đáp án');

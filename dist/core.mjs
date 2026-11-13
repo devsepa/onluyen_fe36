@@ -129,6 +129,13 @@ export function parsePresentation(p){
 }
 export function shuffle(values){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 export function grade(questions,answers){return questions.reduce((n,q)=>n+(isCorrect(q,answers[q.id])?1:0),0);}
+export function studyWrongLimit(session){return Number.isInteger(session.wrongAttemptLimit)&&session.wrongAttemptLimit>=0&&session.wrongAttemptLimit<=5?session.wrongAttemptLimit:0}
+function submitStudyAttempt(session,question,selected){
+ if(isCorrect(question,selected)){session.answers[question.id]=selected;return}
+ const attempts=session.wrongAttempts??={};(attempts[question.id]??=[]).push(selected);
+ if(attempts[question.id].length>studyWrongLimit(session))session.answers[question.id]=selected;
+ else (session.drafts??={})[question.id]=selected;
+}
 export function answerQuestion(session,questionId,optionId,now=Date.now()){
  if(session.done||(session.mode!=='study'&&now>=session.deadline))return false;
  const question=session.questions.find(q=>q.id===questionId);
@@ -137,17 +144,19 @@ export function answerQuestion(session,questionId,optionId,now=Date.now()){
   const map=session.mode==='study'?(session.drafts??={}):session.answers;
   const values=new Set(map[questionId]||'');values.has(optionId)?values.delete(optionId):values.add(optionId);
   const selected=[...values].sort().join('');if(selected)map[questionId]=selected;else delete map[questionId];
- }else session.answers[questionId]=optionId;
+ }else if(session.mode==='study')submitStudyAttempt(session,question,optionId);
+ else session.answers[questionId]=optionId;
  return true;
 }
 export function confirmQuestion(session,questionId){
  const question=session.questions.find(q=>q.id===questionId);
  if(session.done||session.mode!=='study'||!question||question.answer.length<2||session.answers[questionId])return false;
  const selected=normalizeAnswer(session.drafts?.[questionId],question.options);if(!selected)return false;
- session.answers[questionId]=selected;return true;
+ submitStudyAttempt(session,question,selected);return true;
 }
 export function optionState(session,question,optionId){
  const selected=session.answers[question.id];
  if(session.mode==='study'&&selected){if(question.answer.includes(optionId))return 'correct';if(selected.includes(optionId))return 'wrong';return '';}
+ if(session.mode==='study'&&question.answer.length===1&&session.wrongAttempts?.[question.id]?.at(-1)===optionId)return 'wrong';
  return (selected||session.drafts?.[question.id]||'').includes(optionId)?'selected':'';
 }
