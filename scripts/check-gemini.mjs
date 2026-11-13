@@ -2,7 +2,8 @@
 import {generateWithFallback} from '../backend/worker.mjs';
 import {readFile} from 'node:fs/promises';
 const config=JSON.parse(await readFile(new URL('../backend/wrangler.jsonc',import.meta.url),'utf8'));
-const questions=[{id:'smoke',stem:'What is 1 + 1?',options:[{id:'A',text:'2'},{id:'B',text:'3'}]}];
+const image=await readFile(new URL('../tests/fixtures/vision-smoke.png',import.meta.url));
+const questions=[{id:'smoke',stem:'Read the question and choices from the slide image.',options:[{id:'A',text:''},{id:'B',text:''}],image:{mimeType:'image/png',data:image.toString('base64')}}];
 try{
  const {answers,model}=await generateWithFallback(questions,{GEMINI_API_KEY:process.env.GEMINI_API_KEY,GEMINI_MODEL:config.vars.GEMINI_MODEL,GEMINI_FALLBACK_MODEL:config.vars.GEMINI_FALLBACK_MODEL},async(url,init)=>{
   const response=await fetch(url,init);
@@ -11,5 +12,5 @@ try{
   return response;
  });
  if(answers[0]?.answer!=='A')throw Error('Synthetic answer check did not pass.');
- console.log(`Gemini live structured-answer smoke test passed with ${model}.`);
+ console.log(`Gemini live image-answer smoke test passed with ${model}.`);
 }catch(error){console.error(error.message);process.exitCode=1}
