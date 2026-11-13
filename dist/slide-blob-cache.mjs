@@ -6,6 +6,7 @@ export function createSlideBlobCache({owner,load,storage=globalThis.caches,now=D
  async function trim(cache,key,size){indexPromise??=(async()=>new Map(await Promise.all((await cache.keys()).map(async request=>{const response=await cache.match(request);return [request.url||String(request),{size:Number(response?.headers.get('X-Bytes')||0),savedAt:Number(response?.headers.get('X-Saved-At')||0)}]}))))();const entries=await indexPromise;entries.delete(key);entries.set(key,{size,savedAt:now()});let total=[...entries.values()].reduce((n,e)=>n+e.size,0);for(const [old,entry]of entries){if(now()-entry.savedAt>ttl||total>maxBytes){await cache.delete(old);entries.delete(old);total-=entry.size}}}
  return {clear(){epoch++;pending.clear()},async get(q,options={}){
   const identity=owner();if(!identity||!q.url)return load(q,options);const run=epoch,key=await keyFor(q,identity);
+  if(run!==epoch)throw Error('Tài khoản Google đã thay đổi.');
   if(pending.has(key)){const shared=pending.get(key),blob=await shared;if(options.maxBytes&&blob.size>options.maxBytes){if(pending.get(key)===shared)pending.delete(key);return this.get(q,{...options,forceThumbnail:true})}return blob}
   const promise=(async()=>{
    const cache=await open();let cached,loadOptions=options;try{cached=await cache?.match(key)}catch{}
