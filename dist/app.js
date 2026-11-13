@@ -1,12 +1,12 @@
-import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-system-theme-1';
-import {setupResources} from './resources-ui.js?v=20261113-system-theme-1';
+import {shuffle,grade,answerQuestion,optionState,cleanQuestion,normalizeAnswer,isCorrect,confirmQuestion,updateQuestionContent} from './core.mjs?v=20261113-light-default-1';
+import {setupResources} from './resources-ui.js?v=20261113-light-default-1';
 import {presentationIdFromLink} from './resources.mjs';
-import {validateBank} from './banks.mjs?v=20261113-system-theme-1';
-import {setupAccount} from './account-ui.js?v=20261113-system-theme-1';
-import {AI_API_BASE} from './site-config.mjs?v=20261113-system-theme-1';
-import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-system-theme-1';
-import {createSlideImageStore} from './slide-images.mjs?v=20261113-system-theme-1';
-import {setupSlidePreview} from './slide-preview.mjs?v=20261113-system-theme-1';
+import {validateBank} from './banks.mjs?v=20261113-light-default-1';
+import {setupAccount} from './account-ui.js?v=20261113-light-default-1';
+import {AI_API_BASE} from './site-config.mjs?v=20261113-light-default-1';
+import {solveBatch,applyAiResults,readyForPractice,verifyOrSolveWithDirectGemini,blobToBase64} from './ai.mjs?v=20261113-light-default-1';
+import {createSlideImageStore} from './slide-images.mjs?v=20261113-light-default-1';
+import {setupSlidePreview} from './slide-preview.mjs?v=20261113-light-default-1';
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

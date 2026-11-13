@@ -1,6 +1,6 @@
 import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs';
 import {resolveGoogleClientId} from './site-config.mjs';
-import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-system-theme-1';
+import {detailsFromNotes,speakerNotesText,parsePresentation} from './core.mjs?v=20261113-light-default-1';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
