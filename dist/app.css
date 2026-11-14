@@ -672,3 +672,12 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
 
 @keyframes quizFadeSlide{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)}}.quiz-question-fade{animation:quizFadeSlide .15s ease}
 .sound-toggle-btn{width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,transform .1s}.sound-toggle-btn:hover{background:var(--panel);transform:scale(1.07)}
+/* Universal Upload Card Styles */
+.universal-upload-card{border-top:4px solid #10b981!important}
+.universal-upload-dropzone{border:2px dashed var(--line);border-radius:12px;padding:26px 20px;text-align:center;background:var(--panel2);display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;transition:border-color .2s,background .2s;margin-top:16px}
+.universal-upload-dropzone:hover,.universal-upload-dropzone.dragover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--panel2))}
+.dropzone-icon{font-size:36px;display:block;line-height:1}
+.dropzone-content{display:flex;flex-direction:column;gap:6px;align-items:center}
+.btn-choose-file{min-height:40px;padding:8px 20px;font-size:13px;font-weight:700;border-radius:9px;background:var(--accent);color:var(--accent-text);border:none;cursor:pointer;transition:transform .15s}
+.btn-choose-file:hover{transform:scale(1.03)}
+.universal-upload-status{margin-top:14px;padding:12px 14px;border-radius:9px;font-size:12.5px;background:var(--soft);border-left:3px solid var(--accent);color:var(--text);line-height:1.6}

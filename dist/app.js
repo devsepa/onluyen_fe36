@@ -1,3 +1,4 @@
+﻿import { parseExamFile } from './universal-parser.mjs';
 import {setupLibraryManager} from './library-manager.mjs';
 import {createLibraryMedia} from './library-media.mjs';
 import {createSlideBlobCache} from './slide-blob-cache.mjs';
@@ -217,7 +218,7 @@ async function questionBlob(q, options = {}) {
   try{const local=await libraryMedia.forQuestion(q);if(local)return local}catch{}
 
   return await (q.sharedDeck
-    ? publicSlideBlobs.get({...q,url:sharedImagePath(q)},options)
+    ? publicSlideBlobs.get({...q,url:new URL(sharedImagePath(q),AI_API_BASE).href},options)
     : resources.slideBlob(q, options));
   }catch(error){if(error.name!=='AbortError'){telemetry.record('image_error');error.imageReported=true}throw error}finally{telemetry.record('image_ms',performance.now()-started)}
 }
@@ -484,7 +485,7 @@ async function showQuestionImage(container, q) {
   container.append(loading);
   try {
     const url = await slideImages.get(q);
-    if (!container.isConnected) return;
+    if (!container.isConnected||container.dataset.offscreen==='true') return;
     const image = document.createElement("img");
     image.alt = "Slide " + q.slide;
     image.className = container.classList.contains("library-slide-media")
@@ -493,7 +494,7 @@ async function showQuestionImage(container, q) {
     image.dataset.previewSlide = q.id;
     image.title = "Bấm để phóng to ảnh gốc";
     const displayImage = () => {
-      if (container.isConnected) {
+      if (container.isConnected&&container.dataset.offscreen!=='true') {
         if(container.firstElementChild!==image)container.replaceChildren(image);
         fitSlideImage(container,image);
         text?.classList.add("collapsed-text");
@@ -551,14 +552,13 @@ function showSlideError(container, q) {
   link.textContent = "Mở slide gốc ↗";
   if (q.url) container.append(link);
 }
-async function loadLibrarySlideImages(qs) {
-  for (const q of qs) {
-    const container = document.querySelector(
-      '.library-slide-media[data-lib-slide="' + CSS.escape(q.id) + '"]',
-    );
-    if (!container?.isConnected) continue;
-    await showQuestionImage(container, q);
-  }
+let libraryImageObserver=null,libraryImageEpoch=0;
+function loadLibrarySlideImages(qs){
+ libraryImageObserver?.disconnect();const epoch=++libraryImageEpoch,queue=[],queued=new Set();let active=0;
+ function pump(){while(active<2&&queue.length&&!document.hidden&&epoch===libraryImageEpoch){const {q,container}=queue.shift();if(!container.isConnected||container.dataset.offscreen==='true'){queued.delete(container);continue}active++;showQuestionImage(container,q).finally(()=>{queued.delete(container);active--;pump()})}}
+ const byElement=new Map();for(const q of qs){const container=document.querySelector('.library-slide-media[data-lib-slide="'+CSS.escape(q.id)+'"]');if(!container)continue;if(!q.url&&!q.sharedDeck&&!q.mediaId){container.hidden=true;continue}container.dataset.deferred='true';byElement.set(container,q)}
+ if(typeof IntersectionObserver==='undefined'){for(const [container,q]of byElement){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Tải ảnh';button.onclick=()=>showQuestionImage(container,q);container.replaceChildren(button)}return}
+ libraryImageObserver=new IntersectionObserver(entries=>{for(const entry of entries){const container=entry.target;if(entry.isIntersecting){delete container.dataset.offscreen;if(!container.querySelector('img')&&!queued.has(container)){queued.add(container);queue.push({container,q:byElement.get(container)})}}else{container.dataset.offscreen='true';container.replaceChildren()}}pump()},{rootMargin:resourcePolicy.economy?'160px':'400px'});for(const container of byElement.keys())libraryImageObserver.observe(container);
 }
 function renderLibrary() {
   libraryManager?.render();
@@ -1999,8 +1999,8 @@ window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='stud
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
 document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
-mountResourceControl(resourcePolicy);resourcePolicy.subscribe(()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
-document.addEventListener("visibilitychange", updateTimer);
+explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy);resourcePolicy.subscribe(()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
+
 refreshStats();
 switchView(session && !session.done ? "practice" : view);
 if (session && !session.done) startSessionPreload(session.questions);
@@ -2037,3 +2037,68 @@ window.addEventListener("beforeunload", (e) => {
     e.returnValue = "";
   }
 });
+
+// Register after initial rendering; activation never clears image/archive stores.
+if('serviceWorker' in navigator){const registerOffline=()=>navigator.serviceWorker.register(new URL('sw.js',document.baseURI)).catch(()=>{});if(document.readyState==='complete')registerOffline();else window.addEventListener('load',registerOffline,{once:true})}
+
+// Universal File Upload Handler (PDF, Images, Text)
+(function initUniversalUpload() {
+  const dropzone = document.getElementById('universalDropzone');
+  const fileInput = document.getElementById('universalFileInput');
+  const chooseBtn = document.getElementById('btnChooseUniversalFile');
+  const statusEl = document.getElementById('universalUploadStatus');
+  if (!dropzone || !fileInput) return;
+
+  chooseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files?.length) handleFiles(fileInput.files);
+  });
+
+  async function handleFiles(fileList) {
+    statusEl.hidden = false;
+    let addedCount = 0;
+    const errors = [];
+
+    for (const file of fileList) {
+      statusEl.textContent = `Đang xử lý ${file.name}…`;
+      try {
+        const questions = await parseExamFile(file, {
+          aiBase: AI_API_BASE,
+          onProgress: (msg) => { statusEl.textContent = `${file.name}: ${msg}`; }
+        });
+
+        if (questions?.length) {
+          bank = mergeQuestionBanks(bank, questions.map(cleanQuestion));
+          write('sot-bank', bank);
+          addedCount += questions.length;
+        }
+      } catch (err) {
+        errors.push(`${file.name}: ${err.message}`);
+      }
+    }
+
+    renderBank();
+    renderPractice();
+    quizSound?.celebrate?.();
+    let msg = `Đã nhập thành công ${addedCount} câu hỏi vào ngân hàng!`;
+    if (errors.length) msg += ` (Lỗi một số file: ${errors.join('; ')})`;
+    statusEl.textContent = msg;
+    fileInput.value = '';
+  }
+})();
