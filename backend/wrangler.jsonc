@@ -2,6 +2,7 @@
   "name": "onluyen-fe36-ai",
   "main": "worker.mjs",
   "compatibility_date": "2026-11-13",
+  "compatibility_flags": ["global_fetch_strictly_public"],
   "workers_dev": true,
   "vars": {
     "ALLOWED_ORIGINS": "https://devsepa.github.io",

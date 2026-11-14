@@ -71,7 +71,7 @@ export async function preparationRoute(request,env,cors){
  if(!env.DECK_PREPARATION)return wrap(Response.json({error:'Đang chuẩn bị tính năng.'},{status:503}));
  const url=new URL(request.url),id=url.pathname.split('/')[3];
  if(request.method==='GET'&&!id){
-  try{const decks=await preparationCatalog(env),jobs=await Promise.all(decks.map(async deck=>({id:deck.id,title:deck.title,total:deck.count,...await(await object(env,deck.id).fetch('https://preparation/status')).json()})));return wrap(Response.json({jobs,automatic:env.PREPARE_PUBLIC_DECKS==='true'}))}catch{return wrap(Response.json({error:'Chưa tải được tiến độ chuẩn bị.'},{status:503}))}
+  try{const decks=await preparationCatalog(env),jobs=await Promise.all(decks.map(async deck=>({id:deck.id,title:deck.title,total:deck.count,...await(await object(env,deck.id).fetch('https://preparation/status')).json()})));return wrap(Response.json({jobs,automatic:env.PREPARE_PUBLIC_DECKS==='true'}))}catch(error){return wrap(Response.json({error:error.status?error.message:'Chưa tải được tiến độ chuẩn bị.',code:error.status?'PREPARATION_SOURCE_'+error.status:'PREPARATION_STATUS_UNAVAILABLE'},{status:503}))}
  }
  if(!UUID.test(id||''))return wrap(Response.json({error:'Bộ đề không hợp lệ.'},{status:400}));
  if(request.method==='GET')return wrap(await object(env,id).fetch('https://preparation/status'));
