@@ -1,5 +1,5 @@
-import {sha256,imageMime,MAX_IMAGE_BYTES,validMediaId} from './library-data.mjs';
-import {bankQuestionKey} from './bank-merge.mjs';
+import {sha256,imageMime,MAX_IMAGE_BYTES,validMediaId} from './library-data.mjs?v=2026.11.14.32';
+import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.14.32';
 export function createLibraryMedia({indexedDB=globalThis.indexedDB}={}){
  let opened,persistence;
  const open=()=>opened??=new Promise((resolve,reject)=>{if(!indexedDB)return reject(Error('Trình duyệt chưa cho phép lưu ảnh.'));const request=indexedDB.open('sot-library-media-v1',2);request.onupgradeneeded=()=>{for(const name of ['images','links'])if(!request.result.objectStoreNames.contains(name))request.result.createObjectStore(name)};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(Error('Không mở được bộ nhớ ảnh trên thiết bị.'));request.onblocked=()=>reject(Error('Hãy đóng tab ôn luyện cũ rồi thử lại.'))});

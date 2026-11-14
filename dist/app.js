@@ -1,20 +1,20 @@
-import { parseExamFile } from './universal-parser.mjs';
-import {setupLibraryManager} from './library-manager.mjs';
-import {createLibraryMedia} from './library-media.mjs';
-import {createSlideBlobCache} from './slide-blob-cache.mjs';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs';
-import {createStudySelection} from './study-selection.mjs';
-import {createTelemetry} from './telemetry.mjs';
-import {setupQuality} from './quality-ui.mjs';
-import {createBankTracker} from './library-data.mjs';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs';
-import {createExplanationQueue} from './explanation-queue.mjs';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=20261114-cache-exp';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=20261114-sound-footer-2';
-import {setupVersionUpdates} from './version-updates.mjs';
-import { askConfirm } from "./confirm-dialog.mjs";
-import { practiceSubjects, subjectKey } from "./subjects.mjs";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs";
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.14.32';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.14.32';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.14.32';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.14.32';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.14.32';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.14.32';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.14.32';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.14.32';
+import {createBankTracker} from './library-data.mjs?v=2026.11.14.32';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.14.32';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.14.32';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.14.32';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.14.32';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.14.32';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.14.32";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.14.32";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.14.32";
 import {
   shuffle,
   grade,
@@ -25,29 +25,29 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=20261113-background-publish-1";
-import { setupResources } from "./resources-ui.js?v=multi-bank-1";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs';
-import { presentationIdFromLink } from "./resources.mjs";
-import { validateBank } from "./banks.mjs?v=20261113-background-publish-1";
-import { setupAccount } from "./account-ui.js?v=20261113-background-publish-1";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=20261113-background-publish-1";
+} from "./core.mjs?v=2026.11.14.32";
+import { setupResources } from "./resources-ui.js?v=2026.11.14.32";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.14.32';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.14.32";
+import { validateBank } from "./banks.mjs?v=2026.11.14.32";
+import { setupAccount } from "./account-ui.js?v=2026.11.14.32";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.14.32";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=study-speed-1";
-import { createSlideImageStore } from "./slide-images.mjs?v=20261113-background-publish-1";
-import { setupSlidePreview } from "./slide-preview.mjs?v=20261113-background-publish-1";
+} from "./ai.mjs?v=2026.11.14.32";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.14.32";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.14.32";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=merge-practice-1";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=study-speed-1";
-import { createQuizSound } from "./quiz-sound.mjs?v=20261114-sound-footer-2";
-import { setupSidebar } from "./sidebar.mjs";
+} from "./shared-decks.mjs?v=2026.11.14.32";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.14.32";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.14.32";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.14.32";
 
 const $ = (id) => document.getElementById(id);
 const quizAccountControl=document.querySelector('.account-control'),accountHome=document.querySelector('.top-actions');
@@ -582,7 +582,7 @@ function renderLibrary() {
     `${all.length} câu hỏi${all.length ? ` · Hiển thị ${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, all.length)}` : ""}`;
   $("exportBank").disabled = !bank.length;
   $("verifyPage").disabled = !qs.some((q) => q.answer && !q.verified);
-  $("clear").disabled = !bank.length || aiRunning;
+  $("clear").disabled = !$("sourceFilter").value || !bank.length || aiRunning;
   renderAi();
   $("questions").innerHTML = qs.length
     ? qs
@@ -656,8 +656,9 @@ $("questions").onclick = async (e) => {
     q.verified = !q.verified;
   }
   if (button.dataset.delete) {
-    if (!await askConfirm("Xóa câu hỏi này khỏi ngân hàng?", { title: "Xóa câu hỏi", danger: true, okText: "Xóa" })) return;
-    bank = bank.filter((q) => q.id !== id);
+    await libraryManager?.deleteQuestions(item=>item.id===id,`câu hỏi ở slide ${q.slide||1}`);
+    return;
+
   }
   saveBank();
 };
@@ -985,17 +986,9 @@ notesButton.onclick = async () => {
   }
 };
 $("clear").onclick = async () => {
-  if (
-    await askConfirm(
-      "Xóa ngân hàng câu hỏi trên thiết bị này? Lịch sử bài làm vẫn được giữ.",
-      { title: "Xóa ngân hàng câu hỏi", danger: true, okText: "Xóa tất cả" }
-    )
-  ) {
-    bank = [];
-    sourceSummary = "";
-    write("sot-source", "");
-    saveBank();
-  }
+  const selected=bank.find(q=>q.sourceId===$("sourceFilter").value);
+  if(!selected)return message('Chọn một tài liệu hoặc dùng nút Xóa môn trong Thư viện theo môn.','library');
+  await libraryManager?.deleteSubject(subjectKey(selected));
 };
 function editQuestion(q) {
   editing = q.id;
@@ -1989,6 +1982,7 @@ for (const [key, value] of [
   if (originalStorage.get(key) !== JSON.stringify(value)) write(key, value);
 libraryManager=setupLibraryManager({base:DATA_API_BASE,getBank:()=>bank,getGeneration:()=>libraryGeneration,getToken:()=>resources.apiToken(),getBlob:questionBlob,getDetails:q=>hasSpeakerNoteExplanation(q)?null:explanationQueue.state(q).details,media:libraryMedia,
  setBank:questions=>{if(!write('sot-bank',questions))return false;bank=questions;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);refreshStats();if(view==='library')renderLibrary();else if(view==='practice'&&(!session||session.done))renderPractice();return true},
+ getRecoveryQuestions:()=>[...(session?.questions||[]),...history.flatMap(result=>result.questions||[])],
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
  onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);

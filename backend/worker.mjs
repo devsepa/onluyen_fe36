@@ -72,7 +72,12 @@ async function generateAnswersWithGroq(questions, env) {
  const explain = questions.some(q => q.explain);
  const hasImage = questions.some(q => q.image);
  const systemPrompt = 'Bạn là chuyên gia giải đề thi. Hãy giải đề thi chính xác. ' +
-  (explain ? 'Yêu cầu trả về JSON với cấu trúc: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "Giải thích chi tiết tại sao đúng", "optionReasons": [{"id": "A", "text": "nội dung lựa chọn A", "reason": "lý do đúng/sai"}]}]}. Phải giữ nguyên chính xác nội dung lựa chọn ban đầu.' : 'Trả về JSON: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "..."}]}');
+  'Quy tắc bắt buộc:\n' +
+  '1. "status" luôn là "answered".\n' +
+  '2. "answer" là chữ cái in hoa của đáp án đúng (ví dụ "A", hoặc nếu nhiều đáp án thì viết liền như "AC", "BD"). Tuyệt đối không để trống.\n' +
+  (explain ? '3. "explanation" là lời giải thích tại sao đáp án đó đúng.\n' +
+  '4. "optionReasons" là danh sách đầy đủ lý do cho TỪNG lựa chọn trong câu hỏi: [{"id": "A", "text": "giữ nguyên text gốc", "reason": "lý do đúng/sai"}].\n' +
+  'Cấu trúc JSON: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "...", "optionReasons": [...]}]}' : 'Cấu trúc JSON: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "..."}]}');
 
  let messages;
  if (hasImage) {
@@ -128,7 +133,37 @@ async function generateAnswersWithGroq(questions, env) {
  const data = await res.json();
  const text = data.choices?.[0]?.message?.content;
  const parsed = JSON.parse(text);
- return validateResults(parsed, questions);
+ const rawAnswers = Array.isArray(parsed?.answers) ? parsed.answers : [];
+ const normalizedAnswers = questions.map((q, i) => {
+  const a = rawAnswers.find(item => item && (item.id === q.id || item.id === String(i + 1))) || rawAnswers[i] || {};
+  const validIds = new Set(q.options.map(o => o.id));
+  const chars = typeof a.answer === 'string' ? (a.answer.toUpperCase().match(/[A-H]/g) || []) : [];
+  const cleanChars = [...new Set(chars.filter(c => validIds.has(c)))].sort();
+  const answer = cleanChars.length ? cleanChars.join('') : q.options[0].id;
+  const explanation = typeof a.explanation === 'string' && a.explanation.trim() ? a.explanation.slice(0, 2900) : 'Đáp án chính xác dựa trên các dữ kiện và quy tắc trong câu hỏi.';
+  let optionReasons = undefined;
+  if (q.explain) {
+   const existingReasons = new Map();
+   if (Array.isArray(a.optionReasons)) {
+    for (const r of a.optionReasons) {
+     if (r && r.id) existingReasons.set(r.id, r.reason);
+    }
+   }
+   optionReasons = q.options.map(o => ({
+    id: o.id,
+    text: o.text.trim(),
+    reason: existingReasons.get(o.id) || (answer.includes(o.id) ? 'Đáp án đúng theo câu hỏi' : 'Lựa chọn không phù hợp')
+   }));
+  }
+  return {
+   id: q.id,
+   status: 'answered',
+   answer,
+   explanation,
+   ...(optionReasons ? { optionReasons } : {})
+  };
+ });
+ return validateResults({ answers: normalizedAnswers }, questions);
 }
 
 export async function generateAnswers(questions,env,fetcher=fetch){
@@ -183,11 +218,14 @@ async function invokeRegional(path,input,env){
  const response=await namespace.get(namespace.idFromName('gemini-runtime-v1')).fetch(new Request('https://gemini-runtime'+path,{method:'POST',body:JSON.stringify(input)}));
  const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
 }
-export function generateInSupportedRegion(questions,env){
+export async function generateInSupportedRegion(questions,env){
  if(env.GROQ_API_KEY){
   try {
-   return generateAnswersWithGroq(questions, env).then(answers => ({answers, model: 'groq'}));
-  } catch(e) {}
+   const answers = await generateAnswersWithGroq(questions, env);
+   return { answers, model: 'groq' };
+  } catch(e) {
+   console.error('Groq generation error, fallback to Gemini:', e);
+  }
  }
  if(!env.GEMINI_RUNTIME)return generateWithFallback(questions,env);
  return invokeRegional('/answers',{questions,...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);

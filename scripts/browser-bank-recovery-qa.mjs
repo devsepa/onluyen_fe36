@@ -1,0 +1,53 @@
+﻿import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {GOOGLE_CLIENT_ID} from '../dist/site-config.mjs';
+const pages=await(await fetch('http://127.0.0.1:9228/json/list')).json();
+const ws=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);
+let id=0;const pending=new Map(),errors=[];
+ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails.exception?.description)};
+const call=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}))});
+const run=async expression=>{const r=await call('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||r.exceptionDetails.text);return r.result.value};
+const pause=ms=>new Promise(r=>setTimeout(r,ms));
+const wait=async expression=>{for(let i=0;i<100;i++){if(await run(expression))return;await pause(60)}throw Error('Timed out: '+expression+' '+JSON.stringify({errors,ui:await run(`({dialog:document.querySelector('.library-recovery-dialog')?.textContent,status:document.querySelector('.library-operation-status')?.textContent,bank:JSON.parse(localStorage.getItem('sot-bank')).length})`)}))};
+const question=(source,slide)=>({id:source+slide,sourceId:source,sourceName:source,slide,url:'',stem:'原文 câu hỏi '+slide,options:[{id:'A',text:'Một'},{id:'B',text:'Hai'}],answer:'AB',verified:true,answerSource:'manual',explanation:'Giải thích gốc'});
+const bank=[question('semester_DBI202',1),question('other_DBI202',2),question('JPD113',1)],oldQuestion=question('PRN212',1);
+await call('Runtime.enable');await mkdir('outputs/bank-recovery',{recursive:true});
+await call('Network.setBypassServiceWorker',{bypass:true});
+await call('Page.addScriptToEvaluateOnNewDocument',{source:`
+window.google={accounts:{oauth2:{revoke(){},hasGrantedAllScopes:()=>true}}};
+const nativeFetch=fetch;window.fetch=(url,init)=>{const address=String(url);if(address==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa-recovery',name:'QA',email:'recovery-qa@example.com'}));if(address.startsWith('https://www.googleapis.com/drive/v3/files?'))return Promise.resolve(Response.json({files:[]}));return nativeFetch(url,init)};
+sessionStorage.setItem('sot-google-session',JSON.stringify({token:'qa-placeholder',expires:Date.now()+3600000,profile:{name:'QA',email:'recovery-qa@example.com'},clientId:${JSON.stringify(GOOGLE_CLIENT_ID)}}));
+`});
+await call('Page.navigate',{url:'http://localhost:8080'});await wait(`location.origin==='http://localhost:8080'&&!!document.querySelector('#recoverDeletedBank')`);
+await run(`localStorage.setItem('sot-bank',JSON.stringify(${JSON.stringify(bank)}));localStorage.removeItem('sot-session');localStorage.setItem('sot-history',JSON.stringify([{id:'old-result',questions:[${JSON.stringify(oldQuestion)}],answers:{},correct:0,finished:Date.now(),mode:'study'}]));location.reload()`);
+await pause(300);await wait(`!!document.querySelector('#recoverDeletedBank')`);
+if(await run(`document.querySelector('#sourceControls').hidden`))await run(`window.google={accounts:{oauth2:{initTokenClient:settings=>({requestAccessToken:()=>settings.callback({access_token:'qa-placeholder',expires_in:3600})}),hasGrantedAllScopes:()=>true,revoke(){}}}};document.querySelector('#accountButton').click();document.querySelector('#accountLogin').click()`);
+await wait(`!document.querySelector('#sourceControls').hidden`);
+await run(`document.querySelector('[data-view="library"]').click()`);
+assert.equal(await run(`document.querySelector('#clear').disabled`),true);
+await run(`document.querySelector('#sourceFilter').value='semester_DBI202';document.querySelector('#sourceFilter').dispatchEvent(new Event('change'));document.querySelector('#clear').click()`);
+await wait(`!!document.querySelector('dialog[open]')`);
+assert.match(await run(`document.querySelector('dialog[open]').textContent`),/2 câu.*DBI202/s);
+await run(`document.querySelector('dialog[open] .confirm-btn-ok').click()`);
+await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===1`);
+assert.equal(await run(`JSON.parse(localStorage.getItem('sot-bank'))[0].sourceName`),'JPD113');
+await run(`location.reload()`);await pause(300);await wait(`!!document.querySelector('#recoverDeletedBank')`);
+if(await run(`document.querySelector('#sourceControls').hidden`))await run(`window.google={accounts:{oauth2:{initTokenClient:settings=>({requestAccessToken:()=>settings.callback({access_token:'qa-placeholder',expires_in:3600})}),hasGrantedAllScopes:()=>true,revoke(){}}}};document.querySelector('#accountButton').click();document.querySelector('#accountLogin').click()`);
+await wait(`!document.querySelector('#sourceControls').hidden`);await run(`document.querySelector('[data-view="library"]').click()`);await pause(250);await run(`document.querySelector('#recoverDeletedBank').click()`);
+await wait(`document.querySelector('.library-recovery-dialog .subject-library-card button')?.textContent.includes('2 câu')`);
+for(const theme of ['light','dark'])for(const width of [1440,390,320]){
+ await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<900});
+ await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)}`);
+ const bounds=await run(`(()=>{const d=document.querySelector('.library-recovery-dialog'),r=d.getBoundingClientRect();return {left:r.left,right:r.right,bottom:r.bottom,top:r.top,sw:d.scrollWidth,cw:d.clientWidth,w:innerWidth,h:innerHeight}})()`);
+ assert.ok(bounds.left>=0&&bounds.right<=bounds.w+1&&bounds.top>=0&&bounds.bottom<=bounds.h+1&&bounds.sw<=bounds.cw+1,JSON.stringify(bounds));
+ const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/bank-recovery/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
+}
+await run(`document.querySelector('.library-recovery-dialog .subject-library-card button').click()`);await wait(`!!document.querySelector('dialog[open] .confirm-btn-ok')`);await run(`document.querySelector('dialog[open] .confirm-btn-ok').click()`);
+await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===3`);
+assert.equal(await run(`JSON.parse(localStorage.getItem('sot-bank')).find(q=>q.id==='semester_DBI2021').answer`),'AB');
+await wait(`document.querySelector('.library-recovery-dialog .subject-library-card button')?.textContent.includes('1 câu')`);
+await run(`document.querySelector('.library-recovery-dialog .subject-library-card button').click()`);await wait(`!!document.querySelector('dialog[open] .confirm-btn-ok')`);await run(`document.querySelector('dialog[open] .confirm-btn-ok').click()`);
+await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===4`);
+assert.equal(await run(`JSON.parse(localStorage.getItem('sot-history')).length`),1);
+assert.deepEqual(errors,[]);ws.close();console.log('Subject-scoped deletion, durable undo after reload, legacy history recovery, and 6 desktop/mobile theme checks passed.');
+

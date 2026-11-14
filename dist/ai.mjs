@@ -1,4 +1,4 @@
-import {validateOptionReasons} from './explanation-data.mjs';
+import {validateOptionReasons} from './explanation-data.mjs?v=2026.11.14.32';
 const validSet=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 export function questionFingerprint(q){return JSON.stringify([q.sourceId,q.url,q.stem,q.options.map(o=>[o.id,o.text])])}
 export function readyForPractice(q){return !!q.answer&&(q.verified===true||q.answerSource==='gemini')}

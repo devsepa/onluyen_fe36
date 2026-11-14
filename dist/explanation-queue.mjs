@@ -1,4 +1,4 @@
-import {explanationKey,validateOptionReasons} from './explanation-data.mjs';
+import {explanationKey,validateOptionReasons} from './explanation-data.mjs?v=2026.11.14.32';
 export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,now=Date.now}={}){
  const cache=new Map(),states=new Map(),jobs=new Map(),queue=[],invalid=new Set();let running=null,blocked=null,disposed=false,paused=false;
  try{for(const [key,value]of JSON.parse(storage?.getItem('sot-explanation-cache-v1')||'[]').slice(-limit)){
