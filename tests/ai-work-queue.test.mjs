@@ -6,6 +6,18 @@ import {StoredExplanationCache,explainWithSharedCache} from '../backend/explanat
 import {validateResults} from '../backend/worker.mjs';
 class Memory{constructor(){this.data=new Map()}async get(key){return structuredClone(this.data.get(key))}async put(key,value){this.data.set(key,structuredClone(value))}}
 const request=(id,background=false)=>new Request('https://queue/generate',{method:'POST',body:JSON.stringify({background,questions:[{id,stem:'private input '+id,options:[],explain:true}]})});
+test('background work leaves half the daily budget for study and yields after study activity',async()=>{
+ const storage=new Memory();let clock=100000,calls=0;
+ const queue=new StoredAIWorkQueue({storage},{GLOBAL_DAILY_QUESTIONS:'2'},async()=>{calls++;return {answers:[]}},{now:()=>clock,sleep:async ms=>{clock+=ms}});
+ assert.equal((await queue.fetch(request('prepare',true))).status,200);
+ clock+=60000;
+ assert.equal((await queue.fetch(request('prepare2',true))).status,429);
+ assert.equal((await queue.fetch(request('study'))).status,200);
+ assert.equal((await queue.fetch(request('prepare3',true))).status,429);
+ assert.equal(calls,2);
+ const reloaded=new StoredAIWorkQueue({storage},{},async()=>{throw Error('must yield')},{now:()=>clock});
+ assert.equal((await reloaded.fetch(request('prepare4',true))).status,429);
+});
 test('global queue serializes users, spaces actual calls and stores only scheduling metadata',async()=>{
  const storage=new Memory();let clock=100000,calls=0,active=0,maxActive=0,release;const starts=[];
  const queue=new StoredAIWorkQueue({storage},{},async qs=>{calls++;active++;maxActive=Math.max(active,maxActive);starts.push(clock);if(calls===1)await new Promise(r=>release=r);active--;return {answers:qs.map(q=>({id:q.id}))}},{now:()=>clock,sleep:async ms=>{clock+=ms}});

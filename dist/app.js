@@ -300,6 +300,7 @@ function switchView(next, mode) {
     view === "practice" && !!session && !session.done,
   );
   for (const id of Object.keys(pageInfo)) $(id).hidden = id !== view;
+  if ($("topbarClock")) $("topbarClock").style.display = view === "shared" ? "" : "none";
   const activeNav = view === "result" ? "history" : (view === "practice" ? "shared" : view);
   document.querySelectorAll("[data-view].nav").forEach((button) => {
     button.classList.toggle("active", button.dataset.view === activeNav);
@@ -1605,7 +1606,6 @@ function renderQuiz() {
       <div class="quiz-head-center">
         <div class="quiz-progress-pill"><span class="progress-target-icon">🎯</span><small id="progress"></small></div>
         <div class="quiz-clock" ${study ? 'hidden style="display:none !important;"' : ""}><small>${study ? "Thời gian" : "Còn lại"}</small><div class="timer" id="timer"></div></div>
-        <div class="quiz-clock-mount">${renderClockPillHtml()}</div>
       </div>
       <div class="quiz-head-actions">
         <button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button>

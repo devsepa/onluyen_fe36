@@ -13,6 +13,8 @@ export class StoredAIWorkQueue{
    if(new URL(request.url).pathname==='/status')return Response.json({pending:this.pending.length,running:this.running,nextAt:this.schedule.nextAt,cooldownUntil:this.schedule.cooldownUntil});
    const input=await request.json();if(!Array.isArray(input.questions)||input.questions.length<1||input.questions.length>5)return Response.json({error:'Invalid work request'},{status:400});
    if(this.schedule.cooldownUntil>this.now())throw new WorkQueueError(429,'AI đang nghỉ theo hạn mức chung.',Math.ceil((this.schedule.cooldownUntil-this.now())/1000));
+   if(!input.background){this.schedule.lastStudyAt=this.now();await this.storage.put('schedule',this.schedule)}
+   if(input.background&&this.schedule.lastStudyAt&&this.now()-this.schedule.lastStudyAt<120000)throw new WorkQueueError(429,'Đang ưu tiên giải thích câu đang học. Kho chung sẽ chuẩn bị tiếp sau.',120);
    if(this.pending.length>=4||input.background&&(this.running||this.pending.length))throw new WorkQueueError(429,'Đang ưu tiên câu hỏi của người làm bài. Sẽ chuẩn bị tiếp sau.',60);
    return await new Promise(resolve=>{this.pending.push({input,resolve,createdAt:this.now()});this.pump()});
   }catch(error){return this.failure(error)}
@@ -29,11 +31,14 @@ export class StoredAIWorkQueue{
     if(wait>30000||now-job.createdAt>30000)throw new WorkQueueError(429,'AI đang xếp hàng xử lý. Bạn có thể làm tiếp rồi thử lại.',Math.max(1,Math.ceil(wait/1000)));
     if(wait)await this.sleep(wait);
     now=this.now();const day=new Date(now).toISOString().slice(0,10);if(this.schedule.day!==day){this.schedule.day=day;this.schedule.used=0}
+    const backgroundLimit=Math.floor(number(this.env.GLOBAL_DAILY_QUESTIONS,1000)*0.5);
+    if(job.input.background&&(this.schedule.backgroundDay===day?this.schedule.backgroundUsed||0:0)+job.input.questions.length>backgroundLimit)throw new WorkQueueError(429,'Đã dành phần hạn mức còn lại cho người đang học.',Math.ceil((Date.parse(day+'T00:00:00Z')+86402000-now)/1000));
     if(this.schedule.used+job.input.questions.length>number(this.env.GLOBAL_DAILY_QUESTIONS,1000)){
      this.schedule.cooldownUntil=Date.parse(day+'T00:00:00Z')+86402000;await this.storage.put('schedule',this.schedule);throw new WorkQueueError(429,'Đã dùng hết lượt AI trong ngày.',Math.ceil((this.schedule.cooldownUntil-now)/1000));
     }
     const vision=job.input.questions.some(q=>q.image),spacing=vision?number(this.env.AI_IMAGE_INTERVAL_MS,60000):number(this.env.AI_TEXT_INTERVAL_MS,15000);
     this.schedule.nextAt=now+spacing;this.schedule.used+=job.input.questions.length;await this.storage.put('schedule',this.schedule);
+    if(job.input.background){if(this.schedule.backgroundDay!==day){this.schedule.backgroundDay=day;this.schedule.backgroundUsed=0}this.schedule.backgroundUsed+=job.input.questions.length;await this.storage.put('schedule',this.schedule)}
     try{
      const result=await this.generate(job.input.questions,this.env);this.schedule.failures=0;this.schedule.cooldownUntil=0;await this.storage.put('schedule',this.schedule);job.resolve(Response.json(result));
     }catch(error){

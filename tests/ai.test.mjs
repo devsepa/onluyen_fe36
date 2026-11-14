@@ -1,9 +1,12 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import worker,{validateQuestions,validateResults,generateAnswers,generateWithFallback,AIQuota} from '../backend/worker.mjs';
+import worker,{validateQuestions,validateResults,generateAnswers,generateAnswersWithGroq,generateWithFallback,AIQuota} from '../backend/worker.mjs';
 import {applyAiResults,solveBatch,readyForPractice} from '../dist/ai.mjs';
 const q=()=>({id:'q1',sourceId:'slide',url:'https://docs.google.com/presentation/d/slide/edit#slide=id.s1',stem:'Which clause filters groups?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}],answer:'',verified:false});
 const answered=()=>({id:'q1',status:'answered',answer:'B',explanation:'HAVING lọc các nhóm.'});
+test('Groq quota failures retain cooldown and do not expose provider response bodies',async()=>{
+ await assert.rejects(()=>generateAnswersWithGroq([q()],{GROQ_API_KEY:'private'},async()=>Response.json({error:'private provider detail'},{status:429,headers:{'Retry-After':'120'}})),error=>error.status===429&&error.retryAfterSeconds===120&&!error.message.includes('private'));
+});
 test('batch validation limits spend and strips identity/source fields from model input',()=>{
  const result=validateQuestions({questions:[{...q(),token:'private'}]});assert.equal(result[0].token,undefined);assert.equal(result[0].url,undefined);
  assert.throws(()=>validateQuestions({questions:Array.from({length:6},q)}));assert.throws(()=>validateQuestions({questions:[q(),q()]}));

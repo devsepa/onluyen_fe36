@@ -687,8 +687,9 @@ body.quiz-active .quiz-head-actions .avatar:hover {
     order: 1 !important;
     width: 100% !important;
     display: flex !important;
-    justify-content: space-between !important;
+    justify-content: center !important;
     align-items: center !important;
+    gap: 10px !important;
   }
   body.quiz-active .quiz-head-actions {
     order: 3 !important;

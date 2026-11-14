@@ -82,7 +82,10 @@ export async function generateAnswersWithGroq(questions,env,fetcher=fetch){
   method:'POST',headers:{Authorization:'Bearer '+env.GROQ_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
   body:JSON.stringify({model:vision?'qwen/qwen3.8-27b':'openai/gpt-oss-20b',messages:[{role:'system',content:answerPolicy({explain,vision})},{role:'user',content:vision?content:content.map(p=>p.text).join('\n')}],response_format:{type:'json_object'},temperature:0.1,max_tokens:3000})
  })}catch(err){console.error('GROQ_FETCH_ERROR',err);throw new ApiError(504,'AI phản hồi chậm. Chưa thay đổi đáp án; hãy thử lại sau.')}
- if(!response.ok){const errBody=await response.text();console.error('GROQ_RESPONSE_NOT_OK',response.status,errBody);throw new ApiError(502,'Groq error: '+response.status+' - '+errBody)}
+ if(!response.ok){
+  if(response.status===429)throw rateLimit(response,'AI dự phòng đang chờ hạn mức xử lý phục hồi.');
+  throw new ApiError(502,'Dịch vụ AI dự phòng chưa xử lý được câu hỏi.');
+ }
  let parsed;try{const data=await response.json();if(data.choices?.[0]?.finish_reason!=='stop')throw Error('Incomplete');parsed=JSON.parse(data.choices[0].message.content)}catch{throw new ApiError(502,'AI trả thiếu hoặc sai định dạng. Không tự suy đoán đáp án.')}
  return validateResults(parsed,questions);
 }
@@ -210,7 +213,7 @@ export default {async fetch(request,env){
  }
  if(new URL(request.url).pathname!=='/v1/answers')return reply({error:'Không tìm thấy chức năng.'},404);
  if(request.method!=='POST')return reply({error:'Phương thức không hợp lệ.'},405);
- if(!env.GEMINI_API_KEY)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);
+ if(!env.GEMINI_API_KEY&&!env.GROQ_API_KEY)return reply({error:'Tính năng AI đang được chuẩn bị. Hãy thử lại sau.'},503);
  try{
   if(!request.headers.get('Content-Type')?.startsWith('application/json'))throw new ApiError(415,'Nội dung phải là JSON.');
   let body;try{body=JSON.parse(await readLimited(request,MAX_BODY))}catch(error){if(error instanceof ApiError)throw error;throw new ApiError(400,'Nội dung không đọc được.')}
@@ -242,10 +245,6 @@ export class ExplanationCache extends StoredExplanationCache{
 }
 
 export async function queuedAnswers(questions,env){
- if(env.GROQ_API_KEY&&!questions.every(q=>q.preparation===true)){
-  try{const answers=await generateAnswersWithGroq(questions,env);return{answers,model:'groq'}}
-  catch(e){console.warn('GROQ_DIRECT_FALLBACK',e.message)}
- }
  return throughWorkQueue(questions,env,generateInSupportedRegion,{background:questions.every(q=>q.preparation===true)})
 }
 export class AIWorkQueue extends StoredAIWorkQueue{constructor(state,env){super(state,env,generateInSupportedRegion)}}
