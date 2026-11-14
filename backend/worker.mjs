@@ -66,7 +66,49 @@ export function validateResults(data,questions){
  });
  return questions.map(q=>results.find(a=>a.id===q.id));
 }
+async function generateAnswersWithGroq(questions, env) {
+ const groqKey = env.GROQ_API_KEY;
+ if (!groqKey) throw new Error('GROQ_API_KEY is not configured');
+ const explain = questions.some(q => q.explain);
+ const systemPrompt = 'Bạn là chuyên gia giải đề thi. Hãy giải đề thi chính xác. ' +
+  (explain ? 'Yêu cầu trả về JSON với cấu trúc: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "Giải thích chi tiết tại sao đúng", "optionReasons": [{"id": "A", "text": "nội dung lựa chọn A", "reason": "lý do đúng/sai"}]}]}. Phải giữ nguyên chính xác nội dung lựa chọn ban đầu.' : 'Trả về JSON: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "..."}]}');
+
+ const prompt = questions.map(q => {
+  const choices = q.options.map(o => `${o.id}. ${o.text}`).join('\n');
+  return `ID: ${q.id}\nCâu hỏi: ${q.stem}\nLựa chọn:\n${choices}`;
+ }).join('\n---\n');
+
+ const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+   'Authorization': `Bearer ${groqKey}`,
+   'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+   model: 'openai/gpt-oss-120b',
+   messages: [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: prompt }
+   ],
+   response_format: { type: 'json_object' },
+   temperature: 0.2
+  })
+ });
+ if (!res.ok) throw new Error('Groq error: ' + res.status);
+ const data = await res.json();
+ const content = data.choices?.[0]?.message?.content;
+ const parsed = JSON.parse(content);
+ return validateResults(parsed, questions);
+}
+
 export async function generateAnswers(questions,env,fetcher=fetch){
+ if(env.GROQ_API_KEY && !questions.some(q => q.image)){
+  try {
+   return await generateAnswersWithGroq(questions, env);
+  } catch(e) {
+   // Fallback to Gemini if Groq fails
+  }
+ }
  const schema={type:'OBJECT',properties:{answers:{type:'ARRAY',items:{type:'OBJECT',properties:{id:{type:'STRING'},status:{type:'STRING',enum:['answered','uncertain']},answer:{type:'STRING'},explanation:{type:'STRING'}},required:['id','status','answer','explanation']}}},required:['answers']};
  const vision=questions.some(q=>q.image);
  const explain=questions.some(q=>q.explain);
@@ -112,6 +154,11 @@ async function invokeRegional(path,input,env){
  const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
 }
 export function generateInSupportedRegion(questions,env){
+ if(env.GROQ_API_KEY && !questions.some(q => q.image)){
+  try {
+   return generateAnswersWithGroq(questions, env).then(answers => ({answers, model: 'groq/gpt-oss-120b'}));
+  } catch(e) {}
+ }
  if(!env.GEMINI_RUNTIME)return generateWithFallback(questions,env);
  return invokeRegional('/answers',{questions,...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);
 }

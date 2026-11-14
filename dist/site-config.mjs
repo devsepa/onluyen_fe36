@@ -2,7 +2,7 @@
 // Never place a Client Secret or access token in this file.
 export const GOOGLE_CLIENT_ID='261764124421-b5g9ukdhg2t08emklkiiull4f06vktii.apps.googleusercontent.com';
 // Public Worker URL only. The Gemini key belongs in Worker Secrets.
-export const AI_API_BASE='';
+export const AI_API_BASE='https://onluyen-fe36-ai.nguyenduynd1805.workers.dev';
 
 export function resolveGoogleClientId(configured=GOOGLE_CLIENT_ID,storage){
  const valid=value=>typeof value==='string'&&/^[\w.-]+\.apps\.googleusercontent\.com$/.test(value.trim());
