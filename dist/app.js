@@ -1590,7 +1590,7 @@ function renderQuiz() {
       ? `<button type="button" class="secondary source-image-check" data-preview-slide="${esc(q.id)}" title="Phóng to ảnh gốc (Z)"><span class="zoom-text-full">Phóng to ảnh gốc 🔍</span><span class="zoom-text-short">🔍</span></button>`
       : "";
   $("practice").innerHTML =
-    `<div class="quiz-head"><div><span class="overline">${study ? "ÔN LUYỆN" : "THI THỬ"} · ${qs.length} CÂU HỎI</span><h2>${study ? "Ôn luyện" : "Thi thử"}</h2><small id="progress"></small></div><div class="quiz-clock" ${study ? 'hidden style="display:none !important;"' : ""}><small>${study ? "Thời gian đã học" : "Thời gian còn lại"}</small><div class="timer" id="timer"></div></div><div class="quiz-head-actions"><button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button><button id="submit">${study ? "Kết thúc" : "Nộp bài"} ↗</button></div></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div><span class="quiz-progress-pct" style="opacity:${pct>5?1:0}">${pct}%</span></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới"><span class="slide-link-full">Mở slide ↗</span><span class="slide-link-short">↗</span></a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}><span class="flag-text-full"> Đánh dấu xem lại</span><span class="flag-text-short"> Xem lại</span></label></div></div>${multiple ? '<p class="multi-hint">Chọn tất cả đáp án đúng.' + (study ? " Bấm Kiểm tra sau khi chọn xong." : " Có thể thay đổi lựa chọn trước khi nộp bài.") + "</p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}<div class="mobile-swipe-guide" aria-hidden="true"><span class="swipe-arrow">‹</span><span>Vuốt để chuyển câu</span><span class="swipe-arrow">›</span></div>${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}</article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
+    `<div class="quiz-head"><div><span class="overline">${study ? "ÔN LUYỆN" : "THI THỬ"} · ${qs.length} CÂU HỎI</span><h2>${study ? "Ôn luyện" : "Thi thử"}</h2><small id="progress"></small></div><div class="quiz-clock" ${study ? 'hidden style="display:none !important;"' : ""}><small>${study ? "Thời gian đã học" : "Thời gian còn lại"}</small><div class="timer" id="timer"></div></div><div class="quiz-head-actions"><button type="button" class="secondary quiz-toggle-map-btn" id="toggleMapBtn" title="Ẩn/Hiện danh sách câu hỏi">▤ Danh sách câu</button><button id="submit">${study ? "Kết thúc" : "Nộp bài"} ↗</button></div></div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div><span class="quiz-progress-pct" style="opacity:${pct>5?1:0}">${pct}%</span></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${multiple ? `<span class="badge-multi-select" title="Câu hỏi này có nhiều đáp án đúng">⚡ Chọn nhiều đáp án</span>` : ""}${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới"><span class="slide-link-full">Mở slide ↗</span><span class="slide-link-short">↗</span></a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}><span class="flag-text-full"> Đánh dấu xem lại</span><span class="flag-text-short"> Xem lại</span></label></div></div>${multiple ? '<p class="multi-hint"><span class="multi-hint-icon">⚡</span><span><strong>Chọn tất cả đáp án đúng:</strong> ' + (study ? "Tích chọn các ô đáp án rồi bấm Kiểm tra đáp án (Enter)." : "Có thể thay đổi lựa chọn trước khi nộp bài.") + "</span></p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}<div class="quiz-shortcuts-hint"><span class="shortcut-pill">1-4 / A-D: Chọn</span><span class="shortcut-pill">Enter: Tiếp tục</span><span class="shortcut-pill">← / →: Đổi câu</span><span class="shortcut-pill">Z: Phóng to</span></div><div class="mobile-swipe-guide" aria-hidden="true"><span class="swipe-arrow">‹</span><span>Vuốt để chuyển câu</span><span class="swipe-arrow">›</span></div>${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}</article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
   $('practice').dataset.questionId=q.id;
   fitQuizScreen({
     root: $("practice"),
@@ -1711,20 +1711,47 @@ window.addEventListener("keydown", (e) => {
     }
     return;
   }
+  const q = session.questions[session.current];
+  if (/^[1-8]$/.test(e.key)) {
+    const idx = Number(e.key) - 1;
+    if (q.options[idx]) {
+      e.preventDefault();
+      const btn = document.querySelector(`.choice-pill[data-o="${q.options[idx].id}"]`);
+      if (btn && !btn.disabled) btn.click();
+      return;
+    }
+  }
+  const option = q.options.find((o) => o.id.toUpperCase() === key);
+  if (option) {
+    e.preventDefault();
+    const btn = document.querySelector(`.choice-pill[data-o="${option.id}"]`);
+    if (btn && !btn.disabled) btn.click();
+    return;
+  }
+  if (e.key === "Enter" || e.key === " ") {
+    const checkBtn = $("checkMultiple");
+    if (checkBtn && !checkBtn.disabled) {
+      e.preventDefault();
+      checkBtn.click();
+      return;
+    }
+    if (
+      session.answers[q.id] &&
+      session.current < session.questions.length - 1
+    ) {
+      e.preventDefault();
+      session.current++;
+      write("sot-session", session);
+      renderQuiz();
+      return;
+    }
+  }
   if (key === "F") {
     e.preventDefault();
     const flagEl = $("flagCurrent");
     if (flagEl) {
       flagEl.checked = !flagEl.checked;
       flagEl.dispatchEvent(new Event("change"));
-    }
-    return;
-  }
-  if (key === "E") {
-    const expBtn = document.querySelector(".feedback-inline-exp");
-    if (expBtn) {
-      e.preventDefault();
-      expBtn.focus();
     }
     return;
   }
@@ -1736,32 +1763,13 @@ window.addEventListener("keydown", (e) => {
     }
     return;
   }
-  if (e.key === "Enter") {
-    const checkBtn = $("checkMultiple");
-    if (checkBtn && !checkBtn.disabled) {
+  if (key === "E" && !option) {
+    const expBtn = document.querySelector(".feedback-inline-exp");
+    if (expBtn) {
       e.preventDefault();
-      checkBtn.click();
-      return;
+      expBtn.focus();
     }
-    const q = session.questions[session.current];
-    if (
-      session.answers[q.id] &&
-      session.current < session.questions.length - 1
-    ) {
-      e.preventDefault();
-
-      session.current++;
-      write("sot-session", session);
-      renderQuiz();
-      return;
-    }
-  }
-  const q = session.questions[session.current];
-  const option = q.options.find((o) => o.id.toUpperCase() === key);
-  if (option) {
-    e.preventDefault();
-    const btn = document.querySelector(`.choice-pill[data-o="${option.id}"]`);
-    if (btn && !btn.disabled) btn.click();
+    return;
   }
 });
 let touchStartX = 0,
