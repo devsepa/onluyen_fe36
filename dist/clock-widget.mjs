@@ -2,13 +2,13 @@
 // Dynamic live clock with period styling, glowing borders, auto-sliding greetings, and floating weather icon
 
 const PERIODS = [
-  { id: 'midnight',  from:  0, to:  5, icon: '✨', greeting: 'Good Night! ✨' },
-  { id: 'dawn',      from:  5, to:  9, icon: '🌅', greeting: 'Good Morning! 🌅' },
-  { id: 'morning',   from:  9, to: 12, icon: '☀️', greeting: 'Good Morning! ☀️' },
+  { id: 'midnight',  from:  0, to:  5, icon: '✨', greeting: 'Good Night! 🌙' },
+  { id: 'dawn',      from:  5, to:  9, icon: '🌅', greeting: 'Good Morning! 🌿' },
+  { id: 'morning',   from:  9, to: 12, icon: '☀️', greeting: 'Good Morning! ⚡' },
   { id: 'noon',      from: 12, to: 14, icon: '🍱', greeting: 'Good Noon! 🍱' },
   { id: 'afternoon', from: 14, to: 18, icon: '🌦️', greeting: 'Good Afternoon! 🌿' },
-  { id: 'evening',   from: 18, to: 22, icon: '🌇', greeting: 'Good Evening! 🌇' },
-  { id: 'night',     from: 22, to: 24, icon: '🌙', greeting: 'Good Night! 🌙' },
+  { id: 'evening',   from: 18, to: 22, icon: '🌇', greeting: 'Good Evening! 🌿' },
+  { id: 'night',     from: 22, to: 24, icon: '🌙', greeting: 'Good Night! ✨' },
 ];
 
 export function getPeriod(h) {
@@ -44,26 +44,32 @@ export function renderClockPillHtml(extraClass = '') {
   `;
 }
 
-export function setupClockWidget() {
-  const widgets = document.querySelectorAll('.clock-widget, .tumadam-clock-pill');
-  if (!widgets.length) return () => {};
+let delegationAttached = false;
 
+export function setupClockWidget() {
   let lastPeriodId = null;
   let hideGreetingTimer = null;
 
+  function getAllWidgets() {
+    return document.querySelectorAll('.clock-widget, .tumadam-clock-pill');
+  }
+
   function triggerGreetingSlide() {
+    const widgets = getAllWidgets();
     widgets.forEach(w => {
       const g = w.querySelector('.clock-greeting');
-      if (g) {
-        g.classList.remove('hide');
-      }
+      if (g) g.classList.remove('hide');
     });
 
     if (hideGreetingTimer) clearTimeout(hideGreetingTimer);
     hideGreetingTimer = setTimeout(() => {
-      widgets.forEach(w => {
-        const g = w.querySelector('.clock-greeting');
-        if (g) g.classList.add('hide');
+      const activeWidgets = getAllWidgets();
+      activeWidgets.forEach(w => {
+        // Do not hide if currently hovered
+        if (!w.matches(':hover')) {
+          const g = w.querySelector('.clock-greeting');
+          if (g) g.classList.add('hide');
+        }
       });
     }, 8000);
   }
@@ -74,6 +80,7 @@ export function setupClockWidget() {
     const timeStr = formatTime(now);
     const tooltip = formatDateTooltip(now);
 
+    const widgets = getAllWidgets();
     widgets.forEach(w => {
       w.title = tooltip;
 
@@ -89,7 +96,7 @@ export function setupClockWidget() {
       }
 
       const greetEl = w.querySelector('.clock-greeting');
-      if (greetEl && !greetEl.dataset.customized) {
+      if (greetEl && !greetEl.dataset.customized && greetEl.textContent !== p.greeting) {
         greetEl.textContent = p.greeting;
       }
 
@@ -97,8 +104,8 @@ export function setupClockWidget() {
       if (iconEl) {
         const symbolEl = iconEl.querySelector('.clock-icon-symbol');
         if (symbolEl) {
-          symbolEl.textContent = p.icon;
-        } else {
+          if (symbolEl.textContent !== p.icon) symbolEl.textContent = p.icon;
+        } else if (iconEl.textContent !== p.icon) {
           iconEl.textContent = p.icon;
         }
       }
@@ -107,22 +114,35 @@ export function setupClockWidget() {
     lastPeriodId = p.id;
   }
 
-  // Hover or click to reveal greeting anytime
-  widgets.forEach(w => {
-    w.addEventListener('mouseenter', () => {
-      const g = w.querySelector('.clock-greeting');
-      if (g) g.classList.remove('hide');
-    });
-    w.addEventListener('mouseleave', () => {
-      const g = w.querySelector('.clock-greeting');
-      if (g) g.classList.add('hide');
-    });
-    w.addEventListener('click', () => {
-      triggerGreetingSlide();
-    });
-  });
+  // Event delegation: works seamlessly for any widgets added dynamically (e.g. during practice/quiz)
+  if (!delegationAttached && typeof document !== 'undefined') {
+    delegationAttached = true;
 
-  // Initial setup & start 8s timer
+    document.addEventListener('mouseover', e => {
+      const widget = e.target.closest('.clock-widget, .tumadam-clock-pill');
+      if (widget) {
+        const g = widget.querySelector('.clock-greeting');
+        if (g) g.classList.remove('hide');
+      }
+    });
+
+    document.addEventListener('mouseout', e => {
+      const widget = e.target.closest('.clock-widget, .tumadam-clock-pill');
+      if (widget && !widget.contains(e.relatedTarget)) {
+        const g = widget.querySelector('.clock-greeting');
+        if (g) g.classList.add('hide');
+      }
+    });
+
+    document.addEventListener('click', e => {
+      const widget = e.target.closest('.clock-widget, .tumadam-clock-pill');
+      if (widget) {
+        triggerGreetingSlide();
+      }
+    });
+  }
+
+  // Initial tick & start 8s greeting timer
   tick();
   triggerGreetingSlide();
   const timer = setInterval(tick, 1000);
