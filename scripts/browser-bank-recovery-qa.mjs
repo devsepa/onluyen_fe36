@@ -15,7 +15,7 @@ await call('Runtime.enable');await mkdir('outputs/bank-recovery',{recursive:true
 await call('Network.setBypassServiceWorker',{bypass:true});
 await call('Page.addScriptToEvaluateOnNewDocument',{source:`
 window.google={accounts:{oauth2:{revoke(){},hasGrantedAllScopes:()=>true}}};
-const nativeFetch=fetch;window.fetch=(url,init)=>{const address=String(url);if(address==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa-recovery',name:'QA',email:'recovery-qa@example.com'}));if(address.startsWith('https://www.googleapis.com/drive/v3/files?'))return Promise.resolve(Response.json({files:[]}));return nativeFetch(url,init)};
+const nativeFetch=fetch;window.fetch=(url,init)=>{const address=String(url);if(address==='https://openidconnect.googleapis.com/v1/userinfo')return Promise.resolve(Response.json({sub:'qa-recovery',name:'QA',email:'recovery-qa@example.com'}));if(address.startsWith('https://www.googleapis.com/drive/v3/files?'))return Promise.resolve(Response.json({files:[]}));if(address.includes('.workers.dev/v1/decks'))return Promise.resolve(Response.json(new URL(address).pathname==='/v1/decks'?[{id:'recovery-fixture',title:'WED201c',count:1}]:{questions:[${JSON.stringify(question('WED201c',1))}]}));return nativeFetch(url,init)};
 sessionStorage.setItem('sot-google-session',JSON.stringify({token:'qa-placeholder',expires:Date.now()+3600000,profile:{name:'QA',email:'recovery-qa@example.com'},clientId:${JSON.stringify(GOOGLE_CLIENT_ID)}}));
 `});
 await call('Page.navigate',{url:'http://localhost:8080'});await wait(`location.origin==='http://localhost:8080'&&!!document.querySelector('#recoverDeletedBank')`);
@@ -49,5 +49,9 @@ await wait(`document.querySelector('.library-recovery-dialog .subject-library-ca
 await run(`document.querySelector('.library-recovery-dialog .subject-library-card button').click()`);await wait(`!!document.querySelector('dialog[open] .confirm-btn-ok')`);await run(`document.querySelector('dialog[open] .confirm-btn-ok').click()`);
 await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===4`);
 assert.equal(await run(`JSON.parse(localStorage.getItem('sot-history')).length`),1);
+await run(`window.fetch=(url,init)=>Promise.resolve(Response.json(new URL(String(url),location.href).pathname==='/v1/decks'?[{id:'recovery-fixture',title:'WED201c',count:1}]:{questions:[${JSON.stringify(question('WED201c',1))}]}));[...document.querySelectorAll('.library-recovery-dialog button')].find(b=>b.textContent.includes('Tìm bộ đề')).click()`);
+await wait(`[...document.querySelectorAll('.library-recovery-dialog h3')].some(h=>h.textContent==='WED201c')`);
+await run(`[...document.querySelectorAll('.library-recovery-dialog button')].find(b=>b.textContent==='Lấy lại bộ đề này').click()`);await wait(`!!document.querySelector('dialog[open] .confirm-btn-ok')`);await run(`document.querySelector('dialog[open] .confirm-btn-ok').click()`);
+await wait(`JSON.parse(localStorage.getItem('sot-bank')).length===5`);
 assert.deepEqual(errors,[]);ws.close();console.log('Subject-scoped deletion, durable undo after reload, legacy history recovery, and 6 desktop/mobile theme checks passed.');
 

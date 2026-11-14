@@ -24,7 +24,7 @@ async function chooseConflict(conflicts,getImage){return new Promise(resolve=>{
  }
  const row=add(dialog,'div',undefined,'row');button(row,'Giữ bản trên máy',()=>{chosen='local';dialog.close()});button(row,'Dùng bản đã đồng bộ',()=>{chosen='remote';dialog.close()});button(row,'Để sau',()=>dialog.close(),'text-button');dialog.onclose=()=>{for(const url of urls)URL.revokeObjectURL(url);dialog.remove();resolve(chosen)};dialog.oncancel=()=>{chosen=null};document.body.append(dialog);render();dialog.showModal();
 })}
-export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken,getBlob,getDetails,media,canChange,onPractice,getRecoveryQuestions=()=>[],storage=localStorage}={}){
+export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken,getBlob,getDetails,media,canChange,onPractice,getRecoveryQuestions=()=>[],getSharedRecovery,storage=localStorage}={}){
  const root=document.getElementById('library'),panel=document.createElement('section');panel.className='card library-manager';panel.setAttribute('aria-label','Quản lý môn và đồng bộ riêng tư');root.querySelector('.section-heading').before(panel);
  const heading=add(panel,'div',undefined,'library-manager-heading');add(heading,'h2','Thư viện theo môn');const toolbar=add(heading,'div',undefined,'row');const exportAll=button(toolbar,'↓ Sao lưu trọn bộ',()=>exportQuestions(getBank(),'thu-vien'));
  const restore=button(toolbar,'↑ Khôi phục sao lưu',()=>document.getElementById('bankFile').click());
@@ -52,6 +52,20 @@ export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken
   const dialog=document.createElement('dialog');dialog.className='library-recovery-dialog';add(dialog,'h2','Khôi phục câu hỏi');
   add(dialog,'p','Các bản xóa mới được giữ trên thiết bị này. Với lần xóa cũ, chỉ lấy lại được các câu còn trong bài đang làm hoặc lịch sử; dùng sao lưu ZIP, Đồng bộ ngay hoặc Kho đề chung để lấy đủ bộ đề.');
   const list=add(dialog,'div'),notice=add(dialog,'p','','muted');notice.setAttribute('role','status');
+  if(getSharedRecovery){const sharedList=add(dialog,'div');const find=button(sharedList,'Tìm bộ đề còn trong Kho đề chung',async()=>{
+   find.disabled=true;notice.textContent='Đang tìm bộ đề đã lưu trên kho chung…';
+   try{const decks=await getSharedRecovery();if(!dialog.isConnected)return;notice.textContent=decks.length?'Chọn bộ đề cần lấy lại. Câu đang có sẽ được giữ.':'Chưa tìm thấy bộ đề trong kho chung.';
+    for(const deck of decks){const article=add(sharedList,'article',undefined,'subject-library-card');add(article,'h3',deck.label);add(article,'p',deck.count+' câu trong kho chung');
+     const restoreDeck=button(article,'Lấy lại bộ đề này',async()=>{
+      if(busy()||!canChange())return;
+      if(!await askConfirm(`Lấy lại bộ ${deck.label} (${deck.count} câu) từ kho chung? Các môn và câu đang có vẫn được giữ.`,{title:'Khôi phục từ kho chung',okText:'Lấy lại bộ đề'}))return;
+      restoreDeck.disabled=true;
+      try{const questions=await deck.load();if(!dialog.isConnected||busy()||!canChange())return;const before=getBank().length;if(!setBank(mergeQuestionBanks(getBank(),questions)))throw Error('Chưa lưu được bộ đề. Dữ liệu cũ vẫn giữ.');notice.textContent=`Đã lấy lại bộ ${deck.label}; thêm ${getBank().length-before} câu. Các câu đang có vẫn giữ nguyên.`;render();renderRecords()}
+      catch(error){notice.textContent=error.message}finally{restoreDeck.disabled=false}
+     });
+    }
+   }catch(error){notice.textContent=error.message;find.disabled=false}
+  })}
   button(dialog,'Đóng',()=>dialog.close());dialog.onclose=()=>dialog.remove();document.body.append(dialog);dialog.showModal();
   let records=[];try{records=await recoveryStore.list()}catch(error){notice.textContent=error.message}
   if(!dialog.isConnected)return;
