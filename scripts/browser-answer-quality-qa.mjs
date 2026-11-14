@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
+const rateLimited=process.argv.includes('--rate-limit'),outputDir=rateLimited?'outputs/ai-rate-limit':'outputs/answer-quality';
 const pages=await(await fetch('http://127.0.0.1:9229/json/list')).json();const ws=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);await new Promise(r=>ws.onopen=r);
 let id=0;const pending=new Map(),errors=[];ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.id){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(Error(m.error.message)):p.resolve(m.result)}else if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails.exception?.description)};
 const call=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject});ws.send(JSON.stringify({id:n,method,params}))});
@@ -8,19 +9,29 @@ const wait=async expression=>{for(let i=0;i<100;i++){if(await run(expression))re
 const q={id:'quality-where',sourceId:'quality',sourceName:'DBI202',stem:'Which SQL clause filters rows before GROUP BY?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}],answer:'A',verified:false,answerSource:'gemini',explanationSource:'gemini',explanation:'STALE_GUESSED_EXPLANATION',url:''};
 await call('Page.enable');await call('Runtime.enable');await call('Network.enable');await call('Network.setBypassServiceWorker',{bypass:true});await call('Network.setCacheDisabled',{cacheDisabled:true});
 await call('Page.addScriptToEvaluateOnNewDocument',{source:`const previous=fetch;window.fetch=(url,init)=>{
+if(${rateLimited}&&String(url).includes('/v1/answers')){window.qaAiRequests=(window.qaAiRequests||0)+1;return Promise.resolve(Response.json({error:'raw rate_limit_exceeded Gemini project configuration'},{status:429,headers:{'Retry-After':'2'}}))}
 if(String(url).includes('/v1/answers'))return new Promise(resolve=>setTimeout(()=>resolve(Response.json({model:'qa-model',answers:JSON.parse(init.body).questions.map(q=>({id:q.id,status:'answered',answer:'A',explanation:'WHERE lọc từng dòng trước khi GROUP BY; HAVING lọc nhóm sau khi tổng hợp.',tip:'WHERE lọc dòng trước nhóm; HAVING lọc nhóm sau GROUP BY.',optionReasons:q.options.map(o=>({...o,reason:o.id==='A'?'Lọc từng dòng trước khi nhóm.':'Chỉ lọc nhóm sau khi tổng hợp.'}))}))})),700));return previous(url,init)};`});
 await call('Page.navigate',{url:'http://localhost:8080'});await pause(400);
-await run(`localStorage.setItem('sot-bank',JSON.stringify([${JSON.stringify(q)}]));localStorage.setItem('sot-session',JSON.stringify({mode:'study',questions:[${JSON.stringify(q)}],current:0,answers:{},flags:[],started:Date.now(),done:false}));localStorage.removeItem('sot-explanation-cache-v1');location.reload()`);
+await run(`localStorage.setItem('sot-bank',JSON.stringify([${JSON.stringify(q)}]));localStorage.setItem('sot-session',JSON.stringify({mode:'study',questions:[${JSON.stringify(q)}],current:0,answers:{},flags:[],started:Date.now(),done:false}));localStorage.removeItem('sot-explanation-cache-v1');localStorage.removeItem('sot-ai-cooldown-v1');location.reload()`);
 await pause(800);await wait(`!!document.querySelector('[data-o="A"]')`);await run(`document.querySelector('[data-o="A"]').click()`);await pause(100);
 assert.equal(await run(`document.querySelector('.feedback')?.textContent.includes('STALE_GUESSED_EXPLANATION')`),false,JSON.stringify(errors));
+if(rateLimited){
+ await wait(`!!document.querySelector('.explanation-retry:disabled')`);
+ assert.match(await run(`document.querySelector('.study-explanation-status').textContent`),/Không cần đăng nhập lại/);
+ assert.equal(await run(`document.querySelector('.study-explanation-status').textContent.includes('Gemini')`),false);
+ await run(`document.querySelector('.explanation-retry').click()`);assert.equal(await run(`window.qaAiRequests`),1);
+ await wait(`!!document.querySelector('.explanation-retry:not(:disabled)')`);await run(`document.querySelector('.explanation-retry').click()`);
+ await wait(`window.qaAiRequests===2`);
+}else{
 await wait(`!!document.querySelector('.explanation-tip-text')`);
 assert.match(await run(`document.querySelector('.explanation-tip-text').textContent`),/WHERE lọc dòng trước nhóm/);
 assert.match(await run(`document.querySelector('.explanation-answer').textContent`),/A — WHERE/);
-await mkdir('outputs/answer-quality',{recursive:true});
+}
+await mkdir(outputDir,{recursive:true});
 for(const theme of ['light','dark'])for(const width of [1440,390,320]){
  await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<900});await run(`document.documentElement.dataset.theme=${JSON.stringify(theme)};window.dispatchEvent(new Event('resize'))`);await pause(100);
  const bounds=await run(`({w:innerWidth,h:innerHeight,sw:document.documentElement.scrollWidth,sh:document.documentElement.scrollHeight,choices:[...document.querySelectorAll('[data-o]')].map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom}))})`);
  assert.ok(bounds.sw<=bounds.w+1&&bounds.sh<=bounds.h+1,JSON.stringify(bounds));for(const button of bounds.choices)assert.ok(button.top>=0&&button.bottom<=bounds.h+1);
- const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/answer-quality/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
+ const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`${outputDir}/${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
 }
-assert.deepEqual(errors,[]);ws.close();console.log('Fresh explanations hide stale guesses; choice content and memory aid visible in 6 desktop/mobile/theme checks.');
+assert.deepEqual(errors,[]);ws.close();console.log(rateLimited?'429 cooldown blocks repeated requests, retry becomes available after the wait, and 6 desktop/mobile/theme checks passed.':'Fresh explanations hide stale guesses; choice content and memory aid visible in 6 desktop/mobile/theme checks.');

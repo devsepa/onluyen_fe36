@@ -1,6 +1,8 @@
 import {explanationKey,validateOptionReasons} from './explanation-data.mjs?v=2026.11.14.32';
+import {RATE_LIMIT_MESSAGE} from './ai-rate-limit.mjs';
 export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,now=Date.now}={}){
  const cache=new Map(),states=new Map(),jobs=new Map(),queue=[],invalid=new Set();let running=null,blocked=null,disposed=false,paused=false;
+ try{const saved=JSON.parse(storage?.getItem('sot-ai-cooldown-v1')||'null');if(saved?.retryAt>now()&&saved.retryAt<=now()+86400000)blocked={error:RATE_LIMIT_MESSAGE,statusCode:429,code:'AI_RATE_LIMITED',retryAt:saved.retryAt}}catch{}
  try{for(const [key,value]of JSON.parse(storage?.getItem('sot-explanation-cache-v1')||'[]').slice(-limit)){
   if(typeof key!=='string'||typeof value?.answer!=='string'||typeof value.reason!=='string'||value.reason.length>3000||!Array.isArray(value.options))continue;
   validateOptionReasons(value.options,value.options.map(o=>o.id));cache.set(key,value);
@@ -19,12 +21,13 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
    cache.delete(job.key);cache.set(job.key,details);persist();emit(job,{status:'ready',details});job.resolve(details);
   }catch(error){
    if(job.controller.signal.aborted){if(jobs.get(job.key)===job)states.delete(job.key);job.resolve(null)}
-   else{const failure={error:error.message||'Chưa tải được giải thích AI.',statusCode:error.status||0,code:error.code};if([401,403,429].includes(error.status))blocked=failure;emit(job,{status:'error',...failure});job.resolve(null)}
+   else{const failure={error:error.message||'Chưa tải được giải thích AI.',statusCode:error.status||0,code:error.code,...(error.status===429?{retryAt:now()+Math.min(86400,Math.max(1,Number(error.retryAfterSeconds)||60))*1000}:{})};if([401,403,429].includes(error.status))blocked=failure;if(error.status===429)try{storage?.setItem('sot-ai-cooldown-v1',JSON.stringify({retryAt:failure.retryAt}))}catch{}emit(job,{status:'error',...failure});job.resolve(null)}
   }finally{if(jobs.get(job.key)===job)jobs.delete(job.key);if(!states.has(job.key))job.resolve(null);running=null;pump()}
  }
  function request(q,{retry=false,priority=false}={}){
   const embedded=state(q);if(embedded.status==='ready')return Promise.resolve(embedded.details);
   const key=explanationKey(q);if(cache.has(key))return Promise.resolve(cache.get(key));
+  if(blocked?.statusCode===429&&blocked.retryAt>now()){emit({key,q},{status:'error',...blocked});return Promise.resolve(null)}
   if(retry){blocked=null;states.delete(key)}
   if(jobs.has(key)){const job=jobs.get(key);if(job.controller?.signal.aborted){jobs.delete(key);states.delete(key)}else{const index=queue.indexOf(job);if(priority&&index>0){queue.splice(index,1);queue.unshift(job)}return job.promise}}
   if(states.get(key)?.status==='error'&&!retry)return Promise.resolve(null);
@@ -32,7 +35,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
   const job={key,q:structuredClone(q),created:now()};job.promise=new Promise(resolve=>job.resolve=resolve);jobs.set(key,job);emit(job,{status:'queued'});priority?queue.unshift(job):queue.push(job);pump();return job.promise;
  }
  function retain(questions){const keys=new Set(questions.map(explanationKey));for(let i=queue.length-1;i>=0;i--)if(!keys.has(queue[i].key))drop(queue.splice(i,1)[0])}
- function cancel(){for(const job of queue.splice(0))drop(job);running?.controller.abort();blocked=null}
- function resume(){blocked=null;for(const [key,value]of states)if(value.status==='error'&&[401,403].includes(value.statusCode))states.delete(key)}
+ function cancel(){for(const job of queue.splice(0))drop(job);running?.controller.abort();if(blocked?.statusCode!==429||blocked.retryAt<=now())blocked=null}
+ function resume(){if(blocked?.statusCode!==429||blocked.retryAt<=now())blocked=null;for(const [key,value]of states)if(value.status==='error'&&[401,403].includes(value.statusCode))states.delete(key)}
  return {state,request,retain,cancel,resume,setPaused(value){paused=!!value;if(!paused)pump()},invalidate(q){const key=explanationKey(q);invalid.add(key);cache.delete(key);states.delete(key);persist()},dispose(){disposed=true;cancel()}};
 }

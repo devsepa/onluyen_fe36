@@ -68,6 +68,11 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  if(state.status==='error'){
   const status=add(feedback,'div','study-explanation-status');add(status,'span','',state.error);
   const retry=add(status,'button','secondary explanation-retry','Thử lại');retry.type='button';retry.onclick=()=>{onRead();onRetry?.(question)};
+  if(state.statusCode===429&&state.retryAt>Date.now()){
+   const wait=Math.ceil((state.retryAt-Date.now())/1000);retry.disabled=true;retry.textContent='Thử lại sau '+(wait>=60?Math.ceil(wait/60)+' phút':wait+' giây');
+   add(status,'small','','Hạn mức có thể cần lâu hơn để phục hồi.');
+   setTimeout(()=>{if(retry.isConnected){retry.disabled=false;retry.textContent='Thử lại'}},Math.min(2147483647,Math.max(1,state.retryAt-Date.now())));
+  }
  }else if(['queued','loading','no-auth','idle'].includes(state.status)&&!explanation){
   add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
  }

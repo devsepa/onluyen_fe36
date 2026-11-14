@@ -30,9 +30,9 @@ test('queue shares in-flight work, persists a reusable result and limits concurr
  const reloaded=createExplanationQueue({storage,load:()=>assert.fail('cache should prevent another AI call')});assert.equal((await reloaded.request({...question(),id:'regenerated'})).answer,'B');
 });
 test('a failed job is not automatically retried and a quota error stops queued billable requests',async()=>{
- let calls=0,fail=true;const queue=createExplanationQueue({load:async q=>{calls++;await tick();if(fail)throw Object.assign(Error('Quota'),{status:429});return normalizeExplanation(q,result(q.id))}});
+ let calls=0,fail=true,clock=0;const queue=createExplanationQueue({now:()=>clock,load:async q=>{calls++;await tick();if(fail)throw Object.assign(Error('Quota'),{status:429});return normalizeExplanation(q,result(q.id))}});
  await Promise.all([queue.request(question()),queue.request(question('q2'))]);assert.equal(calls,1);assert.equal(queue.state(question('q2')).status,'error');
- await queue.request(question());assert.equal(calls,1);fail=false;await queue.request(question(),{retry:true});assert.equal(calls,2);assert.equal(queue.state(question()).status,'ready');
+ await queue.request(question());assert.equal(calls,1);fail=false;await queue.request(question(),{retry:true});assert.equal(calls,1);clock=60001;await queue.request(question(),{retry:true});assert.equal(calls,2);assert.equal(queue.state(question()).status,'ready');
 });
 test('cancellation drops queued work and an aborted response never enters the cache',async()=>{
  let release;const queue=createExplanationQueue({load:q=>new Promise(r=>release=()=>r(normalizeExplanation(q,result(q.id))))});

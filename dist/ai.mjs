@@ -1,4 +1,5 @@
 import {validateOptionReasons} from './explanation-data.mjs?v=2026.11.14.32';
+import {aiRateLimitError} from './ai-rate-limit.mjs';
 const validSet=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 export function questionFingerprint(q){return JSON.stringify([q.sourceId,q.url,q.stem,q.options.map(o=>[o.id,o.text])])}
 export function readyForPractice(q){return !!q.answer&&(q.verified===true||q.answerSource==='gemini')}
@@ -34,6 +35,7 @@ export async function solveBatch(base,questions,token,{signal,fetcher=fetch,purp
  const headers={'Content-Type':'application/json'};
  if(token)headers['Authorization']=`Bearer ${token}`;
  const response=await fetcher(new URL('/v1/answers',url),{method:'POST',headers,body:JSON.stringify({...(purpose?{purpose}:{}),questions:questions.map(q=>({id:q.id,stem:q.stem,options:q.options,...(q.image?{image:q.image}:{})}))}),signal});
+ if(response.status===429)throw aiRateLimitError(response);
  let data;try{data=await response.json()}catch{throw Error('Không đọc được phản hồi AI. Kết quả trước đó vẫn được giữ.')}
  if(!response.ok){const error=Error(typeof data.error==='string'?data.error:'AI đang bận. Hãy tiếp tục sau.');error.status=response.status;if(['AI_IMAGE_INVALID','AI_KEY_INVALID','AI_PROJECT_RESTRICTED','AI_REGION_UNSUPPORTED','AI_CONFIG_UNSUPPORTED','AI_REQUEST_INVALID'].includes(data.code))error.code=data.code;throw error}
  const ids=new Set(questions.map(q=>q.id)),seen=new Set();
