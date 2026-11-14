@@ -28,7 +28,7 @@
 *{box-sizing:border-box}body{margin:0;min-width:320px}button,input,select,textarea{font:inherit}button{cursor:pointer;border:1px solid transparent;background:var(--accent);color:var(--accent-text);border-radius:10px;padding:12px 18px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:10px;transition:background .15s,transform .15s}button:hover{filter:brightness(1.07)}button:active{transform:translateY(1px)}button:disabled{opacity:.45;cursor:default}a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}input,select,textarea{width:100%;min-width:0;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:12px 14px;color:var(--text);outline:0}input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--accent);flex:none}input:focus,select:focus,textarea:focus{border-color:var(--accent)}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}label{font-size:12px;color:var(--muted);display:block}label>input:not([type=checkbox]):not([type=radio]),label>select,label>textarea{margin-top:9px}textarea{resize:vertical;min-height:100px;line-height:1.8}p{font-size:13px;color:var(--muted);line-height:1.9;margin:10px 0 20px}h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.5px}h1{font-size:34px;line-height:1.35}h2{font-size:20px;line-height:1.6}h3{font-size:16px}small{font-size:11px;color:var(--muted);line-height:1.8}strong{font-weight:600}[hidden]{display:none!important}.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.secondary{background:var(--panel2);color:var(--text);border-color:var(--line)}.text-button{background:transparent;color:var(--muted);padding:8px 0;font-size:12px}.text-button:hover{color:var(--text)}.danger{color:var(--red)}.icon-button{background:transparent;color:var(--muted);border-color:var(--line);padding:7px;width:36px;height:36px;font-size:18px}.wide-button{width:100%;margin-top:20px}.overline,.eyebrow{font-size:10px;letter-spacing:1.8px;font-weight:600;color:var(--accent)}.eyebrow{margin-bottom:15px}.overline{display:block;margin-bottom:10px}
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:252px;background:var(--sidebar);border-right:1px solid var(--line);padding:30px 18px;display:flex;flex-direction:column;z-index:20}.brand{display:flex;gap:12px;align-items:center;padding:0 9px;color:var(--text);font-size:18px;font-weight:700;letter-spacing:-.5px}.brand:hover{text-decoration:none}.brand-icon{width:39px;height:42px;display:grid;place-items:center;border-radius:12px;background:var(--accent);color:var(--accent-text);font-size:28px;position:relative}.brand-icon>span{font-size:13px;position:absolute;right:3px;top:0}.brand small{display:block;font-size:8px;letter-spacing:1.8px;margin-top:3px}.nav-label{font-size:9px;color:var(--muted);letter-spacing:1.6px;margin:48px 13px 18px}.nav{width:100%;justify-content:flex-start;gap:13px;padding:14px 12px;margin-bottom:6px;background:transparent;color:var(--muted);font-size:12px;border-radius:9px;font-weight:500;text-align:left}.nav.active{background:var(--soft);color:var(--accent);box-shadow:inset 3px 0 var(--accent)}.nav-icon{font-size:21px;line-height:1}.nav-arrow,.nav-count{margin-left:auto;font-size:11px}.nav-count{padding:2px 6px;border:1px solid var(--line);border-radius:6px}.sidebar-tip{border:1px solid var(--line);border-radius:12px;padding:17px;margin-top:36px}.sidebar-tip>span{font-size:30px;display:block;color:var(--accent);margin-bottom:15px}.sidebar-tip>strong{font-size:11px}.sidebar-tip p{font-size:11px;margin:8px 0}.sidebar-tip button{font-size:10px;color:var(--accent)}.sidebar-bottom{margin-top:auto;padding-top:30px}.local-status{display:flex;gap:8px;font-size:9px;color:var(--muted);padding:8px 12px}.local-status i,.status-dot{width:6px;height:6px;background:var(--accent);border-radius:50%;display:inline-block;flex:none}
 main{margin-left:252px;min-height:100vh}/* ==========================================================================
-   DYNAMIC ISLAND / FLOATING CAPSULE TOPBAR (Concept 2: Apple Dynamic Island)
+   DYNAMIC ISLAND / FLOATING CAPSULE TOPBAR (Concept 1: Apple Dynamic Island)
    ========================================================================== */
 .topbar {
   height: 56px;
@@ -38,69 +38,163 @@ main{margin-left:252px;min-height:100vh}/* =====================================
   justify-content: space-between;
   align-items: center;
   border-radius: 9999px;
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   position: relative;
   z-index: 100;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+[data-theme="light"] .topbar {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
 body.sidebar-collapsed .topbar {
   margin: 14px 40px 0;
 }
-.breadcrumb {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted);
+.topbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  user-select: none;
+  flex: 1;
+  min-width: 0;
 }
+.breadcrumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  user-select: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+[data-theme="light"] .breadcrumb {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.breadcrumb .crumb-separator,
 .breadcrumb span {
   margin: 0;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+}
+[data-theme="light"] .breadcrumb .crumb-separator,
+[data-theme="light"] .breadcrumb span {
+  color: rgba(0, 0, 0, 0.4);
 }
 .breadcrumb b {
   color: #ffffff;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 3px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+[data-theme="light"] .breadcrumb b {
+  color: #0f172a;
+}
+
+/* Ở giữa: Đồng hồ Tumadam phát sáng neon lục bảo nổi bật ngay tại trung tâm đảo ngọc */
+.topbar-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  z-index: 2;
+}
+.topbar-center .tumadam-clock-pill {
+  border-color: rgba(16, 185, 129, 0.6) !important;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.35), inset 0 0 8px rgba(16, 185, 129, 0.15) !important;
+  background: rgba(6, 78, 59, 0.4) !important;
+}
+.topbar-center .tumadam-clock-pill:hover {
+  border-color: #34d399 !important;
+  box-shadow: 0 0 24px rgba(52, 211, 153, 0.6), inset 0 0 10px rgba(52, 211, 153, 0.25) !important;
+}
+
+/* Bên phải: Cụm phím Loa Celesta, Nút theme sáng/tối dạng tròn mềm mại và Avatar tài khoản có viền phát sáng khi rê chuột */
+.topbar .top-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: none;
 }
 .topbar .icon-button {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: grid;
   place-items: center;
   color: #ffffff;
   cursor: pointer;
-  font-size: 14px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-size: 15px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-theme="light"] .topbar .icon-button {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #1e293b;
 }
 .topbar .icon-button:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: scale(1.06);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.08);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
 }
 .topbar .avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
 }
 .topbar .avatar:hover {
-  transform: scale(1.06);
+  transform: scale(1.08);
   border-color: #818cf8;
-}.breadcrumb{font-size:11px;color:var(--muted)}.breadcrumb span{margin:0 14px;color:var(--line)}.breadcrumb b{color:var(--text);font-weight:400}.top-actions{display:flex;align-items:center;gap:18px}.avatar{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--soft);color:var(--accent);font-size:12px;border:1px solid var(--line)}.page-content{padding:34px 40px 0;max-width:1840px;margin:auto}/* ==========================================================================
+  box-shadow: 0 0 16px rgba(129, 140, 248, 0.6);
+}
+
+.page-content {
+  padding: 24px 40px 0;
+  max-width: 1840px;
+  margin: auto;
+}
+
+@media (max-width: 760px) {
+  body:not(.quiz-active) .topbar {
+    height: auto;
+    min-height: 54px;
+    margin: 10px 14px 0;
+    padding: 8px 14px;
+    border-radius: 20px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .topbar-center {
+    position: static;
+    transform: none;
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
+}
+
+/* ==========================================================================
    EDTECH PRO HERO BANNER DASHBOARD (Concept 3 + Concept 2 Streak)
    ========================================================================== */
 .page-heading {
