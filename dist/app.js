@@ -1625,9 +1625,19 @@ function renderQuiz() {
   drawStudyFeedback();
   primeStudyExplanations();
   versionUpdates.mount($('practice').querySelector('.quiz-head-actions'),{compact:true});
-  // Fade-slide transition
-  const _fadeCard=$('practice').querySelector('.quiz-question');
-  if(_fadeCard){_fadeCard.classList.remove('quiz-question-fade');void _fadeCard.offsetWidth;_fadeCard.classList.add('quiz-question-fade');}
+  // Flashcard slide transition
+  const _fadeCard = $('practice').querySelector('.quiz-question');
+  if (_fadeCard) {
+    _fadeCard.classList.remove('quiz-question-fade', 'slide-in-right', 'slide-in-left');
+    void _fadeCard.offsetWidth;
+    if (lastNavDirection === 'prev') {
+      _fadeCard.classList.add('slide-in-left');
+    } else if (lastNavDirection === 'next') {
+      _fadeCard.classList.add('slide-in-right');
+    } else {
+      _fadeCard.classList.add('quiz-question-fade');
+    }
+  }
   if(study)$('practice').querySelector('.quiz-head-actions').append(quizAccountControl);
   $("flagCurrent").onchange = (e) => {
     session.flags = e.target.checked
@@ -1668,9 +1678,15 @@ $('practice').onclick = (e) => {
     if (session.mode !== "study" && Date.now() >= session.deadline)
       return finish();
 
-    session.current = Number(indexButton.dataset.index);
-    write("sot-session", session);
-    renderQuiz();
+    const targetIdx = Number(indexButton.dataset.index);
+    if (targetIdx !== session.current) {
+      lastNavDirection = targetIdx > session.current ? "next" : "prev";
+      session.current = targetIdx;
+      write("sot-session", session);
+      quizSound.nav();
+      try { navigator.vibrate?.(15); } catch {}
+      renderQuiz();
+    }
     return;
   }
   const answer = e.target.closest("[data-q]");
@@ -1709,9 +1725,11 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowLeft") {
     if (session.current > 0) {
       e.preventDefault();
-
       session.current--;
+      lastNavDirection = "prev";
       write("sot-session", session);
+      quizSound.nav();
+      try { navigator.vibrate?.(15); } catch {}
       renderQuiz();
     }
     return;
@@ -1719,9 +1737,11 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") {
     if (session.current < session.questions.length - 1) {
       e.preventDefault();
-
       session.current++;
+      lastNavDirection = "next";
       write("sot-session", session);
+      quizSound.nav();
+      try { navigator.vibrate?.(15); } catch {}
       renderQuiz();
     }
     return;
@@ -1756,7 +1776,10 @@ window.addEventListener("keydown", (e) => {
     ) {
       e.preventDefault();
       session.current++;
+      lastNavDirection = "next";
       write("sot-session", session);
+      quizSound.nav();
+      try { navigator.vibrate?.(15); } catch {}
       renderQuiz();
       return;
     }
@@ -1788,7 +1811,10 @@ window.addEventListener("keydown", (e) => {
   }
 });
 let touchStartX = 0,
-  touchStartY = 0;
+  touchStartY = 0,
+  touchActiveCard = null,
+  touchIsSwiping = false;
+
 window.addEventListener(
   "touchstart",
   (e) => {
@@ -1798,12 +1824,37 @@ window.addEventListener(
       !document.body.classList.contains("quiz-active")
     )
       return;
+    if (document.querySelector("dialog[open]")) return;
     const touch = e.changedTouches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+    touchIsSwiping = false;
+    touchActiveCard = $('practice')?.querySelector('.quiz-question');
+    if (touchActiveCard) {
+      touchActiveCard.style.transition = 'none';
+    }
   },
   { passive: true },
 );
+
+window.addEventListener(
+  "touchmove",
+  (e) => {
+    if (!touchActiveCard || !session || session.done) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      touchIsSwiping = true;
+      const resistance = 0.45;
+      const moveX = dx * resistance;
+      const rot = dx * 0.02;
+      touchActiveCard.style.transform = `translateX(${moveX}px) rotate(${rot}deg)`;
+    }
+  },
+  { passive: true },
+);
+
 window.addEventListener(
   "touchend",
   (e) => {
@@ -1817,20 +1868,47 @@ window.addEventListener(
     const touch = e.changedTouches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    if (Math.abs(dx) > 55 && Math.abs(dy) < 45) {
+    const card = touchActiveCard;
+    touchActiveCard = null;
+
+    if (Math.abs(dx) > 48 && Math.abs(dy) < 60) {
       if (dx < 0 && session.current < session.questions.length - 1) {
-        session.current++;
-        write("sot-session", session);
-        quizSound.nav();
-        try { navigator.vibrate?.(15); } catch {}
-        renderQuiz();
+        if (card) {
+          card.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
+          card.style.transform = 'translateX(-70px) rotate(-2deg)';
+          card.style.opacity = '0';
+        }
+        try { navigator.vibrate?.([15, 30, 20]); } catch {}
+        setTimeout(() => {
+          session.current++;
+          lastNavDirection = 'next';
+          write("sot-session", session);
+          quizSound.nav();
+          renderQuiz();
+        }, 70);
+        return;
       } else if (dx > 0 && session.current > 0) {
-        session.current--;
-        write("sot-session", session);
-        quizSound.nav();
-        try { navigator.vibrate?.(15); } catch {}
-        renderQuiz();
+        if (card) {
+          card.style.transition = 'transform 0.1s ease-out, opacity 0.1s ease-out';
+          card.style.transform = 'translateX(70px) rotate(2deg)';
+          card.style.opacity = '0';
+        }
+        try { navigator.vibrate?.([15, 30, 20]); } catch {}
+        setTimeout(() => {
+          session.current--;
+          lastNavDirection = 'prev';
+          write("sot-session", session);
+          quizSound.nav();
+          renderQuiz();
+        }, 70);
+        return;
       }
+    }
+
+    if (card && touchIsSwiping) {
+      card.style.transition = 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease';
+      card.style.transform = 'translateX(0) rotate(0deg)';
+      card.style.opacity = '1';
     }
   },
   { passive: true },
