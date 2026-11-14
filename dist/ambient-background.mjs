@@ -31,6 +31,7 @@ export function setupAmbientBackground() {
 
   const { bg, canvas } = ensureElements();
   if (!canvas) return;
+  if (canvas.ambientControls) return canvas.ambientControls;
 
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -116,21 +117,21 @@ export function setupAmbientBackground() {
   function loop() {
     if (document.hidden) return;
     renderFrame();
-    animId = requestAnimationFrame(loop);
+    animId = window.requestAnimationFrame(loop);
   }
 
   function start() {
-    if (animId) return;
+    if (animId || document.hidden) return;
     if (reducedMotion.matches) {
       renderFrame();
       return;
     }
-    animId = requestAnimationFrame(loop);
+    animId = window.requestAnimationFrame(loop);
   }
 
   function stop() {
     if (animId) {
-      cancelAnimationFrame(animId);
+      window.cancelAnimationFrame(animId);
       animId = null;
     }
   }
@@ -153,12 +154,14 @@ export function setupAmbientBackground() {
     renderFrame();
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  reducedMotion.addEventListener?.('change', () => { stop(); start(); });
 
   // Initial render
   resize();
   start();
 
-  return { stop, start, resize };
+  canvas.ambientControls = { stop, start, resize };
+  return canvas.ambientControls;
 }
 
 // Auto-run if loaded via script tag or when DOM ready

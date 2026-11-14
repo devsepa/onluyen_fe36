@@ -69,6 +69,7 @@ test('setupAmbientBackground initializes cleanly with mock DOM', () => {
     assert.equal(typeof controls.resize, 'function');
     assert.equal(mockCanvas.width, 1200);
     assert.equal(mockCanvas.height, 800);
+    assert.equal(setupAmbientBackground(), controls, 'repeat setup must reuse the same animation loop');
 
     // Stop and start calls
     controls.stop();

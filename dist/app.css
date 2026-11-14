@@ -87,10 +87,6 @@ main{margin-left:252px;min-height:100vh;position:relative;z-index:2}
   animation-duration: 19s;
   animation-delay: -7s;
 }
-  background: radial-gradient(circle, #a855f7 0%, rgba(168, 85, 247, 0) 70%);
-  animation-duration: 19s;
-  animation-delay: -7s;
-}
 @keyframes auroraMorph {
   0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
   50% { transform: translate3d(55px, 35px, 0) scale(1.12) rotate(12deg); }
