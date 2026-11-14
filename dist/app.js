@@ -1599,7 +1599,7 @@ function renderQuiz() {
   $("practice").innerHTML =
     `<div class="quiz-head floating-command-capsule">
       <div class="quiz-head-left">
-        <span class="quiz-mode-pill">${study ? "⚡ ÔN LUYỆN" : "⏱ THI THỬ"}</span>
+        <span class="quiz-mode-pill overline">${study ? "⚡ ÔN LUYỆN" : "⏱ THI THỬ"}</span>
         <span class="quiz-deck-name" title="${esc(deckTitle)}">${esc(deckTitle)} <small class="deck-count">(${qs.length} câu)</small></span>
       </div>
       <div class="quiz-head-center">
