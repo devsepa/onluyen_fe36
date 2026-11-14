@@ -1522,7 +1522,7 @@ function navItemClass(session, item, index, study) {
   }
   return classes.join(" ");
 }
-let prefetchEnabled=read('sot-explanation-prefetch',true);
+let prefetchEnabled=read('sot-explanation-prefetch-v2',false);
 // Default locked attempt limit: 2 wrong attempts, show on 3rd
 let wrongAttemptLimit = 2;
 write('sot-wrong-attempt-limit', 2);
@@ -1557,7 +1557,7 @@ function drawStudyFeedback(){
  const q=session.questions[session.current];
  renderQuizFeedback({root:$('practice'),session,question:q,isCorrect,state:session.mode==='study'&&session.answers[q.id]?feedbackState(q):{status:'idle'},onRead:readExplanation,onRetry:question=>explanationQueue.request(question,{retry:true,priority:true})});
 }
-function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
+function setExplanationPrefetch(value){prefetchEnabled=value;write('sot-explanation-prefetch-v2',value);for(const input of document.querySelectorAll('.study-prefetch-toggle input'))input.checked=value;if(!value)explanationQueue.cancel();primeStudyExplanations()}
 function primeStudyExplanations(){if(document.hidden||!session||session.done||session.mode!=='study'||view!=='practice')return;const q=session.questions[session.current];const targets=prefetchEnabled?upcomingExplanationQuestions(session,resourcePolicy.aheadExplanations):session.answers[q.id]?[q]:[];const needed=targets.filter(q=>!hasSpeakerNoteExplanation(q));explanationQueue.retain(needed);for(const question of needed)explanationQueue.request(question,{priority:question.id===q.id&&!!session.answers[q.id]});}
 
 function refreshQuizState(){

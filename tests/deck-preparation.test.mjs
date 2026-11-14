@@ -5,6 +5,11 @@ const id='11111111-1111-4111-8111-111111111111';
 class Memory{constructor(){this.data=new Map()}async get(k){return structuredClone(this.data.get(k))}async put(k,v){if(typeof k==='object'){for(const [key,value]of Object.entries(k))this.data.set(key,structuredClone(value))}else this.data.set(k,structuredClone(v))}async setAlarm(at){this.alarm=at}async deleteAlarm(){this.alarm=null}}
 const question=n=>({id:'q'+n,stem:'Question '+n,options:[{id:'A',text:'First'},{id:'B',text:'Second'}],answer:'A',extraction:'text',sharedIndex:n});
 const start=()=>new Request('https://prep/start',{method:'POST',body:JSON.stringify({deckId:id})});
+test('disabling background preparation stops previously scheduled durable alarms',async()=>{
+ const storage=new Memory();await storage.put('job',{status:'waiting',cursor:2,nextRunAt:999999});
+ const prep=new StoredDeckPreparation({storage},{PREPARE_PUBLIC_DECKS:'false'},{explain:()=>assert.fail('must not spend quota')});
+ await prep.alarm();assert.equal((await storage.get('job')).status,'paused');assert.equal((await storage.get('job')).cursor,2);assert.equal(storage.alarm,null);
+});
 test('deck preparation resumes from durable cursor, reuses explanations and never replaces the answer key',async()=>{
  let clock=0,calls=0;const storage=new Memory(),deps={now:()=>clock,loadDeck:async()=>({title:'DBI202',questions:[question(0),question(1),question(2)]}),loadImage:()=>assert.fail('Text questions need no image'),explain:async()=>{calls++;return {answers:[{status:calls===2?'uncertain':'answered',answer:calls===3?'B':'A',reused:calls===1}]}}};
  let prep=new StoredDeckPreparation({storage},{},deps);assert.equal((await prep.fetch(start())).status,200);clock=1001;await prep.alarm();let job=await storage.get('job');assert.equal(job.cursor,1);assert.equal(job.ready,1);assert.equal(job.reused,1);

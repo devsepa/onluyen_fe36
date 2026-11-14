@@ -31,6 +31,7 @@ export class StoredDeckPreparation{
  alarm(){if(this.running)return this.running;this.running=this.step().finally(()=>{this.running=null});return this.running}
  async step(){
   const job=await this.storage.get('job');if(!job||!['running','waiting'].includes(job.status))return;
+  if(this.env.PREPARE_PUBLIC_DECKS==='false'){await this.storage.put('job',{...job,status:'paused',updatedAt:this.now()});await this.storage.deleteAlarm();return}
   if(job.nextRunAt>this.now()){await this.storage.setAlarm(job.nextRunAt);return}
   try{
    const source=await this.storage.get('q:'+job.cursor);if(!source)throw Error('Thiếu dữ liệu câu hỏi chuẩn bị.');

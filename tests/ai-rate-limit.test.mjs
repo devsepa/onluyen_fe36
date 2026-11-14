@@ -5,6 +5,12 @@ import {aiRateLimitError} from '../dist/ai-rate-limit.mjs';
 import {createExplanationQueue} from '../dist/explanation-queue.mjs';
 const q=id=>({id,sourceId:'qa',url:'',stem:'Question '+id,options:[{id:'A',text:'First'},{id:'B',text:'Second'}],answer:'A'});
 const details={answer:'A',reason:'Specific explanation',options:[{id:'A',text:'First',reason:'Correct condition'},{id:'B',text:'Second',reason:'Wrong condition'}]};
+test('busy transport does not persist a global quota lock or block a different question',async()=>{
+ let calls=0;const values=new Map(),storage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
+ const queue=createExplanationQueue({storage,load:async()=>{if(++calls===1)return solveBatch('https://ai.test',[q('busy')],null,{fetcher:async()=>Response.json({code:'AI_QUEUE_BUSY',error:'AI đang xếp hàng.',retryAfterSeconds:15},{status:503})});return details}});
+ await queue.request(q('busy'));assert.equal(queue.state(q('busy')).code,'AI_QUEUE_BUSY');assert.equal(values.has('sot-ai-cooldown-v1'),false);
+ await queue.request(q('next'));assert.equal(queue.state(q('next')).status,'ready');assert.equal(calls,2);queue.dispose();
+});
 test('429 transport hides provider diagnostics, respects Retry-After, and never requests login',async()=>{
  await assert.rejects(solveBatch('https://ai.test',[q('1')],null,{fetcher:async()=>Response.json({error:'raw rate_limit_exceeded Gemini project details'},{status:429,headers:{'Retry-After':'120'}})}),error=>error.code==='AI_RATE_LIMITED'&&error.retryAfterSeconds===120&&!error.message.includes('Gemini')&&error.message.includes('Không cần đăng nhập lại'));
  assert.equal(aiRateLimitError(new Response('',{headers:{'Retry-After':new Date(120000).toUTCString()}}),0).retryAfterSeconds,120);

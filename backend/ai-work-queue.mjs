@@ -12,10 +12,11 @@ export class StoredAIWorkQueue{
    await this.ready;
    if(new URL(request.url).pathname==='/status')return Response.json({pending:this.pending.length,running:this.running,nextAt:this.schedule.nextAt,cooldownUntil:this.schedule.cooldownUntil});
    const input=await request.json();if(!Array.isArray(input.questions)||input.questions.length<1||input.questions.length>5)return Response.json({error:'Invalid work request'},{status:400});
+   if(input.background&&this.env.PREPARE_PUBLIC_DECKS==='false')throw new WorkQueueError(503,'Đã tạm dừng chuẩn bị nền để dành AI cho người đang học.',120);
    if(this.schedule.cooldownUntil>this.now())throw new WorkQueueError(429,'AI đang nghỉ theo hạn mức chung.',Math.ceil((this.schedule.cooldownUntil-this.now())/1000));
    if(!input.background){this.schedule.lastStudyAt=this.now();await this.storage.put('schedule',this.schedule)}
-   if(input.background&&this.schedule.lastStudyAt&&this.now()-this.schedule.lastStudyAt<120000)throw new WorkQueueError(429,'Đang ưu tiên giải thích câu đang học. Kho chung sẽ chuẩn bị tiếp sau.',120);
-   if(this.pending.length>=4||input.background&&(this.running||this.pending.length))throw new WorkQueueError(429,'Đang ưu tiên câu hỏi của người làm bài. Sẽ chuẩn bị tiếp sau.',60);
+   if(input.background&&this.schedule.lastStudyAt&&this.now()-this.schedule.lastStudyAt<120000)throw new WorkQueueError(503,'Đang ưu tiên giải thích câu đang học. Kho chung sẽ chuẩn bị tiếp sau.',120);
+   if(this.pending.length>=4||input.background&&(this.running||this.pending.length))throw new WorkQueueError(503,'AI đang xếp hàng xử lý. Hãy thử lại sau ít giây.',15);
    return await new Promise(resolve=>{this.pending.push({input,resolve,createdAt:this.now()});this.pump()});
   }catch(error){return this.failure(error)}
  }
@@ -28,7 +29,7 @@ export class StoredAIWorkQueue{
     await this.ready;
     let now=this.now();if(this.schedule.cooldownUntil>now)throw new WorkQueueError(429,'AI đang nghỉ theo hạn mức chung.',Math.ceil((this.schedule.cooldownUntil-now)/1000));
     const wait=Math.max(0,this.schedule.nextAt-now);
-    if(wait>30000||now-job.createdAt>30000)throw new WorkQueueError(429,'AI đang xếp hàng xử lý. Bạn có thể làm tiếp rồi thử lại.',Math.max(1,Math.ceil(wait/1000)));
+    if(wait>30000||now-job.createdAt>30000)throw new WorkQueueError(503,'AI đang xếp hàng xử lý. Bạn có thể làm tiếp rồi thử lại.',Math.max(1,Math.ceil(wait/1000)));
     if(wait)await this.sleep(wait);
     now=this.now();const day=new Date(now).toISOString().slice(0,10);if(this.schedule.day!==day){this.schedule.day=day;this.schedule.used=0}
     const backgroundLimit=Math.floor(number(this.env.GLOBAL_DAILY_QUESTIONS,1000)*0.5);
@@ -52,5 +53,5 @@ export class StoredAIWorkQueue{
 export async function throughWorkQueue(questions,env,generate,{background=false}={}){
  if(!env.AI_WORK_QUEUE)return generate(questions,env);
  const response=await env.AI_WORK_QUEUE.get(env.AI_WORK_QUEUE.idFromName('global-v1')).fetch(new Request('https://ai-work/generate',{method:'POST',body:JSON.stringify({questions,background})}));
- const data=await response.json();if(!response.ok)throw new WorkQueueError(response.status,data.error,data.retryAfterSeconds);return data;
+ const data=await response.json();if(!response.ok){const error=new WorkQueueError(response.status,data.error,data.retryAfterSeconds);error.code=data.code||error.code;throw error}return data;
 }

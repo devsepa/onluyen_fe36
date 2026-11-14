@@ -9,7 +9,7 @@
     "GEMINI_MODEL": "gemini-3.5-flash",
     "USER_DAILY_QUESTIONS": "150",
     "GLOBAL_DAILY_QUESTIONS": "1000",
-    "PREPARE_PUBLIC_DECKS": "true",
+    "PREPARE_PUBLIC_DECKS": "false",
     "AI_IMAGE_INTERVAL_MS": "60000",
     "AI_TEXT_INTERVAL_MS": "15000",
     "MODERATOR_EMAILS": "nguyenduy222.contact@gmail.com"

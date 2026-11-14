@@ -6,6 +6,14 @@ import {StoredExplanationCache,explainWithSharedCache} from '../backend/explanat
 import {validateResults} from '../backend/worker.mjs';
 class Memory{constructor(){this.data=new Map()}async get(key){return structuredClone(this.data.get(key))}async put(key,value){this.data.set(key,structuredClone(value))}}
 const request=(id,background=false)=>new Request('https://queue/generate',{method:'POST',body:JSON.stringify({background,questions:[{id,stem:'private input '+id,options:[],explain:true}]})});
+test('pacing is busy rather than quota exhaustion and disabled background never calls provider',async()=>{
+ const storage=new Memory();let clock=100000,calls=0;
+ const queue=new StoredAIWorkQueue({storage},{PREPARE_PUBLIC_DECKS:'false'},async()=>{calls++;return {answers:[]}},{now:()=>clock});
+ assert.equal((await queue.fetch(request('background',true))).status,503);assert.equal(calls,0);
+ queue.schedule.nextAt=clock+60000;
+ const busy=await queue.fetch(request('study'));assert.equal(busy.status,503);assert.equal((await busy.json()).code,'AI_QUEUE_BUSY');assert.equal(queue.schedule.cooldownUntil,0);
+ clock+=60001;assert.equal((await queue.fetch(request('study2'))).status,200);assert.equal(calls,1);
+});
 test('background work leaves half the daily budget for study and yields after study activity',async()=>{
  const storage=new Memory();let clock=100000,calls=0;
  const queue=new StoredAIWorkQueue({storage},{GLOBAL_DAILY_QUESTIONS:'2'},async()=>{calls++;return {answers:[]}},{now:()=>clock,sleep:async ms=>{clock+=ms}});
@@ -13,10 +21,10 @@ test('background work leaves half the daily budget for study and yields after st
  clock+=60000;
  assert.equal((await queue.fetch(request('prepare2',true))).status,429);
  assert.equal((await queue.fetch(request('study'))).status,200);
- assert.equal((await queue.fetch(request('prepare3',true))).status,429);
+ assert.equal((await queue.fetch(request('prepare3',true))).status,503);
  assert.equal(calls,2);
  const reloaded=new StoredAIWorkQueue({storage},{},async()=>{throw Error('must yield')},{now:()=>clock});
- assert.equal((await reloaded.fetch(request('prepare4',true))).status,429);
+ assert.equal((await reloaded.fetch(request('prepare4',true))).status,503);
 });
 test('global queue serializes users, spaces actual calls and stores only scheduling metadata',async()=>{
  const storage=new Memory();let clock=100000,calls=0,active=0,maxActive=0,release;const starts=[];
@@ -33,7 +41,7 @@ test('a provider limit blocks queued work and survives Durable Object restart',a
 test('background preparation yields to active study requests and daily budget is enforced before generation',async()=>{
  const storage=new Memory();let clock=100000,calls=0,release;
  const queue=new StoredAIWorkQueue({storage},{GLOBAL_DAILY_QUESTIONS:'1'},async()=>{calls++;await new Promise(r=>release=r);return {answers:[]}},{now:()=>clock,sleep:async ms=>{clock+=ms}});
- const first=queue.fetch(request('one'));while(!release)await new Promise(r=>setImmediate(r));assert.equal((await queue.fetch(request('background',true))).status,429);const second=queue.fetch(request('two'));release();assert.equal((await first).status,200);assert.equal((await second).status,429);assert.equal(calls,1);
+ const first=queue.fetch(request('one'));while(!release)await new Promise(r=>setImmediate(r));assert.equal((await queue.fetch(request('background',true))).status,503);const second=queue.fetch(request('two'));release();assert.equal((await first).status,200);assert.equal((await second).status,429);assert.equal(calls,1);
 });
 test('a shared cache hit bypasses the global work queue even while fresh generation is limited',async()=>{
  const storage=new Memory(),env={},objects=new Map();let generated=0,scheduled=0,clock=100000;
