@@ -36,7 +36,6 @@ import {
   solveBatch,
   applyAiResults,
   readyForPractice,
-  verifyOrSolveWithDirectGemini,
   blobToBase64,
 } from "./ai.mjs?v=study-speed-1";
 import { createSlideImageStore } from "./slide-images.mjs?v=20261113-background-publish-1";

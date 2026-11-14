@@ -24,14 +24,10 @@ body.quiz-active .quiz-head .account-menu{z-index:100;right:0;max-width:min(300p
 body.quiz-active .feedback-inline-exp{max-height:min(250px,30dvh);overflow-y:auto;white-space:pre-wrap;overscroll-behavior:contain}
 body.quiz-active .study-explanation-status{max-height:min(110px,18dvh);overflow:auto;flex:none}
 @media(max-width:540px){
- body.quiz-active .quiz-head:has(.study-auto-toggle) .quiz-clock{display:none}
  body.quiz-active .quiz-head{gap:5px}
  body.quiz-active .quiz-head-actions{gap:4px}
  body.quiz-active #toggleMapBtn{font-size:0;padding:5px 8px}
  body.quiz-active #toggleMapBtn:before{content:'▤';font-size:17px}
- body.quiz-active .study-auto-toggle{font-size:9px;gap:3px}
- body.quiz-active .quiz-head>.study-auto-toggle{display:none}
- body.quiz-active .study-auto-toggle input{width:13px;height:13px}
  body.quiz-active .feedback-inline-exp{max-height:min(180px,27dvh);font-size:11px}
  body.quiz-active .quiz-head .app-update-control{font-size:0;padding:5px 8px}
  body.quiz-active .quiz-head .app-update-control:before{content:'↑';font-size:17px}
