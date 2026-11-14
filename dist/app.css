@@ -421,6 +421,10 @@ main{margin-left:252px;min-height:100vh;display:flex;flex-direction:column;paddi
   box-shadow: none;
   user-select: none;
 }
+.app-footer .app-update-control,
+footer .app-update-control {
+  display: none !important;
+}
 body.quiz-active .app-footer,
 body.exam-active .app-footer {
   display: none !important;

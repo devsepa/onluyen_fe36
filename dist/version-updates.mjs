@@ -9,13 +9,13 @@ export function setupVersionUpdates({beforeUpdate=async()=>true,fetcher=fetch,re
  const notice=document.createElement('div');notice.className='app-update-notice';notice.hidden=true;notice.setAttribute('role','status');
  const text=document.createElement('span');text.textContent='Có phiên bản mới. Dữ liệu đã lưu sẽ được giữ khi cập nhật.';notice.append(text);document.querySelector('#message')?.before(notice);
  async function update(){if(!latest||!await beforeUpdate())return;const url=new URL(location.href);url.searchParams.set('v',latest.version);reload(url.href)}
- function refresh(){notice.hidden=!latest;for(const entry of [...controls]){if(!entry.button.isConnected){controls.delete(entry);continue}entry.button.hidden=entry.compact&&!latest;entry.button.textContent=latest?'↑ Cập nhật':`v${label} · Kiểm tra cập nhật`;entry.button.title=latest?'Có phiên bản mới. Bấm để cập nhật.':`Phiên bản hiện tại: ${label}`}}
- function mount(container,{compact=false}={}){if(!container)return;const existing=container.querySelector('.app-update-control');if(existing)return;const button=document.createElement('button');button.type='button';button.className='secondary app-update-control';button.setAttribute('aria-label','Kiểm tra và cập nhật phiên bản web');button.onclick=()=>latest?update():check(true);container.append(button);controls.add({button,compact});refresh()}
+ function refresh(){notice.hidden=!latest;for(const entry of [...controls]){if(!entry.button.isConnected){controls.delete(entry);continue}entry.button.hidden=!latest;entry.button.textContent='↑ Cập nhật';entry.button.title='Có phiên bản mới. Bấm để cập nhật.'}}
+ function mount(container,{compact=false}={}){if(!container)return;const existing=container.querySelector('.app-update-control');if(existing)return;const button=document.createElement('button');button.type='button';button.className='secondary app-update-control';button.setAttribute('aria-label','Cập nhật phiên bản web');button.onclick=()=>latest?update():check(true);button.hidden=!latest;container.append(button);controls.add({button,compact});refresh()}
  async function check(force=false){
   if(checking)return checking;if(!force&&(document.hidden||now()-lastChecked<60000))return;
   lastChecked=now();checking=(async()=>{try{const url=new URL('version.json',document.baseURI);url.searchParams.set('check',String(now()));const release=await fetchRelease(url,{fetcher,signal:AbortSignal.timeout(8000)});if(release.version!==current)latest=release;refresh()}catch{/* Offline checks never interrupt study. */}finally{checking=null}})();return checking;
  }
- mount(document.querySelector('.footer-col-right')||document.querySelector('footer'));mount(notice,{compact:true});mount(document.querySelector('.top-actions'),{compact:true});
+ mount(notice,{compact:true});
  const onVisible=()=>{if(!document.hidden)check()};document.addEventListener('visibilitychange',onVisible);window.addEventListener('focus',onVisible);
  const timer=setInterval(()=>check(),300000);setTimeout(()=>check(true),0);
  return {mount,check,dispose(){clearInterval(timer);document.removeEventListener('visibilitychange',onVisible);window.removeEventListener('focus',onVisible)}};
