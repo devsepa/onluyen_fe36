@@ -1,9 +1,9 @@
 // Stored server-generated explanations only; clients cannot publish cache entries.
-export const EXPLANATION_REVISION='study-explanation-2';
+export const EXPLANATION_REVISION='study-explanation-3';
 export class ExplanationCacheError extends Error{constructor(status,message,code){super(message);this.status=status;this.code=code}}
 export async function explanationCacheKey(question,env={}){
  const content=question.image?['image',question.image.mimeType,question.image.data]:['text',question.stem,question.options.map(o=>[o.id,o.text])];
- const bytes=new TextEncoder().encode(JSON.stringify([EXPLANATION_REVISION,env.GEMINI_MODEL||'gemini-3.8-flash',content]));
+ const bytes=new TextEncoder().encode(JSON.stringify([EXPLANATION_REVISION,env.GROQ_API_KEY?'groq':'gemini',env.GEMINI_MODEL||'gemini-3.8-flash',content]));
  return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
 }
 export class StoredExplanationCache{

@@ -14,7 +14,7 @@ test('Gemini receives inline image separately from text, returns multiple labels
  const q=validateQuestions({questions:[question()]})[0];let payload;
  const answers=await generateAnswers([q],{GEMINI_API_KEY:'server-secret',GEMINI_MODEL:'test-model'},async(url,init)=>{
   payload=JSON.parse(init.body);assert.equal(init.headers['x-goog-api-key'],'server-secret');
-  return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[{id:q.id,status:'answered',answer:'ACE',explanation:'Explanation'}]})}]}}]});
+  return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[{id:q.id,kind:'question',labels:['A','B','C','D','E'],status:'answered',answer:'ACE',explanation:'Explanation'}]})}]}}]});
  });
  assert.deepEqual(payload.contents[0].parts[1],{inlineData:q.image});assert.ok(!payload.contents[0].parts[0].text.includes('data'));assert.equal(answers[0].answer,'ACE');
  assert.throws(()=>validateResults({answers:[{...answers[0],answer:'AA'}]},[q]));assert.throws(()=>validateResults({answers:[{...answers[0],answer:'AZ'}]},[q]));

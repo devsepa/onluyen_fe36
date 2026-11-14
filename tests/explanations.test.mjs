@@ -51,7 +51,7 @@ test('bounded caches evict old memory entries and cancelled foreground requests 
 });
 test('structured AI purpose is validated and the prompt requests exact choice contents and targeted reasons',async()=>{
  const questions=validateQuestions({purpose:'explanation',questions:[question()]});assert.equal(questions[0].explain,true);assert.throws(()=>validateQuestions({purpose:'anything',questions:[question()]}));
- await generateAnswers(questions,{GEMINI_API_KEY:'test-only'},async(_url,init)=>{const sent=JSON.parse(init.body);assert.ok(sent.systemInstruction.parts[0].text.includes('complete exact original choice text'));assert.ok(sent.generationConfig.responseSchema.properties.answers.items.required.includes('optionReasons'));return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[result()]})}]}}]})});
+ await generateAnswers(questions,{GEMINI_API_KEY:'test-only'},async(_url,init)=>{const sent=JSON.parse(init.body);assert.ok(sent.systemInstruction.parts[0].text.includes('complete verbatim original choice'));assert.ok(sent.generationConfig.responseSchema.properties.answers.items.required.includes('optionReasons'));return Response.json({candidates:[{finishReason:'STOP',content:{parts:[{text:JSON.stringify({answers:[result()]})}]}}]})});
  assert.throws(()=>validateResults({answers:[{...result(),optionReasons:[]}]},questions));
 });
 test('client sends purpose but never the current selection or answer key; validates detailed results',async()=>{

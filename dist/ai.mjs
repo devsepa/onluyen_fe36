@@ -16,7 +16,7 @@ export function applyAiResults(bank,submitted,results,model){
   }
   if(result.status==='answered'&&validSet(result.answer,original)&&typeof result.explanation==='string'){
    if(original.image&&[...result.answer].some(label=>!q.options.some(o=>o.id===label))){const last=Math.max(...[...result.answer].map(c=>c.charCodeAt(0)-65),q.options.length-1);q.options=Array.from({length:last+1},(_,i)=>q.options.find(o=>o.id===String.fromCharCode(65+i))||{id:String.fromCharCode(65+i),text:''})}
-   q.answer=result.answer;q.explanation=result.explanation.slice(0,3000);q.verified=false;q.answerSource='gemini';q.aiModel=model;q.aiStatus='proposed';applied++;
+   if(typeof result.tip==='string'&&result.tip.trim())q.tip=result.tip.trim().slice(0,1200);q.answer=result.answer;q.explanation=result.explanation.slice(0,3000);q.verified=false;q.answerSource='gemini';q.aiModel=model;q.aiStatus='proposed';applied++;
   }else if(result.status==='uncertain'){q.aiStatus='uncertain';q.aiReason=String(result.explanation||'AI chưa xác định được đáp án.').slice(0,3000);uncertain++}
  }
  return {applied,uncertain};

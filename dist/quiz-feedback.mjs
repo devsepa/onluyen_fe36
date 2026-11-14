@@ -11,8 +11,8 @@ function isGenericTip(str) {
 }
 
 export function getSmartTip(question, details) {
- if (question.tip && !isGenericTip(question.tip)) return question.tip.trim();
  if (details?.tip && !isGenericTip(details.tip)) return details.tip.trim();
+ if (question.tip && question.answerSource!=='gemini' && !isGenericTip(question.tip)) return question.tip.trim();
 
  const rawText = (details?.reason || question.explanation || '');
  const match = rawText.match(/(?:mẹo|gợi ý|tip|lưu ý|bí quyết|chú ý|quy tắc|công thức)[\s:]+([^\n\r]+)/i);
@@ -36,7 +36,8 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  const report=add(row,'button','secondary quality-report-button','Báo lỗi');report.type='button';report.dataset.reportQuestion=question.id;
  if(wrongCount)add(feedback,'small','',`Đã thử sai ${wrongCount} lần trước khi chốt câu này.`);
  const details=state.details;
- if(details||question.explanation){
+ const explanation=question.explanationSource==='gemini'||question.answerSource==='gemini'?'':question.explanation;
+ if(details||explanation){
   const box=add(feedback,'div','feedback-inline-exp');box.tabIndex=0;box.setAttribute('role','region');box.setAttribute('aria-label','Giải thích đáp án');
   for(const event of ['pointerdown','wheel','focus','touchstart'])box.addEventListener(event,onRead,{passive:true});
   add(box,'b','',details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:');
@@ -45,7 +46,7 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   const content=labels=>[...labels].map(id=>{const text=choices.find(o=>o.id===id)?.text;return id+(text?' — '+text:'')}).join('\n');
   add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
   if(details)add(box,'b','explanation-heading','Tại sao đúng:');
-  add(box,'span','explanation-reason',details?.reason||question.explanation);
+  add(box,'span','explanation-reason',details?.reason||explanation);
   if(!isCorrect(question,answered)){
    add(add(box,'div','explanation-chosen'),'strong','', 'Bạn chọn '+content(answered));
    if(details){
@@ -67,7 +68,7 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  if(state.status==='error'){
   const status=add(feedback,'div','study-explanation-status');add(status,'span','',state.error);
   const retry=add(status,'button','secondary explanation-retry','Thử lại');retry.type='button';retry.onclick=()=>{onRead();onRetry?.(question)};
- }else if(['queued','loading','no-auth','idle'].includes(state.status)&&!question.explanation){
+ }else if(['queued','loading','no-auth','idle'].includes(state.status)&&!explanation){
   add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
  }
  return feedback;
