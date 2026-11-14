@@ -20,7 +20,7 @@ test('cache separates accounts and source versions, expires stale images, and gr
 });
 test('pending image loads are shared and logout prevents delayed private images from being cached',async()=>{
  const cache=new MemoryCache();let release,loads=0;const images=createSlideBlobCache({owner:()=> 'alice',storage:{open:async()=>cache},load:()=>{loads++;return new Promise(resolve=>release=resolve)}});
- const a=images.get(q),b=images.get(q);while(!release)await new Promise(resolve=>setTimeout(resolve,0));assert.equal(loads,1);images.clear();release(image());await assert.rejects(()=>a,/thay đổi/);await assert.rejects(()=>b,/thay đổi/);assert.equal(cache.data.size,0);
+ const a=images.get(q),b=images.get(q),rejected=Promise.all([assert.rejects(a,/thay đổi/),assert.rejects(b,/thay đổi/)]);while(!release)await new Promise(resolve=>setTimeout(resolve,0));assert.equal(loads,1);images.clear();release(image());await rejected;assert.equal(cache.data.size,0);
 });
 test('only a standalone uncropped unrotated image uses the direct source; composed slides keep thumbnails',()=>{
  const slide={pageElements:[{image:{contentUrl:'https://images.example/question.png'}}]};assert.equal(directSlideImage(slide),'https://images.example/question.png');
