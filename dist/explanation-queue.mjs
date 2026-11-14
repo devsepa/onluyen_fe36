@@ -21,7 +21,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
    cache.delete(job.key);cache.set(job.key,details);persist();emit(job,{status:'ready',details});job.resolve(details);
   }catch(error){
    if(job.controller.signal.aborted){if(jobs.get(job.key)===job)states.delete(job.key);job.resolve(null)}
-   else{const failure={error:error.message||'Chưa tải được giải thích AI.',statusCode:error.status||0,code:error.code,...(error.status===429?{retryAt:now()+Math.min(86400,Math.max(1,Number(error.retryAfterSeconds)||60))*1000}:{})};if([401,403,429].includes(error.status))blocked=failure;if(error.status===429)try{storage?.setItem('sot-ai-cooldown-v1',JSON.stringify({retryAt:failure.retryAt}))}catch{}emit(job,{status:'error',...failure});job.resolve(null)}
+   else{const failure={error:error.message||'Chưa tải được giải thích AI.',statusCode:error.status||0,code:error.code,...(error.code==='AI_ANSWER_CONFLICT'&&error.comparison?{comparison:error.comparison}:{}),...(error.status===429?{retryAt:now()+Math.min(86400,Math.max(1,Number(error.retryAfterSeconds)||60))*1000}:{})};if([401,403,429].includes(error.status))blocked=failure;if(error.status===429)try{storage?.setItem('sot-ai-cooldown-v1',JSON.stringify({retryAt:failure.retryAt}))}catch{}emit(job,{status:'error',...failure});job.resolve(null)}
   }finally{if(jobs.get(job.key)===job)jobs.delete(job.key);if(!states.has(job.key))job.resolve(null);running=null;pump()}
  }
  function request(q,{retry=false,priority=false}={}){

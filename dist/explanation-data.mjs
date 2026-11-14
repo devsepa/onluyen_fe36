@@ -13,12 +13,16 @@ export function validateOptionReasons(items,labels){
 }
 export function normalizeExplanation(q,result){
  if(result?.status!=='answered'||typeof result.explanation!=='string'||!result.explanation.trim()||result.explanation.length>3000)throw Error('AI chưa giải thích được câu này.');
- if(typeof result.answer!=='string'||[...result.answer].sort().join('')!==[...q.answer].sort().join(''))throw Error(`AI đề xuất đáp án ${result.answer||'chưa rõ'}, khác đáp án gốc ${q.answer}. Hãy đối chiếu slide; đáp án gốc vẫn được giữ.`);
  const labels=result.kind==='question'?result.labels:q.options.map(o=>o.id);
  const options=validateOptionReasons(result.optionReasons,labels);
  if(!q.image&&q.options.every(o=>o.text?.trim())&&options.some(o=>q.options.find(original=>original.id===o.id)?.text.trim()!==o.text))throw Error('AI đã thay đổi nội dung lựa chọn. Hãy đối chiếu câu hỏi và thử lại.');
  if([...q.answer].some(id=>!options.some(o=>o.id===id)))throw Error('AI chưa đọc đủ nội dung đáp án đúng.');
  if(result.tip!==undefined&&(typeof result.tip!=='string'||result.tip.length>1200))throw Error('Mẹo ghi nhớ chưa hợp lệ.');
+ if(typeof result.answer!=='string'||!/^[A-H]{1,8}$/.test(result.answer)||new Set(result.answer).size!==result.answer.length||[...result.answer].some(id=>!options.some(o=>o.id===id)))throw Error('AI chưa đưa ra đáp án hợp lệ để đối chiếu.');
+ if([...result.answer].sort().join('')!==[...q.answer].sort().join('')){
+  const error=Error(`AI đề xuất đáp án ${result.answer}, khác đáp án gốc ${q.answer}. Hãy đối chiếu slide; đáp án gốc vẫn được giữ.`);
+  error.code='AI_ANSWER_CONFLICT';error.comparison={originalAnswer:q.answer,suggestedAnswer:result.answer,reason:result.explanation.trim(),options,...(/^[a-f0-9]{64}$/.test(result.cacheKey||'')?{cacheKey:result.cacheKey}:{})};throw error;
+ }
  return {answer:q.answer,reason:result.explanation.trim(),options,...(result.tip?.trim()?{tip:result.tip.trim()}:{}),...(result.reused?{reused:true}:{}),...(/^[a-f0-9]{64}$/.test(result.cacheKey||'')&&typeof result.cacheEtag==='string'?{cacheKey:result.cacheKey,cacheEtag:result.cacheEtag.slice(0,100),reviewed:!!result.reviewed}:{})};
 }
 export function hasNoteExplanation(q){return typeof q?.explanation==='string'&&q.explanation.trim().length>0}

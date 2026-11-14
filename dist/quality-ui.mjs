@@ -11,6 +11,7 @@ export function setupQuality({base,getToken,getQuestion,onRead=()=>{},getDetails
  function openReport(q){
   onRead();const details=getDetails(q),d=dialog('Báo lỗi câu hỏi'),form=el('form'),type=el('select');for(const [id,label]of Object.entries(types)){const o=el('option',label);o.value=id;type.append(o)}
   const message=el('textarea');message.required=true;message.maxLength=2000;message.rows=4;message.placeholder='Mô tả chỗ chưa đúng và cách sửa nếu bạn biết.';
+  if(details?.suggestedAnswer){type.value='explanation';message.value=`AI đưa ra đáp án khác đáp án gốc.\nĐáp án đang lưu: ${q.answer}.\nAI đề xuất: ${details.suggestedAnswer}.\nNhờ kiểm tra với câu hỏi và ảnh gốc.`}
   const notice=el('p','Khi gửi, nội dung câu hỏi, đáp án và giải thích đang xem sẽ được chuyển cho người kiểm duyệt. Không gửi tài khoản hoặc ảnh từ tài liệu riêng.','muted');
   const snapshot={stem:q.stem,options:q.options.map(o=>({id:o.id,text:o.text||details?.options?.find(p=>p.id===o.id)?.text||''})),answer:q.answer||'',explanation:details?.reason||q.explanation||'',slide:q.slide,sharedDeck:q.sharedDeck,sharedIndex:q.sharedIndex,cacheKey:details?.cacheKey};
   const preview=el('details'),summary=el('summary','Nội dung sẽ gửi');preview.append(summary,el('pre',JSON.stringify(snapshot,null,2)));

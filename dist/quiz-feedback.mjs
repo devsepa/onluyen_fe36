@@ -45,7 +45,7 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   const headRow = add(box, 'div', 'explanation-card-header');
   const titleWrap = add(headRow, 'div', 'exp-header-title');
   add(titleWrap, 'span', 'exp-sparkle-icon', '✨');
-  add(titleWrap, 'strong', '', details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'GIẢI THÍCH CHI TIẾT:':'GHI CHÚ / GIẢI THÍCH:');
+  add(titleWrap, 'strong', '', details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'Giải thích':'Ghi chú / Giải thích');
   if(details){
    add(titleWrap, 'span', 'exp-badge ' + (details.reviewed?'badge-reviewed':details.reused?'badge-reused':'badge-new'), details.reviewed?'✓ Đã kiểm duyệt':details.reused?'⚡ Đã lưu chung':'Tự động lưu');
   }
@@ -83,9 +83,18 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   const choices=question.options.map(o=>({id:o.id,text:o.text||details?.options.find(item=>item.id===o.id)?.text||''}));
   const content=labels=>[...labels].map(id=>{const text=choices.find(o=>o.id===id)?.text;return id+(text?' — '+text:'')}).join('\n');
 
+  add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
+  const tip = getSmartTip(question, details);
+  if(tip){
+   const tipBox = add(box, 'div', 'explanation-tip-box');
+   const tipHead = add(tipBox, 'div', 'explanation-tip-heading');
+   add(tipHead, 'span', 'tip-icon', '💡');
+   add(tipHead, 'strong', '', 'Mẹo nhớ');
+   add(tipBox, 'div', 'explanation-tip-text', tip);
+  }
   // Core rationale card
   const coreBox = add(box, 'div', 'exp-core-box');
-  add(coreBox, 'div', 'exp-core-title', '🎯 Điểm mấu chốt:');
+  add(coreBox, 'div', 'exp-core-title', 'Tại sao đúng');
   add(coreBox, 'div', 'exp-core-text', details?.reason||explanation);
 
   // Option breakdown cards if available
@@ -104,22 +113,14 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
     add(optCard, 'div', 'exp-option-reason', o.reason);
    }
   } else {
-   add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
    if(!isCorrect(question,answered)){
     add(add(box,'div','explanation-chosen'),'strong','', 'Bạn chọn '+content(answered));
    }
   }
 
-  const tip = getSmartTip(question, details);
-  if(tip){
-   const tipBox = add(box, 'div', 'explanation-tip-box');
-   const tipHead = add(tipBox, 'div', 'explanation-tip-heading');
-   add(tipHead, 'span', 'tip-icon', '💡');
-   add(tipHead, 'strong', '', 'Mẹo xử lý & Ghi nhớ nhanh:');
-   add(tipBox, 'div', 'explanation-tip-text', tip);
-  }
   box.scrollTop=scroll;
  }
+ if(state.status==='error'&&state.comparison){renderAnswerComparison(feedback,question,state.comparison,scroll);return feedback}
  if(state.status==='error'){
   const status=add(feedback,'div','study-explanation-status');add(status,'span','',state.error);
   const retry=add(status,'button','secondary explanation-retry','Thử lại');retry.type='button';retry.onclick=()=>{onRead();onRetry?.(question)};
@@ -132,4 +133,17 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
   add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
  }
  return feedback;
+}
+
+function renderAnswerComparison(feedback,question,comparison,scroll=0){
+ const box=add(feedback,'section','feedback-inline-exp explanation-conflict');box.setAttribute('aria-label','Đối chiếu đáp án gốc và AI');box.tabIndex=0;
+ add(box,'strong','comparison-title','AI khác đáp án gốc — cần đối chiếu');
+ const note=add(box,'p','comparison-note','Đáp án gốc vẫn được giữ để chấm bài. Gợi ý AI chưa được xác nhận.');
+ const pair=add(box,'div','comparison-pair'),content=labels=>[...labels].map(id=>{const text=question.options.find(o=>o.id===id)?.text||comparison.options.find(o=>o.id===id)?.text||'';return id+(text?' — '+text:'')}).join('\n');
+ const original=add(pair,'article','comparison-original');add(original,'h3','',question.answerSource==='speaker-notes'?'Đáp án từ ghi chú':question.answerSource==='gemini'?'Đáp án AI đang lưu':'Đáp án đang lưu');add(original,'p','comparison-answer',content(comparison.originalAnswer));
+ const proposed=add(pair,'article','comparison-proposed');add(proposed,'h3','','AI đề xuất · chưa xác nhận');add(proposed,'p','comparison-answer',content(comparison.suggestedAnswer));
+ box.append(note);
+ const reason=add(box,'div','comparison-rationale');add(reason,'strong','','Lý do AI đưa ra');add(reason,'p','',comparison.reason);
+ const actions=add(box,'div','comparison-actions');if(question.url||question.sharedDeck||question.mediaId){const preview=add(actions,'button','secondary','Đối chiếu ảnh gốc');preview.type='button';preview.dataset.previewSlide=question.id}
+ const report=add(actions,'button','secondary','Báo lỗi khác đáp án');report.type='button';report.dataset.reportQuestion=question.id;box.scrollTop=scroll;
 }

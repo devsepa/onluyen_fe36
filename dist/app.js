@@ -1,3 +1,4 @@
+import {installViewportSizing} from './viewport-sizing.mjs';
 import { parseExamFile } from './universal-parser.mjs?v=2026.11.14.32';
 import {setupLibraryManager} from './library-manager.mjs?v=2026.11.14.32';
 import {createLibraryMedia} from './library-media.mjs?v=2026.11.14.32';
@@ -68,6 +69,7 @@ const read = (key, fallback) => {
     return fallback;
   }
 };
+installViewportSizing();
 let bank = read("sot-bank", []),
   history = read("sot-history", []),
   session = read("sot-session", null),
@@ -2053,7 +2055,7 @@ libraryManager=setupLibraryManager({base:DATA_API_BASE,getBank:()=>bank,getGener
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
  onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);
-quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>{const q=(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id);return q&&view==='practice'&&session&&!session.done&&(session.mode==='exam'||!session.answers[q.id])?{...q,answer:'',explanation:'',explanationDetails:undefined}:q},getDetails:q=>explanationQueue.state(q).details||q.explanationDetails,onRead:readExplanation});quality.setProfile(libraryProfile);
+quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>{const q=(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id);return q&&view==='practice'&&session&&!session.done&&(session.mode==='exam'||!session.answers[q.id])?{...q,answer:'',explanation:'',explanationDetails:undefined}:q},getDetails:q=>{const state=explanationQueue.state(q);return state.details||state.comparison||q.explanationDetails},onRead:readExplanation});quality.setProfile(libraryProfile);
 window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
