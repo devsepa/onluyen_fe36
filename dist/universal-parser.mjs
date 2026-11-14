@@ -1,6 +1,7 @@
 // Universal Document / Image Exam Parser
 // Supports: PDF, Images (PNG, JPG, WebP), Word (.docx text), Plain text (.txt)
 // Extracts and splits exam questions with options (A, B, C, D) and auto-detects answers
+import {normalizeAnswer} from './core.mjs?v=2026.11.14.33';
 
 export async function parseExamFile(file, { onProgress = () => {}, aiBase = '' } = {}) {
   const ext = file.name.split('.').pop().toLowerCase();
@@ -35,6 +36,7 @@ async function parseImageExam(file, { onProgress, aiBase }) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      purpose: 'explanation',
       questions: [{
         id: crypto.randomUUID(),
         stem: 'Đọc toàn bộ câu hỏi trắc nghiệm trong ảnh này.',
@@ -53,6 +55,7 @@ async function parseImageExam(file, { onProgress, aiBase }) {
   const data = await res.json();
   const answerObj = data.answers?.[0];
   if (!answerObj) throw new Error('AI không nhận diện được câu hỏi trong ảnh.');
+  if(answerObj.status!=='answered'||answerObj.kind!=='question'||!answerObj.optionReasons?.length)throw Error('Chưa nhận diện rõ câu hỏi và lựa chọn trong ảnh. Hãy dùng ảnh rõ hơn, mỗi ảnh một câu.');
   
   return [{
     id: crypto.randomUUID(),
@@ -60,7 +63,9 @@ async function parseImageExam(file, { onProgress, aiBase }) {
     options: answerObj.optionReasons?.map(o => ({ id: o.id, text: o.text || '' })) || [{ id: 'A', text: '' }, { id: 'B', text: '' }],
     answer: answerObj.answer || '',
     explanation: answerObj.explanation || '',
-    verified: !!answerObj.answer,
+    verified: false,
+    answerSource: 'gemini',
+    explanationSource: 'gemini',
     sourceName: file.name,
     subject: file.name.replace(/\.[^/.]+$/, "")
   }];
@@ -84,8 +89,7 @@ async function parsePdfExam(file, { onProgress, aiBase }) {
     onProgress(`Đang trích xuất trang ${i} / ${pdf.numPages}...`);
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    const strings = content.items.map(item => item.str);
-    fullText += strings.join(' ') + '\n\n';
+    fullText += content.items.map(item => item.str + (item.hasEOL ? '\n' : ' ')).join('') + '\n\n';
   }
   
   return await parseTextExam(fullText, file.name, { onProgress, aiBase });
@@ -97,10 +101,10 @@ export async function parseTextExam(rawText, sourceName, { onProgress = () => {}
   const cleaned = rawText.replace(/\r\n/g, '\n').replace(/\t/g, ' ');
   
   // Regex to split questions (e.g., Câu 1:, Question 1:, 1., 1/, Bài 1:)
-  const questionSplits = [...cleaned.matchAll(/(?:^|\n)\s*(?:câu|question|bài|\d+)\s*(\d+)[\s.:/-]+/gi)];
+  const questionSplits = [...cleaned.matchAll(/(?:^|\n)\s*(?:(?:câu|question|bài)\s*)?\d+[.:/)\-]\s*/gi)];
   
   const rawQuestions = [];
-  if (questionSplits.length >= 2) {
+  if (questionSplits.length >= 1) {
     for (let i = 0; i < questionSplits.length; i++) {
       const start = questionSplits[i].index;
       const end = questionSplits[i + 1] ? questionSplits[i + 1].index : cleaned.length;
@@ -128,42 +132,17 @@ export async function parseTextExam(rawText, sourceName, { onProgress = () => {}
 }
 
 function parseSingleQuestionBlock(text, sourceName, subject) {
-  // Regex pattern for options: A., B., C., D. or A), B), C), D) or (A), (B), (C), (D)
-  const optionMatches = [...text.matchAll(/(?:^|\n|\s)[(［\[]?([A-H])[)］\]:.\-]\s*([^\n\r]+)/gi)];
-  
-  if (optionMatches.length < 2) return null;
-  
-  // Find where options start
-  const firstOptionIndex = optionMatches[0].index;
-  const stem = text.slice(0, firstOptionIndex).replace(/^(?:câu|question|bài)\s*\d+[\s.:/-]+/i, '').trim();
-  
-  const options = [];
-  for (const m of optionMatches) {
-    const id = m[1].toUpperCase();
-    const optText = m[2].trim();
-    if (!options.some(o => o.id === id)) {
-      options.push({ id, text: optText });
-    }
-  }
-  
-  // Auto-detect answer if provided in text (e.g., Đáp án: A or Answer: B)
-  const ansMatch = text.match(/(?:đáp\s*án|answer|chọn|key)\s*[:：\-]?\s*([A-H])/i);
-  const answer = ansMatch ? ansMatch[1].toUpperCase() : '';
-  
-  // Auto-detect explanation if any
-  const expMatch = text.match(/(?:giải\s*thích|lời\s*giải|hướng\s*dẫn|explanation)\s*[:：\-]?\s*([^\n]+)/i);
-  const explanation = expMatch ? expMatch[1].trim() : '';
-  
-  return {
-    id: crypto.randomUUID(),
-    stem: stem || 'Câu hỏi',
-    options,
-    answer,
-    explanation,
-    verified: !!answer,
-    sourceName,
-    subject: subject || 'Tài liệu tải lên'
-  };
+  const metadata=/(?:^|\n|\s)(?:đáp\s*án|answer|key|giải\s*thích|lời\s*giải|hướng\s*dẫn|explanation)\s*[:：]\s*/i.exec(text);
+  const body=metadata?text.slice(0,metadata.index):text;
+  const markers=[...body.matchAll(/(?:^|\s)(?:\(([A-H])\)|[［\[]([A-H])[］\]]|([A-H])[).:\-])\s*/g)];
+  if(markers.length<2)return null;
+  const options=markers.map((m,i)=>({id:m[1]||m[2]||m[3],text:body.slice(m.index+m[0].length,markers[i+1]?.index??body.length).trim()}));
+  if(new Set(options.map(o=>o.id)).size!==options.length||options.some(o=>!o.text))return null;
+  const stem=body.slice(0,markers[0].index).replace(/^(?:(?:câu|question|bài)\s*)?\d+[.:/)\-]\s*/i,'').trim();
+  const ansMatch=text.match(/(?:^|\n|\s)(?:đáp\s*án|answer|key)\s*[:：\-]\s*([A-H]+(?:[ \t,;/&+]+[A-H]+)*)(?=\s|$|[.;])/i);
+  const answer=normalizeAnswer(ansMatch?.[1]||'',options);
+  const expMatch=text.match(/(?:giải\s*thích|lời\s*giải|hướng\s*dẫn|explanation)\s*[:：\-]\s*([\s\S]*)/i);
+  return {id:crypto.randomUUID(),stem:stem||'Câu hỏi',options,answer,explanation:expMatch?.[1]?.trim()||'',verified:!!answer,answerSource:answer?'manual':null,sourceName,subject:subject||'Tài liệu tải lên'};
 }
 
 function fileToBase64(file) {
