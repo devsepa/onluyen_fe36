@@ -302,6 +302,8 @@ body.quiz-active.sidebar-collapsed main{margin:0}
 /* Enhanced Choice Pills */
 body.quiz-active .quiz-question .choice-pill{background:var(--panel2);color:var(--text);border:1.5px solid var(--line);transition:all .15s ease}
 body.quiz-active .quiz-question .choice-pill:hover:not(:disabled){border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.18)}
+body.quiz-active .quiz-question .choice-pill.selected,
+body.quiz-active .quiz-question .choice-pill[aria-pressed="true"]{background:var(--accent)!important;color:#ffffff!important;border-color:var(--accent)!important;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%,transparent),0 4px 16px rgba(99,102,241,0.45)!important;transform:scale(1.04)}
 body.quiz-active .quiz-question .choice-pill.correct,
 body.quiz-active .quiz-question .choice-pill.status-correct{background:#10b981!important;color:#ffffff!important;border-color:#10b981!important;box-shadow:0 4px 14px rgba(16,185,129,0.3)!important}
 body.quiz-active .quiz-question .choice-pill.wrong,
