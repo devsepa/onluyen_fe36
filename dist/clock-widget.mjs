@@ -1,66 +1,134 @@
 // Clock & Greeting Widget (Tumadam style)
-// Displays: Good Afternoon! 🌿 17:30:03 🌦️ on desktop, and 17:31:05 🌦️ on mobile
+// Dynamic live clock with period styling, glowing borders, auto-sliding greetings, and floating weather icon
 
-function getGreeting(date = new Date()) {
-  const h = date.getHours();
-  if (h >= 5 && h < 12) {
-    return { text: "Good Morning!", leaf: "🌿", icon: "⛅" };
-  } else if (h >= 12 && h < 18) {
-    return { text: "Good Afternoon!", leaf: "🌿", icon: "🌦️" };
-  } else if (h >= 18 && h < 22) {
-    return { text: "Good Evening!", leaf: "🌿", icon: "🌙" };
-  } else {
-    return { text: "Good Night!", leaf: "🌿", icon: "✨" };
-  }
+const PERIODS = [
+  { id: 'midnight',  from:  0, to:  5, icon: '✨', greeting: 'Good Night! ✨' },
+  { id: 'dawn',      from:  5, to:  9, icon: '🌅', greeting: 'Good Morning! 🌅' },
+  { id: 'morning',   from:  9, to: 12, icon: '☀️', greeting: 'Good Morning! ☀️' },
+  { id: 'noon',      from: 12, to: 14, icon: '🍱', greeting: 'Good Noon! 🍱' },
+  { id: 'afternoon', from: 14, to: 18, icon: '🌦️', greeting: 'Good Afternoon! 🌿' },
+  { id: 'evening',   from: 18, to: 22, icon: '🌇', greeting: 'Good Evening! 🌇' },
+  { id: 'night',     from: 22, to: 24, icon: '🌙', greeting: 'Good Night! 🌙' },
+];
+
+export function getPeriod(h) {
+  return PERIODS.find(p => h >= p.from && h < p.to) || PERIODS[4]; // default afternoon
 }
 
-function formatTime(date = new Date()) {
+export function formatTime(date = new Date()) {
   const pad = n => String(n).padStart(2, '0');
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-function formatDateTooltip(date = new Date()) {
+export function formatDateTooltip(date = new Date()) {
   const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
   const dayName = days[date.getDay()];
   const pad = n => String(n).padStart(2, '0');
   return `${dayName}, ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
 }
 
-export function renderClockPillHtml() {
+export function renderClockPillHtml(extraClass = '') {
   const now = new Date();
-  const info = getGreeting(now);
+  const p = getPeriod(now.getHours());
   const timeStr = formatTime(now);
   const tooltip = formatDateTooltip(now);
 
   return `
-    <div class="tumadam-clock-pill" title="${tooltip}">
-      <span class="clock-greeting">${info.text} ${info.leaf}</span>
-      <span class="clock-time">${timeStr}</span>
-      <span class="clock-weather">${info.icon}</span>
+    <div class="clock-widget tumadam-clock-pill period-${p.id} ${extraClass}" title="${tooltip}" role="timer" aria-label="Đồng hồ học tập">
+      <div class="clock-greeting" id="clockGreeting">${p.greeting}</div>
+      <div class="clock-time" id="clockTime">${timeStr}</div>
+      <div class="clock-period-icon clock-weather" id="clockIcon">
+        <span class="clock-icon-symbol">${p.icon}</span>
+      </div>
     </div>
   `;
 }
 
 export function setupClockWidget() {
+  const widgets = document.querySelectorAll('.clock-widget, .tumadam-clock-pill');
+  if (!widgets.length) return () => {};
+
+  let lastPeriodId = null;
+  let hideGreetingTimer = null;
+
+  function triggerGreetingSlide() {
+    widgets.forEach(w => {
+      const g = w.querySelector('.clock-greeting');
+      if (g) {
+        g.classList.remove('hide');
+      }
+    });
+
+    if (hideGreetingTimer) clearTimeout(hideGreetingTimer);
+    hideGreetingTimer = setTimeout(() => {
+      widgets.forEach(w => {
+        const g = w.querySelector('.clock-greeting');
+        if (g) g.classList.add('hide');
+      });
+    }, 8000);
+  }
+
   function tick() {
     const now = new Date();
-    const info = getGreeting(now);
+    const p = getPeriod(now.getHours());
     const timeStr = formatTime(now);
     const tooltip = formatDateTooltip(now);
 
-    document.querySelectorAll('.tumadam-clock-pill').forEach(pill => {
-      pill.title = tooltip;
-      const greetingEl = pill.querySelector('.clock-greeting');
-      if (greetingEl) greetingEl.textContent = `${info.text} ${info.leaf}`;
-      const timeEl = pill.querySelector('.clock-time');
-      if (timeEl) timeEl.textContent = timeStr;
-      const weatherEl = pill.querySelector('.clock-weather');
-      if (weatherEl) weatherEl.textContent = info.icon;
+    widgets.forEach(w => {
+      w.title = tooltip;
+
+      // Update period class if changed
+      if (p.id !== lastPeriodId) {
+        PERIODS.forEach(item => w.classList.remove(`period-${item.id}`));
+        w.classList.add(`period-${p.id}`);
+      }
+
+      const timeEl = w.querySelector('.clock-time');
+      if (timeEl && timeEl.textContent !== timeStr) {
+        timeEl.textContent = timeStr;
+      }
+
+      const greetEl = w.querySelector('.clock-greeting');
+      if (greetEl && !greetEl.dataset.customized) {
+        greetEl.textContent = p.greeting;
+      }
+
+      const iconEl = w.querySelector('.clock-period-icon, .clock-weather');
+      if (iconEl) {
+        const symbolEl = iconEl.querySelector('.clock-icon-symbol');
+        if (symbolEl) {
+          symbolEl.textContent = p.icon;
+        } else {
+          iconEl.textContent = p.icon;
+        }
+      }
     });
+
+    lastPeriodId = p.id;
   }
 
-  // Initial tick & interval
+  // Hover or click to reveal greeting anytime
+  widgets.forEach(w => {
+    w.addEventListener('mouseenter', () => {
+      const g = w.querySelector('.clock-greeting');
+      if (g) g.classList.remove('hide');
+    });
+    w.addEventListener('mouseleave', () => {
+      const g = w.querySelector('.clock-greeting');
+      if (g) g.classList.add('hide');
+    });
+    w.addEventListener('click', () => {
+      triggerGreetingSlide();
+    });
+  });
+
+  // Initial setup & start 8s timer
   tick();
+  triggerGreetingSlide();
   const timer = setInterval(tick, 1000);
-  return () => clearInterval(timer);
+
+  return () => {
+    clearInterval(timer);
+    if (hideGreetingTimer) clearTimeout(hideGreetingTimer);
+  };
 }

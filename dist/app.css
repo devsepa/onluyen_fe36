@@ -406,24 +406,109 @@ body.quiz-active .feedback-inline-exp b{display:block;margin-bottom:4px;font-siz
 main{margin-left:252px;min-height:100vh;display:flex;flex-direction:column;padding-bottom:0!important}
 .page-content{flex:1 0 auto;padding:34px 40px 40px;max-width:1840px;margin:0 auto;width:100%}
 
-.app-footer{margin-top:auto;width:100%;background:var(--panel);border-top:1px solid var(--line);padding:24px 40px;position:static!important;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;user-select:none}
-body.quiz-active .app-footer,body.exam-active .app-footer{display:none!important}
-
-.footer-container{width:100%;max-width:none;margin:0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px}
-
-.footer-brand-block{display:flex;flex-direction:column;gap:5px}
-.footer-brand-title{display:flex;align-items:center;gap:10px}
-.footer-logo-box{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--accent) 0%,#4338ca 100%);color:#fff;display:inline-grid;place-items:center;font-size:15px;font-weight:800;box-shadow:0 4px 12px rgba(99,102,241,0.35);flex:none}
-.footer-brand-name{font-size:16.5px;font-weight:800;color:var(--text);letter-spacing:-.3px}
-.footer-motto{margin:0;font-size:12.5px;color:var(--muted);font-style:italic;line-height:1.5}
-
-.footer-dev-badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);background:var(--panel2);padding:7px 15px;border-radius:9px;border:1px solid var(--line)}
-.footer-dev-badge .dev-link{font-weight:700;color:var(--accent);text-decoration:none;transition:color .15s ease}
-.footer-dev-badge .dev-link:hover{text-decoration:underline;color:#818cf8}
-
-@media(max-width:760px){
-  .app-footer{padding:20px 20px}
-  .footer-container{flex-direction:column;align-items:flex-start;gap:14px}
+/* ==========================================================================
+   SLEEK MODERN MINIMALIST FOOTER
+   ========================================================================== */
+.app-footer {
+  margin-top: auto;
+  width: 100%;
+  background: rgba(10, 15, 29, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 12px 36px;
+  position: static !important;
+  box-shadow: none;
+  user-select: none;
+}
+body.quiz-active .app-footer,
+body.exam-active .app-footer {
+  display: none !important;
+}
+.footer-container {
+  width: 100%;
+  max-width: 1840px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.footer-logo-img {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  flex: none;
+}
+.footer-brand-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.footer-separator {
+  color: rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  margin: 0 1px;
+}
+.footer-tagline {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.footer-dev-text {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.footer-dev-link {
+  font-weight: 600;
+  font-size: 12px;
+  color: #818cf8;
+  text-decoration: none;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  padding: 2.5px 10px;
+  border-radius: 7px;
+  transition: all 0.15s ease;
+}
+.footer-dev-link:hover {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(99, 102, 241, 0.5);
+  color: #a5b4fc;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+  text-decoration: none;
+}
+@media (max-width: 760px) {
+  .app-footer {
+    padding: 10px 16px;
+  }
+  .footer-container {
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+  }
+  .footer-left {
+    justify-content: center;
+  }
+  .footer-tagline, .footer-separator {
+    display: none;
+  }
 }
 
 /* ==========================================================================
@@ -775,70 +860,180 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
 .explanation-tip-text{font-size:12px;line-height:1.6;color:var(--text)}
 
 
-/* Tumadam-style Clock & Greeting Widget */
+/* ==========================================================================
+   TUMADAM-STYLE DYNAMIC CLOCK & GREETING WIDGET (100% Tumadam Match)
+   ========================================================================== */
+.clock-widget,
 .tumadam-clock-pill {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  background: color-mix(in srgb, #064e3b 35%, #051a14);
-  border: 1.5px solid rgba(16, 185, 129, 0.45);
-  box-shadow: 0 0 14px rgba(16, 185, 129, 0.25), inset 0 0 6px rgba(16, 185, 129, 0.12);
+  gap: 8px;
   padding: 5px 14px;
   border-radius: 9999px;
-  color: #f1f5f9;
-  font-size: 13px;
-  line-height: 1;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
-  cursor: default;
+  overflow: hidden;
+  position: relative;
 }
-.tumadam-clock-pill:hover {
-  border-color: rgba(16, 185, 129, 0.75);
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.4);
-}
+
+/* Greeting text — hiện lúc vừa vào / hover, rồi tự động trượt thu gọn */
+.clock-widget .clock-greeting,
 .tumadam-clock-pill .clock-greeting {
   font-size: 12.5px;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: 0.3px;
   white-space: nowrap;
+  max-width: 180px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-width 0.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.6s ease, margin 0.6s ease;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  display: inline-block;
 }
+
+.clock-widget .clock-greeting.hide,
+.tumadam-clock-pill .clock-greeting.hide {
+  max-width: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+/* Thời gian số thực */
+.clock-widget .clock-time,
 .tumadam-clock-pill .clock-time {
-  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', monospace;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Roboto Mono', ui-monospace, monospace;
   font-size: 13.5px;
   font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
   font-variant-numeric: tabular-nums;
+  color: #ffffff;
   white-space: nowrap;
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
 }
+
+/* Icon thời tiết động */
+.clock-widget .clock-period-icon,
+.clock-widget .clock-weather,
+.tumadam-clock-pill .clock-period-icon,
 .tumadam-clock-pill .clock-weather {
-  font-size: 14px;
-  line-height: 1;
-  display: inline-block;
-  transform: translateY(-0.5px);
-  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.35));
-}
-.topbar-clock-mount {
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14.5px;
+  animation: clockIconFloat 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.4));
 }
+
+@keyframes clockIconFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.12);
+  }
+}
+
+/* ===== THEMES THEO BUỔI (TUMADAM NATIVE GLOW) ===== */
+
+/* Buổi chiều (afternoon): Xanh ngọc lục bảo Tumadam */
+.clock-widget.period-afternoon,
+.tumadam-clock-pill.period-afternoon {
+  background: rgba(6, 26, 18, 0.88);
+  border-color: #059669;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.42), inset 0 0 8px rgba(16, 185, 129, 0.18);
+}
+.clock-widget.period-afternoon:hover,
+.tumadam-clock-pill.period-afternoon:hover {
+  border-color: #10b981;
+  box-shadow: 0 0 22px rgba(16, 185, 129, 0.65), inset 0 0 10px rgba(16, 185, 129, 0.28);
+}
+
+/* Buổi tối (night): Tím xanh neon */
+.clock-widget.period-night,
+.tumadam-clock-pill.period-night {
+  background: rgba(10, 12, 35, 0.88);
+  border-color: #6366f1;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.42), inset 0 0 8px rgba(99, 102, 241, 0.18);
+}
+.clock-widget.period-night:hover,
+.tumadam-clock-pill.period-night:hover {
+  border-color: #818cf8;
+  box-shadow: 0 0 22px rgba(99, 102, 241, 0.65);
+}
+
+/* Hoàng hôn (evening): Tím hoàng hôn */
+.clock-widget.period-evening,
+.tumadam-clock-pill.period-evening {
+  background: rgba(24, 8, 38, 0.88);
+  border-color: #7c3aed;
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.42), inset 0 0 8px rgba(124, 58, 237, 0.18);
+}
+
+/* Bình minh & sáng sớm (dawn): Xanh dương bình minh */
+.clock-widget.period-dawn,
+.tumadam-clock-pill.period-dawn {
+  background: rgba(8, 22, 38, 0.88);
+  border-color: #60a5fa;
+  box-shadow: 0 0 16px rgba(96, 165, 250, 0.42), inset 0 0 8px rgba(96, 165, 250, 0.18);
+}
+
+/* Buổi sáng (morning): Hổ phách */
+.clock-widget.period-morning,
+.tumadam-clock-pill.period-morning {
+  background: rgba(32, 22, 6, 0.88);
+  border-color: #d97706;
+  box-shadow: 0 0 16px rgba(217, 119, 6, 0.42), inset 0 0 8px rgba(217, 119, 6, 0.18);
+}
+
+/* Buổi trưa (noon): Cam nắng */
+.clock-widget.period-noon,
+.tumadam-clock-pill.period-noon {
+  background: rgba(36, 18, 6, 0.88);
+  border-color: #ea580c;
+  box-shadow: 0 0 16px rgba(234, 88, 12, 0.42), inset 0 0 8px rgba(234, 88, 12, 0.18);
+}
+
+/* Đêm khuya (midnight): Bạc dạ quang */
+.clock-widget.period-midnight,
+.tumadam-clock-pill.period-midnight {
+  background: rgba(15, 20, 28, 0.88);
+  border-color: #94a3b8;
+  box-shadow: 0 0 16px rgba(148, 163, 184, 0.35), inset 0 0 8px rgba(148, 163, 184, 0.15);
+}
+
+.topbar-clock-mount,
 .quiz-clock-mount {
   display: inline-flex;
   align-items: center;
 }
 
 @media (max-width: 640px) {
+  .clock-widget,
   .tumadam-clock-pill {
     padding: 4px 10px;
-    gap: 5px;
+    gap: 6px;
   }
+  .clock-widget .clock-greeting,
   .tumadam-clock-pill .clock-greeting {
     display: none !important;
   }
+  .clock-widget .clock-time,
   .tumadam-clock-pill .clock-time {
     font-size: 12.5px;
     font-weight: 700;
   }
+  .clock-widget .clock-period-icon,
   .tumadam-clock-pill .clock-weather {
     font-size: 13px;
   }
