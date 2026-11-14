@@ -1,4 +1,4 @@
-﻿import { parseExamFile } from './universal-parser.mjs';
+import { parseExamFile } from './universal-parser.mjs';
 import {setupLibraryManager} from './library-manager.mjs';
 import {createLibraryMedia} from './library-media.mjs';
 import {createSlideBlobCache} from './slide-blob-cache.mjs';
@@ -31,7 +31,7 @@ import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs';
 import { presentationIdFromLink } from "./resources.mjs";
 import { validateBank } from "./banks.mjs?v=20261113-background-publish-1";
 import { setupAccount } from "./account-ui.js?v=20261113-background-publish-1";
-import { AI_API_BASE } from "./site-config.mjs?v=20261113-background-publish-1";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=20261113-background-publish-1";
 import {
   solveBatch,
   applyAiResults,
@@ -212,13 +212,13 @@ function hasAiText(q) {
     q.options.every((o) => typeof o.text === "string" && o.text.trim())
   );
 }
-const publicSlideBlobs=createSlideBlobCache({owner:()=> 'public-shared',cacheName:'sot-public-slide-images-v1',maxBytes:()=>resourcePolicy.publicCacheBytes,ttl:7*86400000,load:async(q,options)=>(await deckRequest(AI_API_BASE,sharedImagePath(q),{signal:options.signal})).blob()});
+const publicSlideBlobs=createSlideBlobCache({owner:()=> 'public-shared',cacheName:'sot-public-slide-images-v1',maxBytes:()=>resourcePolicy.publicCacheBytes,ttl:7*86400000,load:async(q,options)=>(await deckRequest(DATA_API_BASE,sharedImagePath(q),{signal:options.signal})).blob()});
 async function questionBlob(q, options = {}) {
   const started=performance.now();try{
   try{const local=await libraryMedia.forQuestion(q);if(local)return local}catch{}
 
   return await (q.sharedDeck
-    ? publicSlideBlobs.get({...q,url:new URL(sharedImagePath(q),AI_API_BASE).href},options)
+    ? publicSlideBlobs.get({...q,url:new URL(sharedImagePath(q),DATA_API_BASE).href},options)
     : resources.slideBlob(q, options));
   }catch(error){if(error.name!=='AbortError'){telemetry.record('image_error');error.imageReported=true}throw error}finally{telemetry.record('image_ms',performance.now()-started)}
 }
@@ -412,7 +412,7 @@ const resources = setupResources({
   },
 });
 const shared = setupSharedDecks({
-  base: AI_API_BASE,
+  base: DATA_API_BASE,
   getBank: () => bank,
   getToken: () => resources.apiToken(),
   getBlob: questionBlob,
@@ -1988,7 +1988,7 @@ for (const [key, value] of [
   ["sot-session", session],
 ])
   if (originalStorage.get(key) !== JSON.stringify(value)) write(key, value);
-libraryManager=setupLibraryManager({base:AI_API_BASE,getBank:()=>bank,getGeneration:()=>libraryGeneration,getToken:()=>resources.apiToken(),getBlob:questionBlob,getDetails:q=>hasSpeakerNoteExplanation(q)?null:explanationQueue.state(q).details,media:libraryMedia,
+libraryManager=setupLibraryManager({base:DATA_API_BASE,getBank:()=>bank,getGeneration:()=>libraryGeneration,getToken:()=>resources.apiToken(),getBlob:questionBlob,getDetails:q=>hasSpeakerNoteExplanation(q)?null:explanationQueue.state(q).details,media:libraryMedia,
  setBank:questions=>{if(!write('sot-bank',questions))return false;bank=questions;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);refreshStats();if(view==='library')renderLibrary();else if(view==='practice'&&(!session||session.done))renderPractice();return true},
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
  onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}

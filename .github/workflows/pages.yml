@@ -54,6 +54,7 @@ jobs:
       - name: Configure public AI endpoint
         env:
           AI_API_BASE: ${{ vars.AI_API_BASE }}
+          DATA_API_BASE: ${{ vars.DATA_API_BASE }}
         run: node scripts/configure-ai.mjs
       - name: Stamp public release version
         run: node scripts/configure-version.mjs

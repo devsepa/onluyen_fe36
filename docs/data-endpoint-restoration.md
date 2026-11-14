@@ -1,0 +1,7 @@
+# Restore the original persistent library endpoint
+
+The catalog appeared empty because AI provider work hardcoded `AI_API_BASE` to another Cloudflare account, while catalog/images/private-library calls also used that address. The original storage service still returned JPD113 (222 questions) and DBI202 (375 questions), with both manifests and sample original images HTTP 200. No storage deletion was necessary to explain the symptom.
+
+`DATA_API_BASE` now independently selects the persistent data service. Shared catalog reads, published-deck creation/removal, original images, and private-library synchronization use it. AI, explanation cache/review, and quality measurements continue using `AI_API_BASE`. The Pages build accepts separate validated repository variables rather than hardcoding a provider or deriving the data address from the AI address. The original data endpoint is retained when unspecified; changing it is an explicit data migration decision.
+
+No server-side data was copied, overwritten, deleted or republished. Google OAuth identity and user browser storage were retained. Regression tests cover independent configuration, AI changes leaving storage untouched, and rejecting malformed/unsafe URLs without partial writes. Public catalog/manifests/images were verified live; reading a real user's private library requires that user's Google token and is not asserted by anonymous checks.
