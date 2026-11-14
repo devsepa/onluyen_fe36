@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {generateAnswersWithGroq,validateResults} from '../backend/worker.mjs';
 import {normalizeExplanation,explanationKey} from '../dist/explanation-data.mjs';
 import {explanationCacheKey} from '../backend/explanation-cache.mjs';
+import {validateLibraryQuestions} from '../dist/library-data.mjs';
 const question={id:'exact-id',stem:'Which clause filters rows before aggregation?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}],explain:true};
 const result={id:question.id,status:'answered',answer:'A',explanation:'WHERE lọc từng dòng trước khi GROUP BY.',tip:'WHERE lọc dòng trước nhóm; HAVING lọc nhóm sau GROUP BY.',optionReasons:[{id:'A',text:'WHERE',reason:'Lọc từng dòng trước khi nhóm.'},{id:'B',text:'HAVING',reason:'Lọc nhóm sau khi tổng hợp, không phải từng dòng.'}]};
 const fetcher=value=>async()=>Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify({answers:[value]})}}]});
@@ -28,4 +29,10 @@ test('new cache revision and provider identity do not reuse previous generated e
 });
 test('a conflicting independently solved answer cannot overwrite the original answer or be shown as its explanation',()=>{
  assert.throws(()=>normalizeExplanation({...question,answer:'B'},result),/khác đáp án gốc/);
+});
+test('memory aids survive archive/sync validation and boilerplate reasons cannot enter the cache',()=>{
+ const q={...question,sourceId:'quality',url:'https://docs.google.com/presentation/d/quality/edit#slide=id.p1',answer:'A'};
+ const details={...normalizeExplanation(q,result),key:explanationKey(q)};
+ assert.equal(validateLibraryQuestions([{...q,explanationDetails:details}])[0].explanationDetails.tip,result.tip);
+ assert.throws(()=>validateResults({answers:[{...result,optionReasons:result.optionReasons.map(o=>({...o,reason:'Lựa chọn không phù hợp'}))}]},[question]),/cụ thể/);
 });

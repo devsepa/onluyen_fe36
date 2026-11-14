@@ -12,7 +12,7 @@ if(String(url).includes('/v1/answers'))return new Promise(resolve=>setTimeout(()
 await call('Page.navigate',{url:'http://localhost:8080'});await pause(400);
 await run(`localStorage.setItem('sot-bank',JSON.stringify([${JSON.stringify(q)}]));localStorage.setItem('sot-session',JSON.stringify({mode:'study',questions:[${JSON.stringify(q)}],current:0,answers:{},flags:[],started:Date.now(),done:false}));localStorage.removeItem('sot-explanation-cache-v1');location.reload()`);
 await pause(800);await wait(`!!document.querySelector('[data-o="A"]')`);await run(`document.querySelector('[data-o="A"]').click()`);await pause(100);
-assert.equal(await run(`document.querySelector('.feedback')?.textContent.includes('STALE_GUESSED_EXPLANATION')`),false,JSON.stringify({errors,state:await run(`(async()=>({text:document.querySelector('.feedback')?.textContent,q:JSON.parse(localStorage.getItem('sot-session')).questions[0],code:(await import('./quiz-feedback.mjs?v=2026.11.14.32')).renderQuizFeedback.toString().includes('const explanation=')}))()`)}));
+assert.equal(await run(`document.querySelector('.feedback')?.textContent.includes('STALE_GUESSED_EXPLANATION')`),false,JSON.stringify(errors));
 await wait(`!!document.querySelector('.explanation-tip-text')`);
 assert.match(await run(`document.querySelector('.explanation-tip-text').textContent`),/WHERE lọc dòng trước nhóm/);
 assert.match(await run(`document.querySelector('.explanation-answer').textContent`),/A — WHERE/);

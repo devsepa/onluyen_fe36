@@ -59,11 +59,14 @@ export function validateResults(data,questions){
   }
   if(!q||seen.has(a.id)||typeof a.explanation!=='string'||a.explanation.length>3000||!['answered','uncertain'].includes(a.status)||(a.status==='answered'&&!validAnswer(a.answer,q))||(a.status==='uncertain'&&a.answer!==''))throw new ApiError(502,'Đáp án AI trả về không hợp lệ. Hãy thử lại.');
   let optionReasons;
+  const generic=value=>typeof value==='string'&&/^(?:Đáp án đúng theo câu hỏi|Lựa chọn không phù hợp|Đáp án chính xác dựa trên các dữ kiện và quy tắc trong câu hỏi)[.!\s]*$/iu.test(value.trim());
+  if(a.status==='answered'&&(!a.explanation.trim()||generic(a.explanation)))throw new ApiError(502,'AI chưa đưa ra lý do cụ thể. Không lưu đáp án phỏng đoán.');
   if(q.explain){
    if(a.status==='answered')try{optionReasons=validateOptionReasons(a.optionReasons,a.kind==='question'?a.labels:q.options.map(o=>o.id))}catch{throw new ApiError(502,'AI chưa giải thích đầy đủ các lựa chọn. Hãy thử lại.')}
    else optionReasons=[];
   }
   if(q.explain&&!q.image&&a.status==='answered'&&optionReasons.some(o=>q.options.find(original=>original.id===o.id)?.text.trim()!==o.text))throw new ApiError(502,'AI đã thay đổi nội dung lựa chọn. Hãy thử lại.');
+  if(optionReasons?.some(o=>generic(o.reason)))throw new ApiError(502,'AI chưa giải thích cụ thể từng lựa chọn. Hãy thử lại.');
   if(a.tip!==undefined&&(typeof a.tip!=='string'||a.tip.length>1200))throw new ApiError(502,'Mẹo ghi nhớ của AI không hợp lệ.');
   seen.add(a.id);return{id:a.id,status:a.status,answer:a.answer,explanation:a.explanation,...(typeof a.tip==='string'?{tip:a.tip.trim()}:{}),...(a.kind?{kind:a.kind,labels:a.labels}:{}),...(q.explain?{optionReasons}:{})};
  });
@@ -76,7 +79,7 @@ export async function generateAnswersWithGroq(questions,env,fetcher=fetch){
   method:'POST',headers:{Authorization:'Bearer '+env.GROQ_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(90000),
   body:JSON.stringify({model:vision?'qwen/qwen3.8-27b':'openai/gpt-oss-120b',messages:[{role:'system',content:answerPolicy({explain,vision})},{role:'user',content:vision?content:content.map(p=>p.text).join('\n')}],response_format:{type:'json_object'},temperature:0.1,max_completion_tokens:6000})
  })}catch{throw new ApiError(504,'AI phản hồi chậm. Chưa thay đổi đáp án; hãy thử lại sau.')}
- if(!response.ok)throw new ApiError(response.status===429?429:502,'Dịch vụ AI chưa xử lý được yêu cầu ('+response.status+'). Chưa thay đổi đáp án.');
+ if(!response.ok){let code='';try{const detail=await response.json();if(/^[a-z_]{1,60}$/.test(detail.error?.code))code=', '+detail.error.code}catch{}throw new ApiError(response.status===429?429:502,'Dịch vụ AI chưa xử lý được yêu cầu ('+response.status+code+'). Chưa thay đổi đáp án.')}
  let parsed;try{const data=await response.json();if(data.choices?.[0]?.finish_reason!=='stop')throw Error('Incomplete');parsed=JSON.parse(data.choices[0].message.content)}catch{throw new ApiError(502,'AI trả thiếu hoặc sai định dạng. Không tự suy đoán đáp án.')}
  return validateResults(parsed,questions);
 }
@@ -86,6 +89,7 @@ export async function generateAnswers(questions,env,fetcher=fetch){
   try {
    return await generateAnswersWithGroq(questions, env, fetcher);
   } catch(e) {
+   console.warn('AI_PROVIDER_FALLBACK',JSON.stringify({provider:'groq',status:e.status||502,reason:e instanceof ApiError?e.message:'Invalid provider response'}));
    if(!env.GEMINI_API_KEY)throw e;
   }
  }
@@ -134,16 +138,20 @@ async function invokeRegional(path,input,env){
  const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
 }
 export async function generateInSupportedRegion(questions,env){
+ let primaryFailure;
  if(env.GROQ_API_KEY){
   try {
    const answers = await generateAnswersWithGroq(questions, env);
    return { answers, model: 'groq' };
   } catch(e) {
+   primaryFailure=e;
    if(!env.GEMINI_API_KEY)throw e;
   }
  }
- if(!env.GEMINI_RUNTIME)return generateWithFallback(questions,env);
- return invokeRegional('/answers',{questions,...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);
+ try{
+  if(!env.GEMINI_RUNTIME)return await generateWithFallback(questions,{...env,GROQ_API_KEY:undefined});
+  return await invokeRegional('/answers',{questions,...(primaryFailure?{geminiOnly:true}:{}),...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);
+ }catch(error){if(primaryFailure instanceof ApiError&&error instanceof ApiError)error.message=primaryFailure.message+' Dự phòng: '+error.message;throw error}
 }
 async function generateTutorReply(prompt,env){
  const model=env.GEMINI_MODEL||'gemini-3.8-flash';if(!/^[a-zA-Z0-9._-]+$/.test(model))throw new ApiError(503,'Model AI chưa được cấu hình hợp lệ.');
@@ -153,7 +161,7 @@ async function generateTutorReply(prompt,env){
 }
 export class RegionalGemini{
  constructor(state,env){this.env=env}
- async fetch(request){try{const body=JSON.parse(await readLimited(request,MAX_BODY));if(new URL(request.url).pathname==='/followup'){if(typeof body.prompt!=='string'||!body.prompt.trim()||body.prompt.length>2000)throw new ApiError(400,'Câu hỏi thêm không hợp lệ.');return Response.json(await generateTutorReply(body.prompt,this.env))}return Response.json(await generateWithFallback(validateQuestions(body),this.env))}catch(error){return Response.json({error:error instanceof ApiError?error.message:'Chưa gọi được AI tại máy chủ xử lý.',...(error.code?{code:error.code}:{})},{status:error instanceof ApiError?error.status:503})}}
+ async fetch(request){try{const body=JSON.parse(await readLimited(request,MAX_BODY));if(new URL(request.url).pathname==='/followup'){if(typeof body.prompt!=='string'||!body.prompt.trim()||body.prompt.length>2000)throw new ApiError(400,'Câu hỏi thêm không hợp lệ.');return Response.json(await generateTutorReply(body.prompt,this.env))}return Response.json(await generateWithFallback(validateQuestions(body),body.geminiOnly?{...this.env,GROQ_API_KEY:undefined}:this.env))}catch(error){return Response.json({error:error instanceof ApiError?error.message:'Chưa gọi được AI tại máy chủ xử lý.',...(error.code?{code:error.code}:{})},{status:error instanceof ApiError?error.status:503})}}
 }
 // One global Durable Object serializes quota reservations before billable requests.
 // Stores counts only; per-user keys expire by deleting older UTC-day records.
