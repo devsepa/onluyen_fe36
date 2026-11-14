@@ -1,0 +1,5 @@
+.resource-saving-control{display:grid;grid-template-columns:20px minmax(0,1fr);gap:5px 10px;align-items:center;padding:12px 4px;margin:8px 0 0;border-top:1px solid var(--line);font-size:12px;line-height:1.5;white-space:normal;cursor:pointer}.resource-saving-control input{margin:0;width:18px;height:18px;flex:none}.resource-saving-control small{grid-column:2;color:var(--muted);font-size:10px}
+.library-slide-media{aspect-ratio:16/9;min-height:120px}.library-slide-media[hidden]{display:none}.question-card{content-visibility:auto;contain-intrinsic-size:auto 600px}
+html.economy-mode *,html.economy-mode *::before,html.economy-mode *::after{animation:none!important;transition:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.economy-mode .quiz-progress-bar,html.economy-mode .choice-pill,html.economy-mode .card{box-shadow:none!important}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}

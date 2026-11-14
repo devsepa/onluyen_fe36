@@ -1,10 +1,10 @@
 // Private images stay on this device. Keys contain hashes, never Google URLs/tokens.
-export function createSlideBlobCache({owner,load,storage=globalThis.caches,now=Date.now,maxBytes=128*1024*1024,ttl=86400000}={}){
+export function createSlideBlobCache({owner,load,storage=globalThis.caches,now=Date.now,maxBytes=128*1024*1024,ttl=86400000,cacheName='sot-private-slide-images-v1'}={}){
  const pending=new Map();let epoch=0,opened,indexPromise,maintenance=Promise.resolve();
- const open=()=>opened??=storage?.open('sot-private-slide-images-v1').catch(()=>null);
+ const open=()=>opened??=storage?.open(cacheName).catch(()=>null);
  async function keyFor(q,identity){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify([identity.toLowerCase(),q.url,q.sourceVersion||null])));return new URL('/__sot_cached_slide__/'+[...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join(''),globalThis.location?.origin||'https://local.invalid').href}
- async function trim(cache,key,size){indexPromise??=(async()=>new Map(await Promise.all((await cache.keys()).map(async request=>{const response=await cache.match(request);return [request.url||String(request),{size:Number(response?.headers.get('X-Bytes')||0),savedAt:Number(response?.headers.get('X-Saved-At')||0)}]}))))();const entries=await indexPromise;entries.delete(key);entries.set(key,{size,savedAt:now()});let total=[...entries.values()].reduce((n,e)=>n+e.size,0);for(const [old,entry]of entries){if(now()-entry.savedAt>ttl||total>maxBytes){await cache.delete(old);entries.delete(old);total-=entry.size}}}
- return {clear(){epoch++;pending.clear()},async get(q,options={}){
+ async function trim(cache,key,size){indexPromise??=(async()=>new Map(await Promise.all((await cache.keys()).map(async request=>{const response=await cache.match(request);return [request.url||String(request),{size:Number(response?.headers.get('X-Bytes')||0),savedAt:Number(response?.headers.get('X-Saved-At')||0)}]}))))();const entries=await indexPromise;if(key){entries.delete(key);entries.set(key,{size,savedAt:now()})}let total=[...entries.values()].reduce((n,e)=>n+e.size,0);for(const [old,entry]of entries){if(now()-entry.savedAt>ttl||total>(typeof maxBytes==='function'?maxBytes():maxBytes)){await cache.delete(old);entries.delete(old);total-=entry.size}}}
+ return {async prune(){const cache=await open();if(!cache)return;maintenance=maintenance.catch(()=>{}).then(()=>trim(cache,null,0));await maintenance},clear(){epoch++;pending.clear()},async get(q,options={}){
   const identity=owner();if(!identity||!q.url)return load(q,options);const run=epoch,key=await keyFor(q,identity);
   if(run!==epoch)throw Error('Tài khoản Google đã thay đổi.');
   if(pending.has(key)){const shared=pending.get(key),blob=await shared;if(options.maxBytes&&blob.size>options.maxBytes){if(pending.get(key)===shared)pending.delete(key);return this.get(q,{...options,forceThumbnail:true})}return blob}

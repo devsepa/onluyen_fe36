@@ -9,7 +9,7 @@ export function createSlideImageStore(load,{limit=100,revoke=url=>URL.revokeObje
   entry.promise=Promise.resolve().then(()=>load(q)).then(url=>{
    if(run!==epoch||entries.get(key)!==entry){revoke(url);throw Error('Ảnh đã được giải phóng.')}
    entry.url=url;
-   for(const [old,item] of entries){if(entries.size<=limit)break;if(old!==key&&item.url)invalidate(old)}
+   for(const [old,item] of entries){if(entries.size<=(typeof limit==='function'?limit():limit))break;if(old!==key&&item.url)invalidate(old)}
    return url;
   }).catch(error=>{if(entries.get(key)===entry)entries.delete(key);throw error});
   entries.set(key,entry);return entry.promise;

@@ -10,3 +10,4 @@ for(const file of await readdir('dist'))if(/\.(?:js|mjs)$/.test(file)){
  const path='dist/'+file,text=await readFile(path,'utf8');
  await writeFile(path,text.replace(/(from\s+['"])(\.\/[^'"?]+\.(?:mjs|js))(?:\?[^'"]*)?(['"])/g,(_,before,module,quote)=>before+module+'?v='+version+quote));
 }
+const sw=await readFile('dist/sw.js','utf8');await writeFile('dist/sw.js',sw.replace(/const RELEASE_VERSION='[^']*';/,`const RELEASE_VERSION='${version}';`));

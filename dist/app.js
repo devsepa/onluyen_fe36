@@ -492,6 +492,7 @@ async function showQuestionImage(container, q) {
       ? "library-slide-img"
       : "slide-media-img";
     image.dataset.previewSlide = q.id;
+    image.dataset.cropKey=q.mediaId||JSON.stringify([q.sourceId,q.url,q.sharedDeck,q.sharedIndex,q.sourceVersion]);
     image.title = "Bấm để phóng to ảnh gốc";
     const displayImage = () => {
       if (container.isConnected&&container.dataset.offscreen!=='true') {
@@ -552,10 +553,11 @@ function showSlideError(container, q) {
   link.textContent = "Mở slide gốc ↗";
   if (q.url) container.append(link);
 }
-let libraryImageObserver=null,libraryImageEpoch=0;
+let libraryImageObserver=null,libraryImageEpoch=0,resumeLibraryImages=()=>{};
 function loadLibrarySlideImages(qs){
  libraryImageObserver?.disconnect();const epoch=++libraryImageEpoch,queue=[],queued=new Set();let active=0;
- function pump(){while(active<2&&queue.length&&!document.hidden&&epoch===libraryImageEpoch){const {q,container}=queue.shift();if(!container.isConnected||container.dataset.offscreen==='true'){queued.delete(container);continue}active++;showQuestionImage(container,q).finally(()=>{queued.delete(container);active--;pump()})}}
+ function pump(){while(active<2&&queue.length&&!document.hidden&&epoch===libraryImageEpoch){const {q,container}=queue.shift();if(!container.isConnected||!container.getClientRects().length||container.dataset.offscreen==='true'){queued.delete(container);continue}active++;showQuestionImage(container,q).finally(()=>{queued.delete(container);active--;pump()})}}
+ resumeLibraryImages=pump;
  const byElement=new Map();for(const q of qs){const container=document.querySelector('.library-slide-media[data-lib-slide="'+CSS.escape(q.id)+'"]');if(!container)continue;if(!q.url&&!q.sharedDeck&&!q.mediaId){container.hidden=true;continue}container.dataset.deferred='true';byElement.set(container,q)}
  if(typeof IntersectionObserver==='undefined'){for(const [container,q]of byElement){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent='Tải ảnh';button.onclick=()=>showQuestionImage(container,q);container.replaceChildren(button)}return}
  libraryImageObserver=new IntersectionObserver(entries=>{for(const entry of entries){const container=entry.target;if(entry.isIntersecting){delete container.dataset.offscreen;if(!container.querySelector('img')&&!queued.has(container)){queued.add(container);queue.push({container,q:byElement.get(container)})}}else{container.dataset.offscreen='true';container.replaceChildren()}}pump()},{rootMargin:resourcePolicy.economy?'160px':'400px'});for(const container of byElement.keys())libraryImageObserver.observe(container);
@@ -1998,8 +2000,8 @@ quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQues
 window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
 const versionUpdates=setupVersionUpdates({beforeUpdate:async()=>{if(resources.isBusy()||shared.isPublishing()||aiRunning||libraryManager?.isBusy()){message('Hãy đợi nhập tài liệu, AI hoặc đăng bộ đề hoàn tất trước khi cập nhật trang.');return false}if(session&&!session.done){if(!write('sot-session',session))return false;return askConfirm('Cập nhật trang? Bài đang làm đã được lưu và sẽ tiếp tục sau khi tải lại.',{title:'Có phiên bản mới',okText:'Cập nhật'})}return true}});
 setTimeout(scheduleAutoAi, 0);
-document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
-explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy);resourcePolicy.subscribe(()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
+document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden)resumeLibraryImages();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
+explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy);setTimeout(()=>publicSlideBlobs.prune().catch(()=>{}),1000);resourcePolicy.subscribe(()=>{publicSlideBlobs.prune().catch(()=>{});clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 
 refreshStats();
 switchView(session && !session.done ? "practice" : view);
@@ -2039,7 +2041,7 @@ window.addEventListener("beforeunload", (e) => {
 });
 
 // Register after initial rendering; activation never clears image/archive stores.
-if('serviceWorker' in navigator){const registerOffline=()=>navigator.serviceWorker.register(new URL('sw.js',document.baseURI)).catch(()=>{});if(document.readyState==='complete')registerOffline();else window.addEventListener('load',registerOffline,{once:true})}
+if('serviceWorker' in navigator){const registerOffline=()=>navigator.serviceWorker.register(new URL('sw.js',document.baseURI)).then(reg=>{const activate=()=>reg.waiting?.postMessage({type:'SKIP_WAITING'});activate();reg.installing?.addEventListener('statechange',activate)}).catch(()=>{});if(document.readyState==='complete')registerOffline();else window.addEventListener('load',registerOffline,{once:true})}
 
 // Universal File Upload Handler (PDF, Images, Text)
 (function initUniversalUpload() {

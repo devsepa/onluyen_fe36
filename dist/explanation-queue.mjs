@@ -1,6 +1,6 @@
 import {explanationKey,validateOptionReasons} from './explanation-data.mjs';
 export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,now=Date.now}={}){
- const cache=new Map(),states=new Map(),jobs=new Map(),queue=[],invalid=new Set();let running=null,blocked=null,disposed=false;
+ const cache=new Map(),states=new Map(),jobs=new Map(),queue=[],invalid=new Set();let running=null,blocked=null,disposed=false,paused=false;
  try{for(const [key,value]of JSON.parse(storage?.getItem('sot-explanation-cache-v1')||'[]').slice(-limit)){
   if(typeof key!=='string'||typeof value?.answer!=='string'||typeof value.reason!=='string'||value.reason.length>3000||!Array.isArray(value.options))continue;
   validateOptionReasons(value.options,value.options.map(o=>o.id));cache.set(key,value);
@@ -10,7 +10,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
  function persist(){try{while(cache.size>limit){const key=cache.keys().next().value;cache.delete(key);states.delete(key)}let entries=[...cache];while(entries.length>1&&JSON.stringify(entries).length>600000){states.delete(entries[0][0]);cache.delete(entries[0][0]);entries=entries.slice(1)}storage?.setItem('sot-explanation-cache-v1',JSON.stringify(entries))}catch{/* Cache denial must never block practice. */}}
  function drop(job){jobs.delete(job.key);states.delete(job.key);job.resolve(null)}
  async function pump(){
-  if(running||disposed)return;
+  if(running||disposed||paused)return;
   if(blocked){for(const job of queue.splice(0)){emit(job,{status:'error',...blocked});jobs.delete(job.key);job.resolve(null)}return}
   const job=queue.shift();if(!job)return;running=job;job.controller=new AbortController();emit(job,{status:'loading'});
   try{
@@ -34,5 +34,5 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
  function retain(questions){const keys=new Set(questions.map(explanationKey));for(let i=queue.length-1;i>=0;i--)if(!keys.has(queue[i].key))drop(queue.splice(i,1)[0])}
  function cancel(){for(const job of queue.splice(0))drop(job);running?.controller.abort();blocked=null}
  function resume(){blocked=null;for(const [key,value]of states)if(value.status==='error'&&[401,403].includes(value.statusCode))states.delete(key)}
- return {state,request,retain,cancel,resume,invalidate(q){const key=explanationKey(q);invalid.add(key);cache.delete(key);states.delete(key);persist()},dispose(){disposed=true;cancel()}};
+ return {state,request,retain,cancel,resume,setPaused(value){paused=!!value;if(!paused)pump()},invalidate(q){const key=explanationKey(q);invalid.add(key);cache.delete(key);states.delete(key);persist()},dispose(){disposed=true;cancel()}};
 }
