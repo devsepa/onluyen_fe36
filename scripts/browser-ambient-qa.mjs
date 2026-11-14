@@ -13,15 +13,12 @@ for(const theme of ['light','dark'])for(const [width,height]of [[1440,900],[390,
 }
 for(const reduced of ['reduce','no-preference'])for(const economy of [true,false]){
  await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reduced}]});
- await run(`localStorage.removeItem('sot-background-motion');location.reload()`);await new Promise(r=>setTimeout(r,500));
+ await run(`localStorage.setItem('sot-background-motion','off');location.reload()`);await new Promise(r=>setTimeout(r,500));
  await run(`document.documentElement.classList.toggle('economy-mode',${economy})`);await new Promise(r=>setTimeout(r,100));
- const initial=await run(`document.documentElement.dataset.backgroundMotion`);assert.equal(initial,reduced==='reduce'||economy?'off':'on');
- if(initial==='off')await run(`document.querySelector('#backgroundMotionToggle').click()`);
+ assert.equal(await run(`document.documentElement.dataset.backgroundMotion`),'on');
+ assert.equal(await run(`!!document.querySelector('#backgroundMotionToggle')`),false);
  const before=await run(`({transform:getComputedStyle(document.querySelector('.aurora-stream')).transform,pixels:document.querySelector('#stardustCanvas').toDataURL()})`);await new Promise(r=>setTimeout(r,250));
  const after=await run(`({transform:getComputedStyle(document.querySelector('.aurora-stream')).transform,pixels:document.querySelector('#stardustCanvas').toDataURL()})`);
- assert.notEqual(before.transform,after.transform,`${reduced}/${economy}: aurora must move after opt-in`);assert.notEqual(before.pixels,after.pixels,`${reduced}/${economy}: particles must move after opt-in`);
- await run(`document.querySelector('#backgroundMotionToggle').click()`);
- assert.equal(await run(`document.documentElement.dataset.backgroundMotion`),'off');
- await run(`location.reload()`);await new Promise(r=>setTimeout(r,500));assert.equal(await run(`document.documentElement.dataset.backgroundMotion`),'off','explicit stop survives reload');
+ assert.notEqual(before.transform,after.transform,`${reduced}/${economy}: aurora must move automatically`);assert.notEqual(before.pixels,after.pixels,`${reduced}/${economy}: particles must move automatically`);
 }
-console.log('PC/mobile light/dark verified; reduced-motion and economy matrix: explicit opt-in animates CSS and canvas; opt-out persists.');ws.close();
+console.log('PC/mobile light/dark verified; background auto-animates in reduced-motion/economy modes with no visible toggle, ignoring legacy off preference.');ws.close();
