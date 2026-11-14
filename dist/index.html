@@ -29,7 +29,27 @@
  <main>
   <header class="topbar"><div class="breadcrumb">Không gian học tập <span>/</span> <b id="breadcrumb">Kho đề & Ôn luyện</b></div><div class="top-actions"><div id="topbarClock" class="topbar-clock-mount"></div><button id="soundToggle" class="icon-button sound-toggle-btn" type="button" aria-label="Bật/tắt âm thanh" title="Bật/tắt âm thanh">🔊</button><button id="themeToggle" class="icon-button theme-toggle-btn" type="button" aria-label="Đổi giao diện Sáng / Tối" title="Đổi giao diện Sáng / Tối"><span id="themeIcon">🌓</span></button><div class="account-control"><button id="accountButton" class="avatar" type="button" aria-label="Tài khoản: đăng nhập Google" aria-haspopup="true" aria-expanded="false" aria-controls="accountMenu"></button><div id="accountMenu" class="account-menu" hidden><div class="account-info"><strong id="accountName">Khách</strong><span id="accountEmail">Đăng nhập để kết nối tài liệu của bạn.</span></div><div class="account-manage-group" id="accountManageGroup" hidden><div class="account-divider"></div><div class="account-section-title">QUẢN TRỊ & TẢI ĐỀ</div><button type="button" class="account-menu-item" data-view="sources"><span class="menu-icon">▱</span><span>Tài liệu của tôi</span><span class="menu-arrow">↗</span></button><button type="button" class="account-menu-item" data-view="library"><span class="menu-icon">▦</span><span>Ngân hàng câu hỏi</span><span id="accountQuestionCount" class="account-menu-count">0</span></button></div><div class="account-divider"></div><button id="accountLogin" type="button">Đăng nhập với Google</button><button id="accountSwitch" class="secondary" type="button" hidden>Đổi tài khoản Google</button><button id="accountLogout" class="text-button danger" type="button" hidden>Đăng xuất</button></div></div></div></header>
   <div class="page-content">
-   <section class="page-heading" id="pageHeading"><div><h1 id="pageTitle">Kho đề & Ôn luyện</h1><p id="pageDescription" hidden></p></div></section>
+   <section class="page-heading" id="pageHeading">
+      <div class="heading-left-block">
+        <div class="streak-badge"><span class="streak-icon">🔥</span><span class="streak-text">Chuỗi ôn thi: 1 ngày liên tục</span></div>
+        <h1 id="pageTitle">Kho đề & Ôn luyện</h1>
+        <p id="pageDescription" class="page-description" hidden></p>
+      </div>
+      <div class="header-metrics-grid" id="headerMetrics">
+        <div class="metric-card">
+          <span class="metric-label">KHO BỘ ĐỀ</span>
+          <strong class="metric-val" id="metricDecks">1 Đề</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">NGÂN HÀNG CÂU</span>
+          <strong class="metric-val accent" id="metricTotal">222+</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">TRẠNG THÁI</span>
+          <strong class="metric-val green" id="metricReady">Sẵn sàng</strong>
+        </div>
+      </div>
+    </section>
    <div id="message" role="status" hidden></div>
    <section id="sources" hidden>
     <div class="sources-grid">

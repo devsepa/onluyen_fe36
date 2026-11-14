@@ -199,6 +199,9 @@ function refreshStats() {
   $("ready").textContent = bank.filter(readyForPractice).length;
   if ($("navQuestionCount")) $("navQuestionCount").textContent = bank.length;
   if ($("accountQuestionCount")) $("accountQuestionCount").textContent = bank.length;
+  if ($("metricTotal")) $("metricTotal").textContent = bank.length > 0 ? `${bank.length} câu` : "222+";
+  if ($("metricDecks")) $("metricDecks").textContent = "1 Đề";
+  if ($("metricReady")) $("metricReady").textContent = bank.length > 0 ? "Sẵn sàng" : "Chờ nạp";
 }
 function aiBadge(q) {
   return q.answerSource === "gemini"
