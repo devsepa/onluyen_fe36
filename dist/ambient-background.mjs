@@ -37,6 +37,10 @@ export function setupAmbientBackground() {
   if (!ctx) return;
 
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let motionPreference = null;
+  try { const value = window.localStorage?.getItem('sot-background-motion'); if (value === 'on' || value === 'off') motionPreference = value; } catch {}
+  const motionEnabled = () => motionPreference ? motionPreference === 'on' : !reducedMotion.matches && !document.documentElement.classList?.contains('economy-mode');
+  let motionButton;
   let animId = null;
   let width = 0;
   let height = 0;
@@ -122,7 +126,7 @@ export function setupAmbientBackground() {
 
   function start() {
     if (animId || document.hidden) return;
-    if (reducedMotion.matches) {
+    if (!motionEnabled()) {
       renderFrame();
       return;
     }
@@ -134,6 +138,30 @@ export function setupAmbientBackground() {
       window.cancelAnimationFrame(animId);
       animId = null;
     }
+  }
+
+  function syncMotion() {
+    const enabled = motionEnabled();
+    document.documentElement.setAttribute?.('data-background-motion', enabled ? 'on' : 'off');
+    if (motionButton) {
+      motionButton.textContent = enabled ? 'Nền động: Bật' : 'Nền động: Tắt';
+      motionButton.setAttribute('aria-pressed', String(enabled));
+      motionButton.setAttribute('aria-label', enabled ? 'Tắt chuyển động nền' : 'Bật chuyển động nền');
+      motionButton.title = !enabled && !motionPreference ? 'Đang dừng theo chế độ giảm chuyển động hoặc tiết kiệm tài nguyên. Bấm để bật riêng chuyển động nền.' : 'Bật hoặc tắt cực quang và bụi sao';
+    }
+    stop();
+    start();
+  }
+  const footer = document.querySelector?.('footer .footer-right');
+  if (footer) {
+    motionButton = document.createElement('button');
+    motionButton.type = 'button';motionButton.id = 'backgroundMotionToggle';motionButton.className = 'secondary background-motion-toggle';
+    motionButton.onclick = () => {
+      motionPreference = motionEnabled() ? 'off' : 'on';
+      try { window.localStorage.setItem('sot-background-motion', motionPreference); } catch {}
+      syncMotion();
+    };
+    footer.prepend(motionButton);
   }
 
   document.addEventListener('visibilitychange', () => {
@@ -149,16 +177,16 @@ export function setupAmbientBackground() {
     renderFrame();
   }, { passive: true });
 
-  const observer = new MutationObserver(() => {
-    initParticles();
-    renderFrame();
+  const observer = new MutationObserver(records => {
+    if(records.some(record => record.attributeName === 'data-theme')) { initParticles(); renderFrame(); }
+    syncMotion();
   });
-  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-  reducedMotion.addEventListener?.('change', () => { stop(); start(); });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+  reducedMotion.addEventListener?.('change', syncMotion);
 
   // Initial render
   resize();
-  start();
+  syncMotion();
 
   canvas.ambientControls = { stop, start, resize };
   return canvas.ambientControls;

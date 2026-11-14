@@ -3,3 +3,10 @@
 html.economy-mode *,html.economy-mode *::before,html.economy-mode *::after{animation:none!important;transition:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 html.economy-mode .quiz-progress-bar,html.economy-mode .choice-pill,html.economy-mode .card{box-shadow:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+/* Explicit background opt-in overrides only this decoration, never other motion. */
+html[data-background-motion="on"] #appAmbientBg .aurora-stream{animation:auroraMorph 12s ease-in-out infinite alternate!important}
+html[data-background-motion="on"] #appAmbientBg .aurora-1{animation-duration:9s!important}
+html[data-background-motion="on"] #appAmbientBg .aurora-2{animation-duration:12s!important;animation-delay:-4s!important}
+html[data-background-motion="on"] #appAmbientBg .aurora-3{animation-duration:15s!important;animation-delay:-7s!important}
+html[data-background-motion="off"] #appAmbientBg .aurora-stream{animation:none!important}
+.background-motion-toggle{font-size:11px;min-height:44px;padding:8px 12px;white-space:nowrap}
