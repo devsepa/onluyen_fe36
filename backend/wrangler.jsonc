@@ -7,7 +7,11 @@
     "ALLOWED_ORIGINS": "https://devsepa.github.io",
     "GEMINI_MODEL": "gemini-3.5-flash",
     "USER_DAILY_QUESTIONS": "150",
-    "GLOBAL_DAILY_QUESTIONS": "1000"
+    "GLOBAL_DAILY_QUESTIONS": "1000",
+    "PREPARE_PUBLIC_DECKS": "true",
+    "AI_IMAGE_INTERVAL_MS": "60000",
+    "AI_TEXT_INTERVAL_MS": "15000",
+    "MODERATOR_EMAILS": "nguyenduy222.contact@gmail.com"
   },
   "durable_objects": {
     "bindings": [
@@ -34,6 +38,14 @@
       {
         "name": "GEMINI_RUNTIME",
         "class_name": "RegionalGemini"
+      },
+      {
+        "name": "AI_WORK_QUEUE",
+        "class_name": "AIWorkQueue"
+      },
+      {
+        "name": "DECK_PREPARATION",
+        "class_name": "DeckPreparation"
       }
     ]
   },
@@ -73,6 +85,18 @@
       "new_sqlite_classes": [
         "RegionalGemini"
       ]
+    },
+    {
+      "tag": "v7-ai-preparation",
+      "new_sqlite_classes": [
+        "AIWorkQueue",
+        "DeckPreparation"
+      ]
     }
-  ]
+  ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  }
 }

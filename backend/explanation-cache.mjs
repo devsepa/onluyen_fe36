@@ -1,6 +1,6 @@
 // Stored server-generated explanations only; clients cannot publish cache entries.
 export const EXPLANATION_REVISION='study-explanation-3';
-export class ExplanationCacheError extends Error{constructor(status,message,code){super(message);this.status=status;this.code=code}}
+export class ExplanationCacheError extends Error{constructor(status,message,code,retryAfterSeconds){super(message);this.status=status;this.code=code;this.retryAfterSeconds=retryAfterSeconds}}
 export async function explanationCacheKey(question,env={}){
  const content=question.image?['image',question.image.mimeType,question.image.data]:['text',question.stem,question.options.map(o=>[o.id,o.text])];
  const bytes=new TextEncoder().encode(JSON.stringify([EXPLANATION_REVISION,env.GROQ_API_KEY?'groq':'gemini',env.GEMINI_MODEL||'gemini-3.8-flash',content]));
@@ -44,7 +44,7 @@ export class StoredExplanationCache{
     return result;
    })().finally(()=>{this.pending=null});
    return Response.json({...await this.pending,reused:false});
-  }catch(error){return Response.json({error:error.status?error.message:'Chưa tải được giải thích. Hãy thử lại.',...(error.code?{code:error.code}:{})},{status:error.status||503})}
+  }catch(error){return Response.json({error:error.status?error.message:'Chưa tải được giải thích. Hãy thử lại.',...(error.code?{code:error.code}:{}),...(error.retryAfterSeconds?{retryAfterSeconds:error.retryAfterSeconds}:{})},{status:error.status||503})}
  }
 }
 export async function explainWithSharedCache(questions,env,generate){
@@ -52,7 +52,7 @@ export async function explainWithSharedCache(questions,env,generate){
  const responses=await Promise.all(questions.map(async question=>{
   const key=await explanationCacheKey(question,env),object=env.EXPLANATION_CACHE.get(env.EXPLANATION_CACHE.idFromName(key));
   const response=await object.fetch(new Request('https://explanation-cache/',{method:'POST',body:JSON.stringify(question)}));
-  const data=await response.json();if(!response.ok)throw new ExplanationCacheError(response.status,data.error||'Chưa tải được giải thích.',data.code);
+  const data=await response.json();if(!response.ok)throw new ExplanationCacheError(response.status,data.error||'Chưa tải được giải thích.',data.code,data.retryAfterSeconds);
   return {answer:{...data.answers[0],id:question.id,reused:!!data.reused,cacheKey:key,cacheEtag:data.cacheEtag,reviewed:!!data.reviewed},model:data.model};
  }));
  return {answers:responses.map(r=>r.answer),model:[...new Set(responses.map(r=>r.model))].join(', ')};

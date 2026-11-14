@@ -412,6 +412,7 @@ const resources = setupResources({
 });
 const shared = setupSharedDecks({
   base: DATA_API_BASE,
+  preparationBase: AI_API_BASE,
   getBank: () => bank,
   getToken: () => resources.apiToken(),
   getBlob: questionBlob,

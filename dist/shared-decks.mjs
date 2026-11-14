@@ -12,11 +12,15 @@ export async function deckRequest(base,path,{method='GET',token,uploadToken,body
  if(!response.ok){let message=response.statusText;try{const data=await response.json();message=data.error||message}catch{}const error=new Error(message);error.status=response.status;throw error}
  return response;
 }
-export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,onUseLocal}){
+export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,canChange,onUse,onUseLocal}){
  const $=id=>document.getElementById(id),section=$('shared'),dialog=document.createElement('dialog'),publishButton=document.createElement('button');publishButton.id='publishDeck';publishButton.className='secondary';publishButton.textContent='↑ Đăng vào kho chung';$('library').querySelector('.section-heading .row').prepend(publishButton);dialog.className='publish-dialog';dialog.setAttribute('aria-labelledby','publishTitle');
  dialog.innerHTML='<form id="publishForm"><div class="modal-heading"><h2 id="publishTitle">Đăng bộ đề vào kho chung</h2><button type="button" class="secondary" id="closePublish">Đóng</button></div><label>Tên bộ đề<input id="deckTitle" required maxlength="160" placeholder="Ví dụ: DBI202 · Học kỳ 3"></label><p id="publishCount"></p><p>Ảnh slide, đáp án và giải thích sẽ công khai cho mọi người. Link Google riêng vẫn giữ quyền truy cập của Google. Lịch sử và thông tin tài khoản không được chia sẻ.</p><label class="check-label"><input id="publishRights" type="checkbox" required> Tôi có quyền chia sẻ các ảnh slide và nội dung này.</label><p id="publishStatus" role="status" aria-live="polite"></p><progress id="publishBar" value="0" max="1" hidden></progress><div class="modal-actions"><button type="submit" id="publishSubmit">Đăng bộ đề</button><button type="button" id="stopPublish" class="secondary" hidden>Dừng tải lên</button></div></form>';
  dialog.querySelector('p:not([id])').textContent='Ảnh slide, đáp án và giải thích sẽ công khai; tài khoản và lịch sử vẫn riêng. Link Google giữ nguyên quyền xem. Có thể đóng hộp thoại để ôn tiếp, nhưng cần giữ tab này mở đến khi tải xong.';
  document.body.append(dialog);let controller=null,items=[],loading=false;
+ let preparations=new Map(),preparationLoading=false,lastPreparation=0;
+ function preparationBadge(deck){const job=preparations.get(deck.id);if(!job||job.status==='not-started')return '💡 Giải thích AI khi làm bài';const ready=job.ready||0,total=job.total||deck.count;if(job.status==='waiting')return `💡 AI đang nghỉ · ${ready}/${total} câu sẵn`;if(job.status==='paused')return `💡 Tạm dừng · ${ready}/${total} câu sẵn`;if(job.status==='done')return `💡 ${ready}/${total} câu có giải thích`;return `💡 Đang chuẩn bị · ${ready}/${total} câu sẵn`}
+ async function loadPreparation(){if(!preparationBase||preparationLoading||document.hidden||section.hidden)return;preparationLoading=true;try{const response=await fetch(new URL('/v1/preparation',preparationBase),{credentials:'omit',signal:AbortSignal.timeout(15000)});if(!response.ok)return;const data=await response.json();if(!Array.isArray(data.jobs))return;preparations=new Map(data.jobs.map(job=>[job.id,job]));lastPreparation=Date.now();cards()}catch{/* The public deck remains usable while progress is offline. */}finally{preparationLoading=false}}
+ setInterval(()=>{if(Date.now()-lastPreparation>=60000)loadPreparation()},60000);
 
  const widget=document.createElement('aside');widget.className='upload-progress-widget';widget.hidden=true;
  widget.innerHTML='<div class="upload-widget-header"><div class="upload-widget-title-group"><span class="upload-widget-icon" id="uploadWidgetIcon">☁️</span><div class="upload-widget-info"><strong class="upload-widget-title">Đăng vào kho chung</strong><span class="upload-widget-deck-name" id="uploadDeckName"></span></div></div><div class="upload-widget-controls"><button type="button" class="upload-widget-btn-icon" id="uploadWidgetToggle" title="Thu nhỏ / Mở rộng">−</button><button type="button" class="upload-widget-btn-icon" id="uploadWidgetClose" title="Ẩn">✕</button></div></div><div class="upload-widget-body"><div class="upload-widget-progress-row"><span class="upload-widget-metric" id="uploadWidgetMetric">0 / 0</span><span class="upload-widget-percent" id="uploadWidgetPercent">0%</span></div><div class="upload-progress-track"><div class="upload-progress-bar" id="uploadProgressBar" style="width:0%"></div></div><p class="upload-widget-status" id="uploadWidgetStatus" role="status" aria-live="polite">Đang chuẩn bị…</p><div class="upload-widget-actions"><button type="button" class="secondary upload-widget-action-btn" id="uploadWidgetStop" hidden>Dừng</button><button type="button" class="upload-widget-action-btn" id="uploadWidgetResume" hidden>Tiếp tục tải</button><button type="button" class="text-button upload-widget-action-btn" id="uploadWidgetDetails">Chi tiết</button></div></div>';
@@ -97,7 +101,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
        <div class="shared-deck-badges">
          <span class="shared-badge count">📚 <b>${d.count}</b> câu</span>
          <span class="shared-badge">🖼️ Slide gốc</span>
-         <span class="shared-badge">💡 Có giải thích AI</span>
+         <span class="shared-badge" title="Giải thích được chuẩn bị trên máy chủ và dùng chung cho các lần ôn sau.">${esc(preparationBadge(d))}</span>
        </div>
      </div>
      <div class="shared-deck-footer shared-deck-actions">
@@ -117,7 +121,7 @@ export function setupSharedDecks({base,getBank,getToken,getBlob,canChange,onUse,
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
   try{items=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(items))throw Error('Không đọc được danh sách bộ đề.');cards();$('deckStatus').textContent=''}
   catch(error){$('deckStatus').textContent=error.message}
-  finally{loading=false}
+  finally{loading=false;loadPreparation()}
  }
  if($('refreshDecks'))$('refreshDecks').onclick=load;if($('deckSearch'))$('deckSearch').oninput=cards;
  section.addEventListener('click',async e=>{

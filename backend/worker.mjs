@@ -1,3 +1,5 @@
+import {StoredAIWorkQueue,throughWorkQueue,WorkQueueError} from './ai-work-queue.mjs';
+import {StoredDeckPreparation,publicDeckRequest,discoverPreparation,preparationRoute} from './deck-preparation.mjs';
 import {answerPolicy} from './answer-policy.mjs';
 import {sharedDeckRoute} from './shared-decks.mjs';
 import {qualityRoute} from './quality.mjs';
@@ -12,6 +14,7 @@ export {SharedDecks} from './shared-decks.mjs';
 const BATCH_LIMIT=5,MAX_BODY=3000000;
 const validAnswer=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 class ApiError extends Error{constructor(status,message,upstreamStatus=null){super(message);this.status=status;this.upstreamStatus=upstreamStatus}}
+function rateLimit(response,message){const error=new ApiError(429,message),header=response.headers.get('Retry-After'),seconds=Number(header);error.retryAfterSeconds=header&&Number.isFinite(seconds)&&seconds>0?Math.min(86400,Math.ceil(seconds)):60;return error}
 export function classifyGemini400(detail){
  if(/API.?key|API_KEY|credentials/i.test(detail))return {code:'AI_KEY_INVALID',message:'Gemini từ chối khóa API (400). Chủ web cần cập nhật khóa; không cần đăng nhập Google lại.'};
  if(/(?:location|region).*(?:not supported|unsupported)|unsupported.*(?:location|region)/i.test(detail))return {code:'AI_REGION_UNSUPPORTED',message:'Google chưa hỗ trợ vùng/IP của máy chủ đang gọi Gemini (400). Chủ web cần kiểm tra vị trí máy chủ; đăng nhập Google lại không sửa được lỗi này.'};
@@ -79,7 +82,7 @@ export async function generateAnswersWithGroq(questions,env,fetcher=fetch){
   method:'POST',headers:{Authorization:'Bearer '+env.GROQ_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(90000),
   body:JSON.stringify({model:vision?'qwen/qwen3.8-27b':'openai/gpt-oss-120b',messages:[{role:'system',content:answerPolicy({explain,vision})},{role:'user',content:vision?content:content.map(p=>p.text).join('\n')}],response_format:{type:'json_object'},temperature:0.1,max_completion_tokens:6000})
  })}catch{throw new ApiError(504,'AI phản hồi chậm. Chưa thay đổi đáp án; hãy thử lại sau.')}
- if(!response.ok){let code='';try{const detail=await response.json();if(/^[a-z_]{1,60}$/.test(detail.error?.code))code=', '+detail.error.code}catch{}throw new ApiError(response.status===429?429:502,'Dịch vụ AI chưa xử lý được yêu cầu ('+response.status+code+'). Chưa thay đổi đáp án.')}
+ if(!response.ok){let code='';try{const detail=await response.json();if(/^[a-z_]{1,60}$/.test(detail.error?.code))code=', '+detail.error.code}catch{}const message='Dịch vụ AI chưa xử lý được yêu cầu ('+response.status+code+'). Chưa thay đổi đáp án.';throw response.status===429?rateLimit(response,message):new ApiError(502,message)}
  let parsed;try{const data=await response.json();if(data.choices?.[0]?.finish_reason!=='stop')throw Error('Incomplete');parsed=JSON.parse(data.choices[0].message.content)}catch{throw new ApiError(502,'AI trả thiếu hoặc sai định dạng. Không tự suy đoán đáp án.')}
  return validateResults(parsed,questions);
 }
@@ -107,7 +110,7 @@ export async function generateAnswers(questions,env,fetcher=fetch){
  })}catch{throw new ApiError(504,'AI chưa phản hồi kịp. Kết quả trước đó đã được giữ; bấm tiếp tục sau.')}
  if(!response.ok){
   // Return actionable categories, never forward Google's raw body or credentials.
-  if(response.status===429)throw new ApiError(429,'Gemini đã đạt hạn mức yêu cầu hoặc token (429). Hãy kiểm tra hạn mức dự án hoặc tiếp tục sau.');
+  if(response.status===429)throw rateLimit(response,'Gemini đang chờ hạn mức xử lý phục hồi.');
   if(response.status===503)throw new ApiError(503,'Gemini đang quá tải tạm thời (503). Không cần đăng nhập lại hay đổi key. Các đáp án đã lưu vẫn được giữ; hãy thử lại sau.',503);
   if(response.status===401||response.status===403)throw new ApiError(502,'Gemini từ chối quyền truy cập (401/403). Chủ web cần kiểm tra API key và quyền của dự án.');
   if(response.status===404)throw new ApiError(502,'Model Gemini chưa khả dụng cho dự án (404). Chủ web cần cập nhật model.',404);
@@ -135,7 +138,7 @@ export async function generateWithFallback(questions,env,fetcher=fetch){
 async function invokeRegional(path,input,env){
  const namespace=env.GEMINI_RUNTIME.jurisdiction('us');
  const response=await namespace.get(namespace.idFromName('gemini-runtime-v1')).fetch(new Request('https://gemini-runtime'+path,{method:'POST',body:JSON.stringify(input)}));
- const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
+ const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;error.retryAfterSeconds=data.retryAfterSeconds;throw error}return data;
 }
 export async function generateInSupportedRegion(questions,env){
  let primaryFailure;
@@ -151,7 +154,7 @@ export async function generateInSupportedRegion(questions,env){
  try{
   if(!env.GEMINI_RUNTIME)return await generateWithFallback(questions,{...env,GROQ_API_KEY:undefined});
   return await invokeRegional('/answers',{questions,...(primaryFailure?{geminiOnly:true}:{}),...(questions.some(q=>q.explain)?{purpose:'explanation'}:{})},env);
- }catch(error){if(primaryFailure instanceof ApiError&&error instanceof ApiError)error.message=primaryFailure.message+' Dự phòng: '+error.message;throw error}
+ }catch(error){if(primaryFailure instanceof ApiError&&error instanceof ApiError){error.message=primaryFailure.message+' Dự phòng: '+error.message;error.retryAfterSeconds=Math.max(primaryFailure.retryAfterSeconds||0,error.retryAfterSeconds||0)||60}throw error}
 }
 async function generateTutorReply(prompt,env){
  const model=env.GEMINI_MODEL||'gemini-3.8-flash';if(!/^[a-zA-Z0-9._-]+$/.test(model))throw new ApiError(503,'Model AI chưa được cấu hình hợp lệ.');
@@ -161,7 +164,7 @@ async function generateTutorReply(prompt,env){
 }
 export class RegionalGemini{
  constructor(state,env){this.env=env}
- async fetch(request){try{const body=JSON.parse(await readLimited(request,MAX_BODY));if(new URL(request.url).pathname==='/followup'){if(typeof body.prompt!=='string'||!body.prompt.trim()||body.prompt.length>2000)throw new ApiError(400,'Câu hỏi thêm không hợp lệ.');return Response.json(await generateTutorReply(body.prompt,this.env))}return Response.json(await generateWithFallback(validateQuestions(body),body.geminiOnly?{...this.env,GROQ_API_KEY:undefined}:this.env))}catch(error){return Response.json({error:error instanceof ApiError?error.message:'Chưa gọi được AI tại máy chủ xử lý.',...(error.code?{code:error.code}:{})},{status:error instanceof ApiError?error.status:503})}}
+ async fetch(request){try{const body=JSON.parse(await readLimited(request,MAX_BODY));if(new URL(request.url).pathname==='/followup'){if(typeof body.prompt!=='string'||!body.prompt.trim()||body.prompt.length>2000)throw new ApiError(400,'Câu hỏi thêm không hợp lệ.');return Response.json(await generateTutorReply(body.prompt,this.env))}return Response.json(await generateWithFallback(validateQuestions(body),body.geminiOnly?{...this.env,GROQ_API_KEY:undefined}:this.env))}catch(error){return Response.json({error:error instanceof ApiError?error.message:'Chưa gọi được AI tại máy chủ xử lý.',...(error.code?{code:error.code}:{}),...(error.retryAfterSeconds?{retryAfterSeconds:error.retryAfterSeconds}:{})},{status:error instanceof ApiError?error.status:503})}}
 }
 // One global Durable Object serializes quota reservations before billable requests.
 // Stores counts only; per-user keys expire by deleting older UTC-day records.
@@ -186,10 +189,11 @@ export class AIQuota{
 }
 export default {async fetch(request,env){
  const origin=request.headers.get('Origin')||'',allowed=(env.ALLOWED_ORIGINS||'').split(',').map(s=>s.trim());
- const cors=allowed.includes(origin)?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Vary':'Origin'}:{};
- const reply=(body,status=200)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':'60'}:{})}});
+ const cors=allowed.includes(origin)?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Methods':'GET, POST, PUT, DELETE, OPTIONS','Access-Control-Allow-Headers':'Authorization, Content-Type','Access-Control-Max-Age':'600','Access-Control-Expose-Headers':'Retry-After','Vary':'Origin'}:{};
+ const reply=(body,status=200,retryAfterSeconds=60)=>Response.json(body,{status,headers:{...cors,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(status===429?{'Retry-After':String(retryAfterSeconds)}:{})}});
  if(!allowed.includes(origin))return reply({error:'Nguồn truy cập không được phép.'},403);
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+ if(new URL(request.url).pathname.startsWith('/v1/preparation'))return preparationRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/quality/'))return qualityRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/explanations/'))return cacheModerationRoute(request,env,cors);
  if(new URL(request.url).pathname.startsWith('/v1/library/'))return privateLibraryRoute(request,env,cors);
@@ -230,9 +234,17 @@ export default {async fetch(request,env){
     await quota.fetch('https://quota/reserve',{method:'POST',body:JSON.stringify({user,count:questions.length})});
    }catch{}
   }
-  return reply(await (body.purpose==='explanation'?explainWithSharedCache(questions,env,generateInSupportedRegion):generateInSupportedRegion(questions,env)));
- }catch(error){return reply({error:(error instanceof ApiError||error instanceof ExplanationCacheError)?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.',...((error instanceof ApiError||error instanceof ExplanationCacheError)&&error.code?{code:error.code}:{})},(error instanceof ApiError||error instanceof ExplanationCacheError)?error.status:503)}
-}};
+  return reply(await (body.purpose==='explanation'?explainWithSharedCache(questions,env,queuedAnswers):queuedAnswers(questions,env)));
+ }catch(error){return reply({error:(error instanceof ApiError||error instanceof ExplanationCacheError||error instanceof WorkQueueError)?error.message:'Dịch vụ AI tạm thời chưa sẵn sàng.',...((error instanceof ApiError||error instanceof ExplanationCacheError||error instanceof WorkQueueError)&&error.code?{code:error.code}:{})},(error instanceof ApiError||error instanceof ExplanationCacheError||error instanceof WorkQueueError)?error.status:503,error.retryAfterSeconds||60)}
+},async scheduled(_event,env,context){context.waitUntil(discoverPreparation(env))}};
 export class ExplanationCache extends StoredExplanationCache{
- constructor(state,env){super(state,env,generateInSupportedRegion,validateResults)}
+ constructor(state,env){super(state,env,queuedAnswers,validateResults)}
 }
+
+export async function queuedAnswers(questions,env){return throughWorkQueue(questions,env,generateInSupportedRegion,{background:questions.every(q=>q.preparation===true)})}
+export class AIWorkQueue extends StoredAIWorkQueue{constructor(state,env){super(state,env,generateInSupportedRegion)}}
+export class DeckPreparation extends StoredDeckPreparation{constructor(state,env){super(state,env,{
+ loadDeck:async id=>(await publicDeckRequest('/'+id,env)).json(),
+ loadImage:async(id,index)=>(await publicDeckRequest('/'+id+'/images/'+index,env)).blob(),
+ explain:q=>explainWithSharedCache([validateQuestions({purpose:'explanation',questions:[q]})[0]].map(item=>({...item,preparation:true})),env,queuedAnswers)
+})}}
