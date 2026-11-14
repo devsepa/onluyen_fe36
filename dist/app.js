@@ -1,4 +1,4 @@
-import {installViewportSizing} from './viewport-sizing.mjs';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.14.32';
 import { parseExamFile } from './universal-parser.mjs?v=2026.11.14.32';
 import {setupLibraryManager} from './library-manager.mjs?v=2026.11.14.32';
 import {createLibraryMedia} from './library-media.mjs?v=2026.11.14.32';
@@ -1526,7 +1526,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  if(!AI_API_BASE)throw Error('Giải thích AI đang được chuẩn bị. Hãy thử lại sau.');
  let token=null;try{token=resources.apiToken()}catch{token=null;}
  const started=performance.now();generatedExplanationKeys.add(explanationKey(q));
- const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(95000)]),submitted=structuredClone(q);
+ const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(18000)]),submitted=structuredClone(q);
  try{
   if((q.url||q.sharedDeck) && (q.extraction==='ocr' || !q.stem?.trim() || !q.options?.every(o=>o.text?.trim()))){const blob=await questionBlob(q,{signal:requestSignal});if(blob.size>2100000)throw Error('Ảnh slide quá lớn để gửi AI.');submitted.image={mimeType:blob.type,data:await blobToBase64(blob)}}
   const result=await solveBatch(AI_API_BASE,[submitted],token,{signal:requestSignal,purpose:'explanation'});

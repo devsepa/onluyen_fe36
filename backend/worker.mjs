@@ -79,10 +79,10 @@ export async function generateAnswersWithGroq(questions,env,fetcher=fetch){
  const explain=questions.some(q=>q.explain),vision=questions.some(q=>q.image);
  const content=questions.flatMap(q=>[{type:'text',text:JSON.stringify({id:q.id,stem:q.stem,options:q.options})},...(q.image?[{type:'image_url',image_url:{url:'data:'+q.image.mimeType+';base64,'+q.image.data}}]:[])]);
  let response;try{response=await fetcher('https://api.groq.com/openai/v1/chat/completions',{
-  method:'POST',headers:{Authorization:'Bearer '+env.GROQ_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(90000),
-  body:JSON.stringify({model:vision?'qwen/qwen3.8-27b':'openai/gpt-oss-120b',messages:[{role:'system',content:answerPolicy({explain,vision})},{role:'user',content:vision?content:content.map(p=>p.text).join('\n')}],response_format:{type:'json_object'},temperature:0.1,max_completion_tokens:6000})
- })}catch{throw new ApiError(504,'AI phản hồi chậm. Chưa thay đổi đáp án; hãy thử lại sau.')}
- if(!response.ok){let code='';try{const detail=await response.json();if(/^[a-z_]{1,60}$/.test(detail.error?.code))code=', '+detail.error.code}catch{}const message='Dịch vụ AI chưa xử lý được yêu cầu ('+response.status+code+'). Chưa thay đổi đáp án.';throw response.status===429?rateLimit(response,message):new ApiError(502,message)}
+  method:'POST',headers:{Authorization:'Bearer '+env.GROQ_API_KEY,'Content-Type':'application/json'},signal:AbortSignal.timeout(20000),
+  body:JSON.stringify({model:vision?'qwen/qwen3.8-27b':'openai/gpt-oss-20b',messages:[{role:'system',content:answerPolicy({explain,vision})},{role:'user',content:vision?content:content.map(p=>p.text).join('\n')}],response_format:{type:'json_object'},temperature:0.1,max_tokens:3000})
+ })}catch(err){console.error('GROQ_FETCH_ERROR',err);throw new ApiError(504,'AI phản hồi chậm. Chưa thay đổi đáp án; hãy thử lại sau.')}
+ if(!response.ok){const errBody=await response.text();console.error('GROQ_RESPONSE_NOT_OK',response.status,errBody);throw new ApiError(502,'Groq error: '+response.status+' - '+errBody)}
  let parsed;try{const data=await response.json();if(data.choices?.[0]?.finish_reason!=='stop')throw Error('Incomplete');parsed=JSON.parse(data.choices[0].message.content)}catch{throw new ApiError(502,'AI trả thiếu hoặc sai định dạng. Không tự suy đoán đáp án.')}
  return validateResults(parsed,questions);
 }
@@ -241,7 +241,13 @@ export class ExplanationCache extends StoredExplanationCache{
  constructor(state,env){super(state,env,queuedAnswers,validateResults)}
 }
 
-export async function queuedAnswers(questions,env){return throughWorkQueue(questions,env,generateInSupportedRegion,{background:questions.every(q=>q.preparation===true)})}
+export async function queuedAnswers(questions,env){
+ if(env.GROQ_API_KEY&&!questions.every(q=>q.preparation===true)){
+  try{const answers=await generateAnswersWithGroq(questions,env);return{answers,model:'groq'}}
+  catch(e){console.warn('GROQ_DIRECT_FALLBACK',e.message)}
+ }
+ return throughWorkQueue(questions,env,generateInSupportedRegion,{background:questions.every(q=>q.preparation===true)})
+}
 export class AIWorkQueue extends StoredAIWorkQueue{constructor(state,env){super(state,env,generateInSupportedRegion)}}
 export class DeckPreparation extends StoredDeckPreparation{constructor(state,env){super(state,env,{
  loadDeck:async id=>(await publicDeckRequest('/'+id,env)).json(),

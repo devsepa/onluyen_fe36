@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>5 Mẫu Thiết Kế Toàn Diện: Màn Hình Thiết Lập & Làm Bài</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 99px; }
+
+    /* Theme 1: Gamified Duolingo 3D button */
+    .btn-3d {
+      box-shadow: 0 4px 0 #059669;
+      transition: all 0.1s ease;
+    }
+    .btn-3d:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #059669;
+    }
+    .btn-3d-indigo {
+      box-shadow: 0 4px 0 #4338ca;
+    }
+    .btn-3d-indigo:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #4338ca;
+    }
+
+    /* Theme 4: Neon Cyberpunk */
+    .neon-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+    }
+    .neon-magenta {
+      box-shadow: 0 0 15px rgba(217, 70, 239, 0.4), inset 0 0 10px rgba(217, 70, 239, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen p-3 md:p-6 custom-scroll antialiased">
+  <div class="max-w-6xl mx-auto space-y-5">
+
+    <!-- Top Navigation Header -->
+    <header class="border-b border-slate-800 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          <span>🎨 BẢN THIẾT KẾ GIAO DIỆN TOÀN DIỆN</span>
+        </div>
+        <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">5 Mẫu Thiết Kế Giao Diện Slide Ôn Thi</h1>
+        <p class="text-slate-400 text-sm mt-1">So sánh trực tiếp cả <strong>Màn hình Thiết lập</strong> và <strong>Màn hình Làm bài</strong> trên 5 ngôn ngữ thiết kế khác nhau.</p>
+      </div>
+
+      <!-- Controls: Screen View & Device Toggle -->
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Screen Toggle (Setup vs Quiz) -->
+        <div class="flex items-center bg-slate-900 border border-slate-700/80 p-1 rounded-xl shadow-inner">
+          <button id="tabSetup" onclick="switchScreen('setup')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1.5">
+            <span>⚙️ Màn hình Thiết lập</span>
+          </button>
+          <button id="tabQuiz" onclick="switchScreen('quiz')" class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white flex items-center gap-1.5">
+            <span>📝 Màn hình Làm bài</span>
+          </button>
+        </div>
+
+        <!-- Device Toggle (Mobile vs Desktop) -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl">
+          <button id="btnMobile" onclick="setDevice('mobile')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-white shadow-sm flex items-center gap-1">
+            <span>📱 Mobile</span>
+          </button>
+          <button id="btnDesktop" onclick="setDevice('desktop')" class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1">
+            <span>💻 Desktop</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Concept Selector Pills -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
+      <button onclick="selectConcept(1)" id="pill1" class="concept-pill p-3 rounded-2xl border text-left transition-all bg-indigo-600/20 border-indigo-500 shadow-md">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">🎮</span>
+          <span class="font-bold text-xs md:text-sm text-indigo-300">1. Gamified</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1">Duolingo 3D · Nút khối nổi</p>
+      </button>
+
+      <button onclick="selectConcept(2)" id="pill2" class="concept-pill p-3 rounded-2xl border text-left transition-all bg-slate-900/80 border-slate-800 hover:border-slate-700">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">🍎</span>
+          <span class="font-bold text-xs md:text-sm text-slate-200">2. Apple Clean</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1">Tối giản · Viền kính siêu mỏng</p>
+      </button>
+
+      <button onclick="selectConcept(3)" id="pill3" class="concept-pill p-3 rounded-2xl border text-left transition-all bg-slate-900/80 border-slate-800 hover:border-slate-700">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">🎓</span>
+          <span class="font-bold text-xs md:text-sm text-slate-200">3. Exam Pro</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1">Khảo thí · Chuẩn Coursera/IELTS</p>
+      </button>
+
+      <button onclick="selectConcept(4)" id="pill4" class="concept-pill p-3 rounded-2xl border text-left transition-all bg-slate-900/80 border-slate-800 hover:border-slate-700">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">⚡</span>
+          <span class="font-bold text-xs md:text-sm text-slate-200">4. Cyberpunk</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1">OLED Dark · Neon Glow viền</p>
+      </button>
+
+      <button onclick="selectConcept(5)" id="pill5" class="concept-pill p-3 rounded-2xl border text-left transition-all bg-slate-900/80 border-slate-800 hover:border-slate-700">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">👍</span>
+          <span class="font-bold text-xs md:text-sm text-slate-200">5. Thumb-First</span>
+        </div>
+        <p class="text-[11px] text-slate-400 line-clamp-1">Gọn 1 tay · Không khoảng đen</p>
+      </button>
+    </div>
+
+    <!-- Active Concept Description Banner -->
+    <div id="conceptBanner" class="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs text-slate-300">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Live Preview Stage Frame -->
+    <div class="flex justify-center items-start py-2">
+      <!-- Container changes width based on Mobile/Desktop mode -->
+      <div id="deviceFrame" class="w-full max-w-sm transition-all duration-300 bg-[#0f172a] rounded-[36px] p-3 shadow-2xl border-4 border-slate-800 relative">
+        <!-- Mobile Notch / Camera indicator -->
+        <div id="mobileNotch" class="w-32 h-4 bg-slate-800 rounded-full mx-auto mb-2 opacity-70"></div>
+        
+        <!-- Screen Content Viewport -->
+        <div id="screenViewport" class="min-h-[580px] flex flex-col transition-all">
+          <!-- Dynamic Content Rendered Here -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentConcept = 1;
+    let currentScreen = 'setup'; // 'setup' | 'quiz'
+    let currentDevice = 'mobile'; // 'mobile' | 'desktop'
+    
+    // Interactive State inside mockups
+    let selectedMode = 'study'; // 'study' | 'exam'
+    let selectedSubject = 'csdl';
+    let questionCount = 20;
+    let examMinutes = 30;
+    let selectedAnswers = []; // for multi-select demonstration
+    let singleAnswer = 'B';
+    let showAiFeedback = true;
+
+    const concepts = {
+      1: {
+        name: "Gamified EdTech (Duolingo Style)",
+        tagline: "Học tập vui vẻ, nút bấm 3D nổi bật, màu sắc sinh động, kích thích động lực học tập.",
+        highlights: "Thẻ chọn Ôn luyện / Thi thử minh họa hoạt hình, nút số câu dạng Badge nảy, phím A-B-C-D dạng phím bấm khối nổi nảy tay, feedback đúng/sai chúc mừng sinh động."
+      },
+      2: {
+        name: "Minimalist Clean (Apple Dark Style)",
+        tagline: "Tập trung cao độ, phẳng tuyệt đối, đường viền mờ 1px, không phân tâm.",
+        highlights: "Segmented Control kính mờ, typography làm trung tâm, slide câu hỏi tràn viền tinh tế, các phím chọn dạng viên thuốc Pill thanh lịch."
+      },
+      3: {
+        name: "Professional Exam Hub (Khảo thí & Học thuật)",
+        tagline: "Bố cục thi cử nghiêm túc, hiển thị thông số chi tiết, chuẩn giao diện khảo thí.",
+        highlights: "Thẻ cấu hình chia 2 cột rõ ràng, đồng hồ bấm giờ chuẩn mực, bảng danh sách câu hỏi dạng lưới số, thanh tiến độ chia vạch."
+      },
+      4: {
+        name: "Cyberpunk OLED Neon (High-Tech HUD)",
+        tagline: "Tông đen sâu tiết kiệm pin, viền phát sáng Neon Cyan & Magenta, cực ngầu.",
+        highlights: "Chỉ số terminal công nghệ cao, nút BẮT ĐẦU phát sáng viền neon, phím A-B-C-D phản hồi ánh sáng khi chạm, card AI dạng Hacker Console."
+      },
+      5: {
+        name: "Ergonomic Thumb-First (Tối ưu thao tác 1 tay trên điện thoại)",
+        tagline: "Loại bỏ 100% khoảng trống thừa, toàn bộ nút bấm nằm gọn trong vùng với của ngón cái.",
+        highlights: "Màn hình thiết lập cuộn mượt gọn trong 1 tầm nhìn, slide to trọn vẹn bề ngang màn hình, cụm phím A B C D gắn sát đáy màn hình cực dễ bấm."
+      }
+    };
+
+    function selectConcept(id) {
+      currentConcept = id;
+      for (let i = 1; i <= 5; i++) {
+        const pill = document.getElementById('pill' + i);
+        if (i === id) {
+          pill.className = "concept-pill p-3 rounded-2xl border text-left transition-all bg-indigo-600/20 border-indigo-500 shadow-md ring-1 ring-indigo-500/50";
+        } else {
+          pill.className = "concept-pill p-3 rounded-2xl border text-left transition-all bg-slate-900/80 border-slate-800 hover:border-slate-700";
+        }
+      }
+      renderBanner();
+      renderContent();
+    }
+
+    function switchScreen(screen) {
+      currentScreen = screen;
+      const tabSetup = document.getElementById('tabSetup');
+      const tabQuiz = document.getElementById('tabQuiz');
+      if (screen === 'setup') {
+        tabSetup.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1.5";
+        tabQuiz.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white flex items-center gap-1.5";
+      } else {
+        tabQuiz.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white shadow-sm flex items-center gap-1.5";
+        tabSetup.className = "px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-white flex items-center gap-1.5";
+      }
+      renderContent();
+    }
+
+    function setDevice(device) {
+      currentDevice = device;
+      const frame = document.getElementById('deviceFrame');
+      const notch = document.getElementById('mobileNotch');
+      const btnMobile = document.getElementById('btnMobile');
+      const btnDesktop = document.getElementById('btnDesktop');
+
+      if (device === 'mobile') {
+        frame.className = "w-full max-w-[390px] transition-all duration-300 bg-[#0f172a] rounded-[36px] p-3 shadow-2xl border-4 border-slate-800 relative";
+        notch.style.display = 'block';
+        btnMobile.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-white shadow-sm flex items-center gap-1";
+        btnDesktop.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1";
+      } else {
+        frame.className = "w-full max-w-[860px] transition-all duration-300 bg-[#0f172a] rounded-2xl p-5 shadow-2xl border-2 border-slate-800 relative";
+        notch.style.display = 'none';
+        btnDesktop.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-slate-800 text-white shadow-sm flex items-center gap-1";
+        btnMobile.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-400 hover:text-white flex items-center gap-1";
+      }
+      renderContent();
+    }
+
+    function renderBanner() {
+      const c = concepts[currentConcept];
+      document.getElementById('conceptBanner').innerHTML = `
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold text-sm text-indigo-400">Mẫu ${currentConcept}: ${c.name}</span>
+          </div>
+          <p class="text-slate-300 text-xs">${c.tagline}</p>
+        </div>
+        <div class="text-[11px] text-slate-400 bg-slate-800/80 px-3 py-2 rounded-xl border border-slate-700/60 max-w-md">
+          <span class="text-indigo-300 font-semibold">Điểm nhấn:</span> ${c.highlights}
+        </div>
+      `;
+    }
+
+    // Toggle multi answers
+    function toggleOption(key) {
+      if (selectedAnswers.includes(key)) {
+        selectedAnswers = selectedAnswers.filter(k => k !== key);
+      } else {
+        selectedAnswers.push(key);
+      }
+      renderContent();
+    }
+
+    function selectSingleOption(key) {
+      singleAnswer = key;
+      renderContent();
+    }
+
+    function setMode(mode) {
+      selectedMode = mode;
+      renderContent();
+    }
+
+    function setCount(cnt) {
+      questionCount = cnt;
+      renderContent();
+    }
+
+    // MAIN RENDER DISPATCHER
+    function renderContent() {
+      const vp = document.getElementById('screenViewport');
+      if (currentScreen === 'setup') {
+        renderSetupScreen(vp);
+      } else {
+        renderQuizScreen(vp);
+      }
+    }
+
+    /* =========================================================================
+       1. SETUP SCREEN IMPLEMENTATIONS (5 CONCEPTS)
+       ========================================================================= */
+    function renderSetupScreen(vp) {
+      if (currentConcept === 1) {
+        // GAMIFIED (Duolingo Style)
+        vp.innerHTML = `
+          <div class="space-y-4">
+            <!-- Header -->
+            <div class="text-center py-2">
+              <span class="text-3xl">🚀</span>
+              <h2 class="text-lg font-black text-white mt-1">Sẵn Sàng Chinh Phục!</h2>
+              <p class="text-xs text-slate-400">Thiết lập buổi luyện đề để đạt điểm A+</p>
+            </div>
+
+            <!-- Mode Selector: Big 3D Cards -->
+            <div class="grid grid-cols-2 gap-2.5">
+              <div onclick="setMode('study')" class="p-3 rounded-2xl cursor-pointer transition-all border-2 ${selectedMode === 'study' ? 'bg-emerald-500/15 border-emerald-500 shadow-lg' : 'bg-slate-900 border-slate-800 opacity-70'}">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xl">📖</span>
+                  ${selectedMode === 'study' ? '<span class="text-emerald-400 text-xs font-black">✓ ĐÃ CHỌN</span>' : ''}
+                </div>
+                <div class="font-bold text-xs text-white">Ôn Luyện</div>
+                <div class="text-[10px] text-slate-400">Xem đáp án & AI giải thích ngay</div>
+              </div>
+
+              <div onclick="setMode('exam')" class="p-3 rounded-2xl cursor-pointer transition-all border-2 ${selectedMode === 'exam' ? 'bg-amber-500/15 border-amber-500 shadow-lg' : 'bg-slate-900 border-slate-800 opacity-70'}">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-xl">⏱️</span>
+                  ${selectedMode === 'exam' ? '<span class="text-amber-400 text-xs font-black">✓ ĐÃ CHỌN</span>' : ''}
+                </div>
+                <div class="font-bold text-xs text-white">Thi Thử</div>
+                <div class="text-[10px] text-slate-400">Tính giờ áp lực, nộp bài tính điểm</div>
+              </div>
+            </div>
+
+            <!-- Subject Card -->
+            <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-1.5">
+              <label class="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                <span>📚 Môn Học & Đề Thi</span>
+              </label>
+              <select class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500">
+                <option>Cơ sở dữ liệu (Kho 240 câu hỏi)</option>
+                <option>Kiến trúc máy tính (Kho 180 câu)</option>
+                <option>Mạng máy tính (Kho 310 câu)</option>
+              </select>
+            </div>
+
+            <!-- Question Count (Preset Badges) -->
+            <div class="bg-slate-900/90 border border-slate-800 p-3 rounded-2xl space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-slate-300">🎯 Số lượng câu hỏi</span>
+                <span class="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">${questionCount} câu</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5">
+                ${[10, 20, 50, 240].map(cnt => `
+                  <button onclick="setCount(${cnt})" class="py-2 rounded-xl text-xs font-bold transition-all ${questionCount === cnt ? 'bg-emerald-500 text-white shadow-md scale-105' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                    ${cnt === 240 ? 'Tất cả' : cnt + ' câu'}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Big 3D Start Button -->
+            <button onclick="switchScreen('quiz')" class="w-full py-3.5 rounded-2xl font-black text-sm text-white bg-emerald-500 hover:bg-emerald-400 btn-3d uppercase tracking-wider flex items-center justify-center gap-2 mt-4 shadow-xl">
+              <span>Bắt Đầu Ngay</span>
+              <span>⚡</span>
+            </button>
+          </div>
+        `;
+      }
+      else if (currentConcept === 2) {
+        // APPLE CLEAN
+        vp.innerHTML = `
+          <div class="space-y-5 max-w-lg mx-auto">
+            <!-- Clean Header -->
+            <div class="pt-2">
+              <span class="text-[11px] uppercase tracking-widest text-slate-500 font-semibold">Cấu hình bài thi</span>
+              <h2 class="text-xl font-semibold text-white tracking-tight">Thiết lập ôn tập</h2>
+            </div>
+
+            <!-- Apple Segmented Control -->
+            <div class="bg-black/60 p-1 rounded-xl border border-white/10 flex">
+              <button onclick="setMode('study')" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedMode === 'study' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}">
+                Ôn luyện tự do
+              </button>
+              <button onclick="setMode('exam')" class="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${selectedMode === 'exam' ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-400 hover:text-white'}">
+                Thi thử tính giờ
+              </button>
+            </div>
+
+            <!-- Subject Row -->
+            <div class="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-2">
+              <div class="text-xs text-zinc-400">Học phần</div>
+              <div class="flex items-center justify-between text-xs font-medium text-white">
+                <span>Cơ sở dữ liệu (Database)</span>
+                <span class="text-zinc-500 text-[11px]">240 câu hỏi ›</span>
+              </div>
+            </div>
+
+            <!-- Sliders -->
+            <div class="p-3.5 rounded-2xl bg-zinc-900/60 border border-white/5 space-y-3">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-zinc-400">Số lượng câu làm</span>
+                <span class="font-medium text-white">${questionCount} câu</span>
+              </div>
+              <input type="range" min="5" max="100" value="${questionCount}" oninput="setCount(Number(this.value))" class="w-full accent-white h-1.5 bg-zinc-800 rounded-lg">
+              <div class="flex justify-between text-[10px] text-zinc-500">
+                <span>5 câu</span>
+                <span>20 câu</span>
+                <span>50 câu</span>
+                <span>100 câu</span>
+              </div>
+            </div>
+
+            <!-- Start Button -->
+            <button onclick="switchScreen('quiz')" class="w-full py-3 rounded-full font-semibold text-xs text-black bg-white hover:bg-zinc-200 transition-all shadow-md">
+              Bắt đầu phiên học
+            </button>
+          </div>
+        `;
+      }
+      else if (currentConcept === 3) {
+        // EXAM PRO (Academic / Canvas)
+        vp.innerHTML = `
+          <div class="space-y-4">
+            <!-- Academic Title -->
+            <div class="border-b border-slate-700/80 pb-2 flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold text-white uppercase tracking-wider">Hệ Thống Khảo Thí Trắc Nghiệm</h2>
+                <span class="text-[10px] text-slate-400">Phiên bản trực tuyến 2026</span>
+              </div>
+              <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 text-[10px] font-bold border border-blue-500/30">MÃ ĐỀ: CSDL-FE36</span>
+            </div>
+
+            <!-- Exam Mode Tabs -->
+            <div class="flex border-b border-slate-800 text-xs">
+              <button onclick="setMode('study')" class="px-4 py-2 font-bold transition-all ${selectedMode === 'study' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-slate-400'}">
+                Chế độ Ôn Luyện
+              </button>
+              <button onclick="setMode('exam')" class="px-4 py-2 font-bold transition-all ${selectedMode === 'exam' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-slate-400'}">
+                Chế độ Thi Thử (Chuẩn Đề)
+              </button>
+            </div>
+
+            <!-- Info Summary Grid -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                <span class="text-slate-500 block text-[10px]">Thời gian làm bài:</span>
+                <span class="font-bold text-white">30 phút (Đếm ngược)</span>
+              </div>
+              <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800">
+                <span class="text-slate-500 block text-[10px]">Quy chế thi:</span>
+                <span class="font-bold text-amber-400">Không hỗ trợ giải ngay</span>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="bg-slate-900 p-3 rounded-lg border border-slate-800 space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-300">Chọn số câu bài thi:</span>
+                <select onchange="setCount(Number(this.value))" class="bg-slate-800 border border-slate-700 text-white rounded px-2 py-1 text-xs">
+                  <option value="10" ${questionCount===10?'selected':''}>10 câu (Khởi động)</option>
+                  <option value="20" ${questionCount===20?'selected':''}>20 câu (Tiêu chuẩn)</option>
+                  <option value="40" ${questionCount===40?'selected':''}>40 câu (Đề thi chính thức)</option>
+                </select>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-slate-300">Thứ tự câu hỏi:</span>
+                <span class="text-slate-400 text-[11px]">Đảo ngẫu nhiên câu & đáp án</span>
+              </div>
+            </div>
+
+            <!-- Start Action -->
+            <button onclick="switchScreen('quiz')" class="w-full py-2.5 rounded-lg font-bold text-xs bg-blue-600 hover:bg-blue-500 text-white shadow-md flex items-center justify-center gap-2">
+              <span>BẮT ĐẦU TÍNH GIỜ LÀM BÀI</span>
+              <span>→</span>
+            </button>
+          </div>
+        `;
+      }
+      else if (currentConcept === 4) {
+        // CYBERPUNK HUD
+        vp.innerHTML = `
+          <div class="space-y-4 mono">
+            <!-- Terminal Header -->
+            <div class="border border-cyan-500/30 p-2 rounded-lg bg-black/80 neon-cyan flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span class="text-xs text-cyan-400 font-bold tracking-widest">// SYSTEM_SETUP_v2.0</span>
+              </div>
+              <span class="text-[10px] text-slate-500">[CORE: READY]</span>
+            </div>
+
+            <!-- Cyber Mode Switch -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="setMode('study')" class="p-2.5 rounded border ${selectedMode === 'study' ? 'border-cyan-400 bg-cyan-950/40 text-cyan-300 neon-cyan font-bold' : 'border-slate-800 bg-black text-slate-500'}">
+                [01] PRACTICE_MODE
+              </button>
+              <button onclick="setMode('exam')" class="p-2.5 rounded border ${selectedMode === 'exam' ? 'border-fuchsia-500 bg-fuchsia-950/40 text-fuchsia-300 neon-magenta font-bold' : 'border-slate-800 bg-black text-slate-500'}">
+                [02] EXAM_SIMULATION
+              </button>
+            </div>
+
+            <!-- Subject & Pool HUD -->
+            <div class="bg-black/90 border border-slate-800 p-3 rounded space-y-2 text-xs">
+              <div class="text-[10px] text-cyan-500">> TARGET_DATASET:</div>
+              <div class="text-slate-200 font-bold">DATABASE_RELATIONAL_240_QUESTIONS</div>
+              <div class="flex justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-900">
+                <span>BUFFER: 240 ITEMS</span>
+                <span>STATUS: CACHED</span>
+              </div>
+            </div>
+
+            <!-- Count Selector -->
+            <div class="bg-black/90 border border-slate-800 p-3 rounded space-y-2 text-xs">
+              <div class="flex justify-between items-center text-[11px]">
+                <span class="text-slate-400">> BATCH_SIZE:</span>
+                <span class="text-cyan-400 font-bold">${questionCount} NODES</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1">
+                ${[10, 20, 50, 100].map(cnt => `
+                  <button onclick="setCount(${cnt})" class="py-1.5 border text-xs ${questionCount === cnt ? 'border-cyan-400 text-cyan-300 bg-cyan-950/60' : 'border-slate-800 text-slate-500'}">
+                    ${cnt}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Neon Start -->
+            <button onclick="switchScreen('quiz')" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-black text-xs uppercase tracking-widest rounded neon-cyan transition-all">
+              EXECUTE_SESSION >>
+            </button>
+          </div>
+        `;
+      }
+      else if (currentConcept === 5) {
+        // THUMB-FIRST MOBILE SETUP
+        vp.innerHTML = `
+          <div class="flex flex-col h-full justify-between space-y-3">
+            <!-- Compact Header -->
+            <div class="flex items-center justify-between pb-1">
+              <div>
+                <h2 class="text-base font-extrabold text-white">Luyện Đề Nhanh</h2>
+                <p class="text-[11px] text-slate-400">Thiết lập 2 chạm cho ngón cái</p>
+              </div>
+              <span class="text-xs bg-indigo-500/20 text-indigo-300 font-bold px-2 py-0.5 rounded-full">240 câu</span>
+            </div>
+
+            <!-- Mode Segment (Pill style) -->
+            <div class="bg-slate-900 p-1 rounded-2xl border border-slate-800 grid grid-cols-2 gap-1">
+              <button onclick="setMode('study')" class="py-2 rounded-xl text-xs font-bold transition-all ${selectedMode === 'study' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400'}">
+                📖 Ôn Luyện (Có giải)
+              </button>
+              <button onclick="setMode('exam')" class="py-2 rounded-xl text-xs font-bold transition-all ${selectedMode === 'exam' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400'}">
+                ⏱️ Thi Thử (Tính giờ)
+              </button>
+            </div>
+
+            <!-- Subject Selector Touch-Friendly -->
+            <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+              <span class="text-[10px] text-slate-400 block mb-1">MÔN ĐANG CHỌN</span>
+              <div class="flex items-center justify-between text-xs font-bold text-white">
+                <span>Cơ sở dữ liệu (Database)</span>
+                <span class="text-indigo-400 text-xs">Đổi môn ▾</span>
+              </div>
+            </div>
+
+            <!-- Quick Preset Count Pills -->
+            <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-300 font-semibold">Số câu muốn làm:</span>
+                <span class="font-black text-indigo-400 text-sm">${questionCount} câu</span>
+              </div>
+              <div class="grid grid-cols-4 gap-1.5">
+                ${[10, 20, 50, 100].map(cnt => `
+                  <button onclick="setCount(${cnt})" class="h-10 rounded-xl font-bold text-xs transition-all ${questionCount === cnt ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-800 text-slate-300'}">
+                    ${cnt}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+
+            <!-- Thumb Dock Button -->
+            <div class="pt-2">
+              <button onclick="switchScreen('quiz')" class="w-full h-12 rounded-2xl font-black text-sm text-white bg-indigo-600 hover:bg-indigo-500 shadow-xl flex items-center justify-center gap-2">
+                <span>Bắt Đầu Làm Bài</span>
+                <span>➔</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+
+    /* =========================================================================
+       2. QUIZ SCREEN IMPLEMENTATIONS (5 CONCEPTS)
+       ========================================================================= */
+    function renderQuizScreen(vp) {
+      if (currentConcept === 1) {
+        // GAMIFIED DUOLINGO QUIZ
+        vp.innerHTML = `
+          <div class="flex flex-col h-full space-y-2">
+            <!-- Top Status Bar -->
+            <div class="flex items-center justify-between text-xs pb-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-emerald-400 font-bold">🔥 Câu 3/20</span>
+                <span class="text-slate-500">· Đúng 2 câu</span>
+              </div>
+              <button onclick="switchScreen('setup')" class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-[11px] font-bold">Kết thúc</button>
+            </div>
+
+            <!-- Thick Progress Bar -->
+            <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5">
+              <div class="bg-emerald-400 h-full rounded-full transition-all" style="width: 25%"></div>
+            </div>
+
+            <!-- Slide Box (Zero Black Space, Auto-fit) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-2.5 flex flex-col items-center">
+              <div class="w-full aspect-[16/9] bg-white rounded-xl flex flex-col justify-center items-center p-3 text-slate-900 text-center shadow-inner relative">
+                <span class="text-[10px] text-blue-600 font-extrabold uppercase tracking-wide">Slide 341 · Khóa Ngoại</span>
+                <p class="text-xs font-bold text-slate-900 mt-1">
+                  Which of the following is false about a foreign key?
+                </p>
+                <div class="absolute bottom-1 right-2 text-[9px] text-slate-400">🔍 Chạm phóng to</div>
+              </div>
+            </div>
+
+            <!-- 3D Answer Buttons A B C D -->
+            <div class="grid grid-cols-4 gap-2 pt-1">
+              ${['A', 'B', 'C', 'D'].map(k => {
+                const isSelected = singleAnswer === k;
+                return `
+                  <button onclick="selectSingleOption('${k}')" class="h-12 rounded-2xl font-black text-sm flex items-center justify-center transition-all ${isSelected ? 'bg-emerald-500 text-white btn-3d' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'}">
+                    ${k}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Feedback Card (Rich AI Explanations) -->
+            <div class="bg-emerald-950/40 border border-emerald-500/40 rounded-2xl p-3 text-xs space-y-1.5 animate-fadeIn">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 text-emerald-400 font-black">
+                  <span>✓ CHÍNH XÁC! ĐÁP ÁN: B</span>
+                </div>
+                <button class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold">📋 Sao chép</button>
+              </div>
+              <p class="text-[11px] text-slate-300 leading-relaxed">
+                <strong>Điểm mấu chốt:</strong> Khóa ngoại có thể trỏ tới bất kỳ khóa chính nào, và một bảng có thể chứa <strong>nhiều khóa ngoại</strong> chứ không phải chỉ duy nhất một khóa ngoại.
+              </p>
+            </div>
+
+            <!-- Next Button -->
+            <div class="pt-1 mt-auto">
+              <button class="w-full py-3 rounded-2xl font-black text-xs text-white bg-indigo-600 hover:bg-indigo-500 btn-3d-indigo uppercase tracking-wider">
+                Câu tiếp theo ➔
+              </button>
+            </div>
+          </div>
+        `;
+      }
+      else if (currentConcept === 2) {
+        // APPLE CLEAN QUIZ
+        vp.innerHTML = `
+          <div class="flex flex-col h-full space-y-3">
+            <!-- Apple Top Nav -->
+            <div class="flex items-center justify-between text-xs text-zinc-400 pt-1">
+              <button onclick="switchScreen('setup')" class="hover:text-white">✕ Đóng</button>
+              <span class="font-medium text-white">Câu hỏi 3 / 20</span>
+              <span class="text-zinc-500 text-[11px]">Slide 341</span>
+            </div>
+
+            <!-- Thin Line Progress -->
+            <div class="w-full h-0.5 bg-zinc-800 rounded-full">
+              <div class="bg-white h-full rounded-full" style="width: 25%"></div>
+            </div>
+
+            <!-- Clean Slide Presentation -->
+            <div class="bg-zinc-900/80 border border-white/10 rounded-2xl p-3 flex flex-col justify-center items-center text-center">
+              <span class="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold mb-1">CƠ SỞ DỮ LIỆU</span>
+              <p class="text-xs font-medium text-white leading-relaxed">
+                Which of the following is false about a foreign key?
+              </p>
+            </div>
+
+            <!-- Pill Answers -->
+            <div class="space-y-1.5">
+              ${[
+                { k: 'A', text: 'Whereas only one foreign key is allowed' },
+                { k: 'B', text: 'It refers to the field in a table which is PK' },
+                { k: 'C', text: 'It can contain duplicate values' },
+                { k: 'D', text: 'It can also contain NULL values' }
+              ].map(opt => `
+                <div onclick="selectSingleOption('${opt.k}')" class="p-2.5 rounded-xl border text-xs cursor-pointer flex items-center gap-2.5 transition-all ${singleAnswer === opt.k ? 'bg-white text-black border-white font-semibold' : 'bg-zinc-900 border-white/5 text-zinc-300 hover:bg-zinc-800'}">
+                  <span class="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] ${singleAnswer === opt.k ? 'bg-black text-white' : 'bg-zinc-800 text-zinc-400'}">${opt.k}</span>
+                  <span class="text-[11px] truncate">${opt.text}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="flex items-center justify-between pt-2 mt-auto">
+              <button class="px-3 py-1.5 text-xs text-zinc-400 hover:text-white">← Câu trước</button>
+              <button class="px-4 py-2 bg-white text-black text-xs font-semibold rounded-full shadow">Tiếp theo →</button>
+            </div>
+          </div>
+        `;
+      }
+      else if (currentConcept === 3) {
+        // EXAM PRO QUIZ
+        vp.innerHTML = `
+          <div class="flex flex-col h-full space-y-2">
+            <!-- Academic Exam Bar -->
+            <div class="bg-slate-900 border border-slate-800 p-2 rounded-lg flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white">BÀI THI: CSDL</span>
+                <span class="text-[11px] text-slate-400">| Câu 3/20</span>
+              </div>
+              <div class="font-mono text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
+                ⏱ 24:18
+              </div>
+            </div>
+
+            <!-- Question Matrix Pill Grid (Jump to question) -->
+            <div class="flex gap-1 overflow-x-auto py-1 text-[10px] custom-scroll">
+              ${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `
+                <span class="px-2 py-0.5 rounded font-bold cursor-pointer ${n === 3 ? 'bg-blue-600 text-white' : (n < 3 ? 'bg-slate-800 text-emerald-400' : 'bg-slate-900 text-slate-500 border border-slate-800')}">
+                  ${n}
+                </span>
+              `).join('')}
+            </div>
+
+            <!-- Question & Slide Container -->
+            <div class="bg-slate-900 border border-slate-800 rounded-lg p-3 text-xs space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[11px] font-bold text-blue-400">CÂU HỎI SỐ 3 (Slide 341)</span>
+                <label class="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                  <input type="checkbox"> Đánh dấu xem lại
+                </label>
+              </div>
+              <p class="text-white text-xs leading-relaxed">
+                Suppose we have relation R(A,B,C,D,E,F,N) and functional dependencies... Which of the following is not a key?
+              </p>
+            </div>
+
+            <!-- Multi / Single Option Selection Checkbox -->
+            <div class="space-y-1.5">
+              ${['A. AB', 'B. FN', 'C. E', 'D. D'].map((item, idx) => {
+                const k = ['A', 'B', 'C', 'D'][idx];
+                const isChecked = selectedAnswers.includes(k);
+                return `
+                  <div onclick="toggleOption('${k}')" class="p-2.5 rounded border flex items-center justify-between text-xs cursor-pointer transition-all ${isChecked ? 'bg-blue-900/30 border-blue-500 text-white font-bold' : 'bg-slate-900 border-slate-800 text-slate-300'}">
+                    <span>${item}</span>
+                    <input type="checkbox" ${isChecked ? 'checked' : ''} class="accent-blue-500">
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800 mt-auto">
+              <button class="px-3 py-1.5 text-xs text-slate-400 bg-slate-900 border border-slate-800 rounded">← Câu trước</button>
+              <button class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded">Lưu & Câu tiếp →</button>
+            </div>
+          </div>
+        `;
+      }
+      else if (currentConcept === 4) {
+        // CYBERPUNK QUIZ
+        vp.innerHTML = `
+          <div class="flex flex-col h-full space-y-2 mono">
+            <!-- HUD Header -->
+            <div class="flex items-center justify-between border-b border-cyan-500/30 pb-1 text-xs">
+              <span class="text-cyan-400 font-bold">// NODE_03 OF 20</span>
+              <span class="text-fuchsia-400 text-[10px]">TIME_REMAINING: 24:18</span>
+            </div>
+
+            <!-- Cyber Slide Frame -->
+            <div class="border border-cyan-500/40 bg-black p-2.5 rounded neon-cyan text-xs space-y-1">
+              <div class="text-[9px] text-cyan-500">> SLIDE_REF: #341</div>
+              <p class="text-slate-100 font-semibold leading-relaxed">
+                Which of the following is false about a foreign key?
+              </p>
+            </div>
+
+            <!-- Neon Buttons A B C D -->
+            <div class="grid grid-cols-4 gap-2 pt-1">
+              ${['A', 'B', 'C', 'D'].map(k => {
+                const isSelected = singleAnswer === k;
+                return `
+                  <button onclick="selectSingleOption('${k}')" class="h-11 rounded font-black text-sm border transition-all ${isSelected ? 'border-cyan-400 bg-cyan-950 text-cyan-300 neon-cyan scale-105' : 'border-slate-800 bg-black text-slate-500'}">
+                    ${k}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- AI Console Inspector (Handling 429 cleanly) -->
+            <div class="border border-slate-800 bg-black p-2 rounded text-[11px] space-y-1">
+              <div class="text-cyan-400 font-bold">> AI_AGENT_STATUS: [429_LIMIT_REACHED]</div>
+              <p class="text-slate-400 text-[10px]">
+                API Quota exceeded. Tự động chuyển qua Local Fallback Cache thành công!
+              </p>
+              <button class="px-2 py-0.5 bg-cyan-500 text-black font-bold text-[10px] rounded">THỬ LẠI KẾT NỐI</button>
+            </div>
+
+            <!-- Action -->
+            <button class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs uppercase tracking-widest rounded neon-cyan mt-auto">
+              NEXT_QUESTION >>
+            </button>
+          </div>
+        `;
+      }
+      else if (currentConcept === 5) {
+        // ERGONOMIC THUMB-FIRST QUIZ (THE WINNER FOR MOBILE USABILITY)
+        vp.innerHTML = `
+          <div class="flex flex-col h-full justify-between space-y-2">
+            <!-- Mini Compact Header -->
+            <div class="flex items-center justify-between text-xs text-slate-400 pb-0.5">
+              <span class="text-indigo-400 font-bold">Câu 3 / 20</span>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400 text-[11px]">Slide 341</span>
+                <button onclick="switchScreen('setup')" class="text-slate-400 hover:text-white text-xs">✕</button>
+              </div>
+            </div>
+
+            <!-- Fluid Slide Image: TAKES FULL WIDTH, NO BLACK BOTTOM GAP -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-2 relative shadow-lg">
+              <div class="w-full aspect-[16/10] bg-white rounded-xl flex flex-col justify-center items-center text-center p-3 text-slate-900 shadow-inner">
+                <span class="text-[10px] text-indigo-600 font-bold">SLIDE 341 · KHÓA NGOẠI (FOREIGN KEY)</span>
+                <p class="text-xs font-bold mt-1 text-slate-900 leading-snug">
+                  Which of the following is false about a foreign key?
+                </p>
+                <div class="mt-2 text-[10px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  🔍 Chạm để mở ảnh gốc sắc nét
+                </div>
+              </div>
+            </div>
+
+            <!-- Swipe Indicator -->
+            <div class="text-center text-[10px] text-slate-500 py-0.5">
+              ‹ Vuốt ngang đổi câu · Chạm phím bên dưới để trả lời ›
+            </div>
+
+            <!-- Thumb Dock at Bottom (Zero Reach Strain) -->
+            <div class="bg-slate-900/95 border border-slate-800 rounded-3xl p-2.5 shadow-2xl space-y-2 backdrop-blur-md">
+              <!-- Big Keys A B C D -->
+              <div class="grid grid-cols-4 gap-2">
+                ${['A', 'B', 'C', 'D'].map(k => {
+                  const isSelected = singleAnswer === k;
+                  return `
+                    <button onclick="selectSingleOption('${k}')" class="h-13 py-3 rounded-2xl font-black text-base flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-lg scale-105 ring-2 ring-indigo-400' : 'bg-slate-800 text-slate-200 active:scale-95'}">
+                      ${k}
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+
+              <!-- Action Bar in Dock -->
+              <div class="flex items-center gap-2 pt-0.5">
+                <button class="w-1/3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs">
+                  ← Trước
+                </button>
+                <button class="w-2/3 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md">
+                  Câu tiếp theo →
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Initialize View
+    selectConcept(1);
+  </script>
+</body>
+</html>

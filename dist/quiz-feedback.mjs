@@ -130,7 +130,7 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
    setTimeout(()=>{if(retry.isConnected){retry.disabled=false;retry.textContent='Thử lại'}},Math.min(2147483647,Math.max(1,state.retryAt-Date.now())));
   }
  }else if(['queued','loading','no-auth','idle'].includes(state.status)&&!explanation){
-  add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'Đang tạo giải thích AI…');
+  add(feedback,'div','study-explanation-status',state.status==='queued'?'Đang chờ tạo giải thích AI…':'⚡ Đang tạo giải thích AI… (bạn có thể bấm Tiếp để làm tiếp)');
  }
  return feedback;
 }
