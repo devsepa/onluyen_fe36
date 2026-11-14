@@ -10,7 +10,7 @@ export function createQuizSound({storage,makeContext=()=>new(globalThis.AudioCon
   }catch{return null}
  }
 
- function tone(freq, duration=0.04, type='sine', gainVal=0.04, freqEnd=null){
+ function tone(freq, duration=0.045, type='sine', gainVal=0.05, freqEnd=null){
   if(!enabled)return;
   const ctx=getContext();if(!ctx)return;
   try{
@@ -22,7 +22,7 @@ export function createQuizSound({storage,makeContext=()=>new(globalThis.AudioCon
    gain.gain.setValueAtTime(gainVal,now);
    gain.gain.exponentialRampToValueAtTime(0.0001,now+duration);
    osc.connect(gain);gain.connect(ctx.destination);
-   osc.start(now);osc.stop(now+duration+0.01);
+   osc.start(now);osc.stop(now+duration+0.015);
    osc.onended=()=>{osc.disconnect();gain.disconnect()};
   }catch{}
  }
@@ -30,51 +30,62 @@ export function createQuizSound({storage,makeContext=()=>new(globalThis.AudioCon
  return {
   get enabled(){return enabled},
   toggleSound(){enabled=!enabled;try{storage.setItem('sot-sound',String(enabled))}catch{}return enabled},
+
+  // Bộ 4: Đàn Chuông Celesta (Sweet Celesta) - Trong trẻo, ngọt ngào, ngân vang
   play(correct){
    if(!enabled)return;
    const ctx=getContext();if(!ctx)return;
    try{
-    const start=ctx.currentTime,notes=correct?[[660,0],[880,.11]]:[[220,0],[165,.13]];
+    const start=ctx.currentTime;
+    // Đúng: Hợp âm Celesta E6 (1318Hz) -> G#6 (1661Hz) -> B6 (1975Hz)
+    // Sai: Hai nốt ngắt phím thanh tao A5 (880Hz) -> G#5 (830Hz)
+    const notes=correct?[[1318,0],[1661,0.07],[1975,0.14]]:[[880,0],[830,0.1]];
     for(const [frequency,delay]of notes){
      const osc=ctx.createOscillator(),gain=ctx.createGain(),time=start+delay;
-     osc.type=correct?'triangle':'sine';
+     osc.type='sine';
      osc.frequency.setValueAtTime(frequency,time);
      gain.gain.setValueAtTime(0,time);
-     gain.gain.linearRampToValueAtTime(correct?.06:.045,time+.012);
-     gain.gain.exponentialRampToValueAtTime(.001,time+.14);
+     gain.gain.linearRampToValueAtTime(correct?0.06:0.05,time+0.012);
+     gain.gain.exponentialRampToValueAtTime(0.0001,time+(correct?0.32:0.2));
      osc.connect(gain);gain.connect(ctx.destination);
-     osc.start(time);osc.stop(time+.16);
+     osc.start(time);osc.stop(time+(correct?0.35:0.22));
      osc.onended=()=>{osc.disconnect();gain.disconnect()};
     }
    }catch{}
   },
-  // Crisp UI Click for buttons & navs
-  click(){tone(780,0.032,'sine',0.035,380)},
-  // Tactile choice pill pick
-  select(){tone(480,0.045,'triangle',0.05,720)},
-  // Question switch / Next / Prev
-  nav(){tone(340,0.06,'sine',0.035,560)},
-  // Switches, toggles, checkboxes
-  toggle(){tone(640,0.038,'sine',0.04)},
-  // Dialog / Modal open
-  pop(){tone(420,0.05,'sine',0.045,840)},
-  // Celebrating quiz completion
+
+  // UI Click: Gõ phím chuông ngắn
+  click(){tone(1760,0.035,'sine',0.04,1975)},
+
+  // Chọn đáp án A B C D: Phím chuông gõ ngọt B6 (1975Hz)
+  select(){tone(1975,0.045,'sine',0.05)},
+
+  // Chuyển câu: Lướt phím nhẹ E6 (1318Hz) lên A6 (1760Hz)
+  nav(){tone(1318,0.05,'sine',0.045,1760)},
+
+  // Toggles, switches
+  toggle(){tone(1661,0.04,'sine',0.045)},
+
+  // Pop modal
+  pop(){tone(1318,0.05,'sine',0.045,1975)},
+
+  // Hoàn thành bài: Khúc nhạc hộp ngọc Celesta C6 -> E6 -> G6 -> C7
   celebrate(){
    if(!enabled)return;
    const ctx=getContext();if(!ctx)return;
    try{
     const now=ctx.currentTime;
-    const notes=[[523.25,0],[659.25,0.09],[783.99,0.18],[1046.5,0.28]];
+    const notes=[[1046,0],[1318,0.09],[1567,0.18],[2093,0.28]];
     for(const [freq,delay]of notes){
      const osc=ctx.createOscillator(),gain=ctx.createGain();
      const t=now+delay;
-     osc.type='triangle';
+     osc.type='sine';
      osc.frequency.setValueAtTime(freq,t);
      gain.gain.setValueAtTime(0,t);
-     gain.gain.linearRampToValueAtTime(0.065,t+0.015);
-     gain.gain.exponentialRampToValueAtTime(0.0001,t+0.22);
+     gain.gain.linearRampToValueAtTime(0.06,t+0.015);
+     gain.gain.exponentialRampToValueAtTime(0.0001,t+0.42);
      osc.connect(gain);gain.connect(ctx.destination);
-     osc.start(t);osc.stop(t+0.24);
+     osc.start(t);osc.stop(t+0.45);
      osc.onended=()=>{osc.disconnect();gain.disconnect()};
     }
    }catch{}
