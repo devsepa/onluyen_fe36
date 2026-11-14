@@ -70,9 +70,9 @@ export function setupAmbientBackground() {
       y: Math.random() * height,
       r: Math.random() * 2 + 1,
       color: colors[Math.floor(Math.random() * colors.length)],
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: -0.25 - Math.random() * 0.55,
-      baseAlpha: Math.random() * 0.5 + 0.35,
+      vx: (Math.random() - 0.5) * 0.65,
+      vy: -0.5 - Math.random() * 0.65,
+      baseAlpha: Math.random() * 0.3 + 0.22,
       phase: Math.random() * Math.PI * 2,
       pulseSpeed: 0.018 + Math.random() * 0.03
     }));
@@ -115,7 +115,7 @@ export function setupAmbientBackground() {
   }
 
   function loop() {
-    if (document.hidden) return;
+    if (document.hidden) { animId = null; return; }
     renderFrame();
     animId = window.requestAnimationFrame(loop);
   }
