@@ -70,14 +70,44 @@ async function generateAnswersWithGroq(questions, env) {
  const groqKey = env.GROQ_API_KEY;
  if (!groqKey) throw new Error('GROQ_API_KEY is not configured');
  const explain = questions.some(q => q.explain);
+ const hasImage = questions.some(q => q.image);
  const systemPrompt = 'Bạn là chuyên gia giải đề thi. Hãy giải đề thi chính xác. ' +
   (explain ? 'Yêu cầu trả về JSON với cấu trúc: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "Giải thích chi tiết tại sao đúng", "optionReasons": [{"id": "A", "text": "nội dung lựa chọn A", "reason": "lý do đúng/sai"}]}]}. Phải giữ nguyên chính xác nội dung lựa chọn ban đầu.' : 'Trả về JSON: {"answers": [{"id": "...", "status": "answered", "answer": "A", "explanation": "..."}]}');
 
- const prompt = questions.map(q => {
-  const choices = q.options.map(o => `${o.id}. ${o.text}`).join('\n');
-  return `ID: ${q.id}\nCâu hỏi: ${q.stem}\nLựa chọn:\n${choices}`;
- }).join('\n---\n');
+ let messages;
+ if (hasImage) {
+  const content = [];
+  content.push({ type: 'text', text: questions.map(q => {
+   const choices = q.options.map(o => `${o.id}. ${o.text}`).join('\n');
+   return `ID: ${q.id}\nCâu hỏi: ${q.stem}\nLựa chọn:\n${choices}`;
+  }).join('\n---\n') });
 
+  for (const q of questions) {
+   if (q.image?.data) {
+    content.push({
+     type: 'image_url',
+     image_url: { url: `data:${q.image.mimeType || 'image/jpeg'};base64,${q.image.data}` }
+    });
+   }
+  }
+
+  messages = [
+   { role: 'system', content: systemPrompt },
+   { role: 'user', content }
+  ];
+ } else {
+  const prompt = questions.map(q => {
+   const choices = q.options.map(o => `${o.id}. ${o.text}`).join('\n');
+   return `ID: ${q.id}\nCâu hỏi: ${q.stem}\nLựa chọn:\n${choices}`;
+  }).join('\n---\n');
+
+  messages = [
+   { role: 'system', content: systemPrompt },
+   { role: 'user', content: prompt }
+  ];
+ }
+
+ const model = hasImage ? 'qwen/qwen3.8-27b' : 'openai/gpt-oss-120b';
  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
   method: 'POST',
   headers: {
@@ -85,24 +115,24 @@ async function generateAnswersWithGroq(questions, env) {
    'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-   model: 'openai/gpt-oss-120b',
-   messages: [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: prompt }
-   ],
+   model,
+   messages,
    response_format: { type: 'json_object' },
    temperature: 0.2
   })
  });
- if (!res.ok) throw new Error('Groq error: ' + res.status);
+ if (!res.ok) {
+  const errText = await res.text();
+  throw new Error('Groq error: ' + res.status + ' - ' + errText);
+ }
  const data = await res.json();
- const content = data.choices?.[0]?.message?.content;
- const parsed = JSON.parse(content);
+ const text = data.choices?.[0]?.message?.content;
+ const parsed = JSON.parse(text);
  return validateResults(parsed, questions);
 }
 
 export async function generateAnswers(questions,env,fetcher=fetch){
- if(env.GROQ_API_KEY && !questions.some(q => q.image)){
+ if(env.GROQ_API_KEY){
   try {
    return await generateAnswersWithGroq(questions, env);
   } catch(e) {
@@ -154,9 +184,9 @@ async function invokeRegional(path,input,env){
  const data=await response.json();if(!response.ok){const error=new ApiError(response.status,data.error||'Chưa gọi được Gemini.');error.code=data.code;throw error}return data;
 }
 export function generateInSupportedRegion(questions,env){
- if(env.GROQ_API_KEY && !questions.some(q => q.image)){
+ if(env.GROQ_API_KEY){
   try {
-   return generateAnswersWithGroq(questions, env).then(answers => ({answers, model: 'groq/gpt-oss-120b'}));
+   return generateAnswersWithGroq(questions, env).then(answers => ({answers, model: 'groq'}));
   } catch(e) {}
  }
  if(!env.GEMINI_RUNTIME)return generateWithFallback(questions,env);

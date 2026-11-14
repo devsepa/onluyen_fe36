@@ -1533,7 +1533,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
  const started=performance.now();generatedExplanationKeys.add(explanationKey(q));
  const requestSignal=AbortSignal.any([signal,AbortSignal.timeout(95000)]),submitted=structuredClone(q);
  try{
-  if(q.url||q.sharedDeck){const blob=await questionBlob(q,{signal:requestSignal});if(blob.size>2100000)throw Error('Ảnh slide quá lớn để gửi AI.');submitted.image={mimeType:blob.type,data:await blobToBase64(blob)}}
+  if((q.url||q.sharedDeck) && (!q.stem?.trim() || !q.options?.some(o=>o.text?.trim()))){const blob=await questionBlob(q,{signal:requestSignal});if(blob.size>2100000)throw Error('Ảnh slide quá lớn để gửi AI.');submitted.image={mimeType:blob.type,data:await blobToBase64(blob)}}
   const result=await solveBatch(AI_API_BASE,[submitted],token,{signal:requestSignal,purpose:'explanation'});
   telemetry.record('ai_ms',performance.now()-started);telemetry.record(result.answers[0].reused?'shared_hit':'shared_miss');
   return normalizeExplanation(q,result.answers[0]);
