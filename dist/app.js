@@ -1232,10 +1232,8 @@ function renderPractice() {
         </div>
 
         <!-- Exam Minutes Selection -->
-        <div id="wrongLimitSetting" class="form-group-v2" ${preferredMode==='study'?'':'hidden'}>
-          <label class="form-label-v2" for="wrongAttemptLimit">Số lần sai được thử lại mỗi câu</label>
-          <select id="wrongAttemptLimit" class="select-control-v2">${[0,1,2,3,4,5].map(limit=>`<option value="${limit}" ${limit===wrongAttemptLimit?'selected':''}>${limit===0?'Hiện ngay khi sai':`${limit} lần · sai lần ${limit+1} mới hiện${limit===2?' (Khuyên dùng)':''}`}</option>`).join('')}</select>
-          <small class="muted">Chọn đúng sẽ hiện đáp án và giải thích ngay. Bạn tự bấm để chuyển câu.</small>
+        <div id="wrongLimitSetting" class="form-group-v2" hidden style="display:none !important;">
+          <select id="wrongAttemptLimit" class="select-control-v2" hidden><option value="2" selected>2 lần</option></select>
         </div>
         <div id="timeSetting" class="form-group-v2" ${preferredMode === "study" ? "hidden" : ""}>
           <div class="form-label-row">
@@ -1363,7 +1361,7 @@ function renderPractice() {
   };
 
   // Slider & Number input sync
-  $("wrongAttemptLimit").onchange=()=>{wrongAttemptLimit=Number($("wrongAttemptLimit").value);write('sot-wrong-attempt-limit',wrongAttemptLimit)};
+  if($("wrongAttemptLimit"))$("wrongAttemptLimit").onchange=()=>{wrongAttemptLimit=Number($("wrongAttemptLimit").value);write('sot-wrong-attempt-limit',wrongAttemptLimit)};
   $("selectionStrategy").onchange=()=>{selectionStrategy=$("selectionStrategy").value;write('sot-selection-strategy',selectionStrategy);renderPractice()};
   $("resetSelection").onclick=async()=>{if(await askConfirm('Bắt đầu vòng mới cho môn / nguồn đang chọn? Các môn khác giữ nguyên tiến độ.',{title:'Ôn vòng tiếp theo',okText:'Bắt đầu vòng mới'})){try{studySelection.reset(allPool());renderPractice()}catch{message('Không lưu được tiến độ. Hãy kiểm tra dung lượng trình duyệt.')}}};
   $("countSlider").oninput = (e) => {
@@ -1446,7 +1444,6 @@ function renderPractice() {
         else seg.classList.remove("active");
       });
       $("timeSetting").hidden = preferredMode === "study";
-      $("wrongLimitSetting").hidden = preferredMode !== "study";
       const startBtn = $("start");
       const btnText = startBtn.querySelector(".btn-text");
       if (btnText) btnText.textContent = preferredMode === "study" ? "Bắt đầu ôn luyện" : "Bắt đầu thi thử";
@@ -1525,10 +1522,10 @@ function navItemClass(session, item, index, study) {
   return classes.join(" ");
 }
 let prefetchEnabled=read('sot-explanation-prefetch',true);
-// Cache-bust: 20261114-attempt-limit-default2
-let wrongAttemptLimit=read('sot-wrong-attempt-limit',2);if(!Number.isInteger(wrongAttemptLimit)||wrongAttemptLimit<0||wrongAttemptLimit>5)wrongAttemptLimit=2;
-if(localStorage.getItem('sot-wrong-attempt-limit')===null){wrongAttemptLimit=2;write('sot-wrong-attempt-limit',2);}
-if(session?.mode==='study'&&(!Number.isInteger(session.wrongAttemptLimit)||session.wrongAttemptLimit<0||session.wrongAttemptLimit>5))session.wrongAttemptLimit=wrongAttemptLimit;
+// Default locked attempt limit: 2 wrong attempts, show on 3rd
+let wrongAttemptLimit = 2;
+write('sot-wrong-attempt-limit', 2);
+if (session?.mode === 'study') session.wrongAttemptLimit = 2;
 const generatedExplanationKeys=new Set(),localExplanationHits=new Set();
 const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)},load:async(q,{signal})=>{
  if(!AI_API_BASE)throw Error('Giải thích AI đang được chuẩn bị. Hãy thử lại sau.');
