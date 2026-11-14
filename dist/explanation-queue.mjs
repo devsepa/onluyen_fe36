@@ -1,5 +1,5 @@
 import {explanationKey,validateOptionReasons} from './explanation-data.mjs?v=2026.11.14.32';
-import {RATE_LIMIT_MESSAGE} from './ai-rate-limit.mjs';
+import {RATE_LIMIT_MESSAGE} from './ai-rate-limit.mjs?v=2026.11.14.32';
 export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,now=Date.now}={}){
  const cache=new Map(),states=new Map(),jobs=new Map(),queue=[],invalid=new Set();let running=null,blocked=null,disposed=false,paused=false;
  try{const saved=JSON.parse(storage?.getItem('sot-ai-cooldown-v1')||'null');if(saved?.retryAt>now()&&saved.retryAt<=now()+86400000)blocked={error:RATE_LIMIT_MESSAGE,statusCode:429,code:'AI_RATE_LIMITED',retryAt:saved.retryAt}}catch{}

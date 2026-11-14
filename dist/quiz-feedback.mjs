@@ -40,21 +40,76 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  if(details||explanation){
   const box=add(feedback,'div','feedback-inline-exp');box.tabIndex=0;box.setAttribute('role','region');box.setAttribute('aria-label','Giải thích đáp án');
   for(const event of ['pointerdown','wheel','focus','touchstart'])box.addEventListener(event,onRead,{passive:true});
-  add(box,'b','',details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'Giải thích AI · cần kiểm tra:':'Ghi chú / Giải thích:');
-  if(details)add(box,'small','explanation-storage-note',details.reviewed?'Đã được kiểm duyệt':details.reused?'Đã lưu · dùng lại từ kho giải thích chung':'Tự động lưu cho lần ôn sau');
+
+  // Header with title, badge and copy button
+  const headRow = add(box, 'div', 'explanation-card-header');
+  const titleWrap = add(headRow, 'div', 'exp-header-title');
+  add(titleWrap, 'span', 'exp-sparkle-icon', '✨');
+  add(titleWrap, 'strong', '', details||question.explanationSource==='gemini'||question.answerSource==='gemini'?'GIẢI THÍCH CHI TIẾT:':'GHI CHÚ / GIẢI THÍCH:');
+  if(details){
+   add(titleWrap, 'span', 'exp-badge ' + (details.reviewed?'badge-reviewed':details.reused?'badge-reused':'badge-new'), details.reviewed?'✓ Đã kiểm duyệt':details.reused?'⚡ Đã lưu chung':'Tự động lưu');
+  }
+
+  const copyBtn = add(headRow, 'button', 'btn-copy-explanation', '📋 Sao chép');
+  copyBtn.type = 'button';
+  copyBtn.title = 'Sao chép nội dung giải thích vào bộ nhớ tạm';
+  copyBtn.onclick = async () => {
+   try {
+    const choices = question.options.map(o => `${o.id}. ${o.text || details?.options?.find(item => item.id === o.id)?.text || ''}`);
+    let copyText = `[CÂU HỎI]: ${question.stem || ('Slide ' + question.slide)}\n${choices.join('\n')}\n\n`;
+    copyText += `[ĐÁP ÁN ĐÚNG]: ${question.answer}\n`;
+    copyText += `[ĐIỂM MẤU CHỐT]: ${details?.reason || explanation || ''}\n`;
+    if (details?.options?.length) {
+     copyText += `\n[CHI TIẾT TỪNG PHƯƠNG ÁN]:\n`;
+     for (const o of details.options) {
+      const isRight = question.answer.includes(o.id);
+      copyText += `- ${o.id} (${isRight ? 'Đúng' : 'Sai'}): ${o.reason}\n`;
+     }
+    }
+    const tipText = getSmartTip(question, details);
+    if (tipText) copyText += `\n[MẸO GHI NHỚ]: ${tipText}\n`;
+    await navigator.clipboard.writeText(copyText.trim());
+    copyBtn.textContent = '✓ Đã chép!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => {
+     if (copyBtn.isConnected) {
+      copyBtn.textContent = '📋 Sao chép';
+      copyBtn.classList.remove('copied');
+     }
+    }, 2000);
+   } catch {}
+  };
+
   const choices=question.options.map(o=>({id:o.id,text:o.text||details?.options.find(item=>item.id===o.id)?.text||''}));
   const content=labels=>[...labels].map(id=>{const text=choices.find(o=>o.id===id)?.text;return id+(text?' — '+text:'')}).join('\n');
-  add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
-  if(details)add(box,'b','explanation-heading','Tại sao đúng:');
-  add(box,'span','explanation-reason',details?.reason||explanation);
-  if(!isCorrect(question,answered)){
-   add(add(box,'div','explanation-chosen'),'strong','', 'Bạn chọn '+content(answered));
-   if(details){
-    const extra=[...answered].filter(id=>!question.answer.includes(id)),missing=[...question.answer].filter(id=>!answered.includes(id));
-    for(const id of extra){const option=details.options.find(o=>o.id===id);if(option)add(box,'p','explanation-choice-reason',`${id}: ${option.reason}`)}
-    if(missing.length&&question.answer.length>1){add(box,'p','explanation-choice-reason','Bạn còn thiếu: '+missing.join(', ')+'.');for(const id of missing){const option=details.options.find(o=>o.id===id);if(option)add(box,'p','explanation-choice-reason',`${id}: ${option.reason}`)}}
+
+  // Core rationale card
+  const coreBox = add(box, 'div', 'exp-core-box');
+  add(coreBox, 'div', 'exp-core-title', '🎯 Điểm mấu chốt:');
+  add(coreBox, 'div', 'exp-core-text', details?.reason||explanation);
+
+  // Option breakdown cards if available
+  if (details?.options?.length) {
+   const optionsGrid = add(box, 'div', 'exp-options-grid');
+   for (const o of details.options) {
+    const isCorrectOpt = question.answer.includes(o.id);
+    const isUserPicked = (answered || '').includes(o.id);
+    const optCard = add(optionsGrid, 'div', 'exp-option-card ' + (isCorrectOpt ? 'is-correct' : 'is-distractor') + (isUserPicked ? ' user-picked' : ''));
+    const optHead = add(optCard, 'div', 'exp-option-head');
+    add(optHead, 'span', 'exp-option-badge ' + (isCorrectOpt ? 'badge-correct' : 'badge-distractor'), (isCorrectOpt ? '✓ ' : '✕ ') + o.id);
+    if (o.text) add(optHead, 'span', 'exp-option-text', o.text);
+    if (isUserPicked) {
+     add(optHead, 'span', 'exp-user-tag ' + (isCorrectOpt ? 'user-right' : 'user-wrong'), isCorrectOpt ? 'Bạn chọn đúng' : 'Bạn đã chọn');
+    }
+    add(optCard, 'div', 'exp-option-reason', o.reason);
+   }
+  } else {
+   add(add(box,'div','explanation-answer'),'strong','', 'Chọn '+content(question.answer));
+   if(!isCorrect(question,answered)){
+    add(add(box,'div','explanation-chosen'),'strong','', 'Bạn chọn '+content(answered));
    }
   }
+
   const tip = getSmartTip(question, details);
   if(tip){
    const tipBox = add(box, 'div', 'explanation-tip-box');
