@@ -39,7 +39,7 @@ dialog{border:1px solid var(--line);padding:0;color:var(--text);background:var(-
 <script>
 (()=>{'use strict';
  const $=id=>document.getElementById(id),dialog=$('game'),canvas=$('board'),ctx=canvas.getContext('2d'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
- let mode='study',phase='closed',w=0,h=0,dpr=1,origin,target,box,velocity,gravity=500,maxPull=100,factor=5,defaultAngle=50,angle=50,power=.76,drag=null,shots=0,rotation=0,frame=0,lastTime=0,phaseTime=0,flightTime=0,trail=[],particles=[],sound=false,audio=null,misses=0;
+ let mode='study',phase='closed',w=0,h=0,dpr=1,origin,target,box,velocity,gravity=500,maxPull=100,factor=5,defaultAngle=50,angle=50,power=.76,drag=null,shots=0,rotation=0,frame=0,lastTime=0,phaseTime=0,flightTime=0,trail=[],particles=[],sound=false,audio=null,misses=0,dodged=false,dodge=null,evadedThisShot=false,targetFraction=.77;
  let dark=matchMedia('(prefers-color-scheme:dark)').matches;try{const saved=localStorage.getItem('slingshot-preview-theme');if(saved)dark=saved==='dark'}catch{}
  function setTheme(){document.documentElement.dataset.theme=dark?'dark':'light';$('theme').textContent=dark?'☀':'☾';$('theme').setAttribute('aria-label',dark?'Dùng giao diện sáng':'Dùng giao diện tối');try{localStorage.setItem('slingshot-preview-theme',dark?'dark':'light')}catch{}draw()}
  $('theme').onclick=()=>{dark=!dark;setTheme()};
@@ -50,17 +50,17 @@ dialog{border:1px solid var(--line);padding:0;color:var(--text);background:var(-
  function setMode(value){mode=value;$('study').setAttribute('aria-pressed',String(mode==='study'));$('exam').setAttribute('aria-pressed',String(mode==='exam'));$('openLabel').textContent=mode==='study'?'Kết thúc':'Nộp bài'}
  $('study').onclick=()=>setMode('study');$('exam').onclick=()=>setMode('exam');
  function resize(force=false){if(!dialog.open)return;const r=canvas.getBoundingClientRect();if(!force&&Math.abs(w-r.width)<.5&&Math.abs(h-r.height)<.5){draw();return}w=r.width;h=r.height;if(w<1||h<1)return;dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
-  const side=clamp(w*.075,42,68),floor=h*.89;origin={x:w*.21,y:h*.64};target={x:w*.77,y:h*.66,width:clamp(w*.145,78,148),height:Math.min(clamp(h*.22,65,112),Math.max(52,floor-h*.66)),floor};gravity=Math.max(360,h*1.35);maxPull=clamp(w*.16,60,135);
+  const side=clamp(w*.075,42,68),floor=h*.89;origin={x:w*.21,y:h*.64};target={x:w*targetFraction,y:h*.66,width:clamp(w*.145,78,148),height:Math.min(clamp(h*.22,65,112),Math.max(52,floor-h*.66)),floor};gravity=Math.max(360,h*1.35);maxPull=clamp(w*.16,60,135);
   const rise=Math.max(18,Math.min(h*.42,origin.y-28)),vy=-Math.sqrt(2*gravity*rise),t=(-vy+Math.sqrt(vy*vy+2*gravity*(target.y-origin.y)))/gravity,vx=(target.x-origin.x)/t;defaultAngle=Math.atan2(-vy,vx)*180/Math.PI;factor=Math.hypot(vx,vy)/(.76*maxPull);
-  box={x:origin.x,y:origin.y,side};angle=defaultAngle;power=.76;drag=null;trail=[];rotation=0;if(!['won','closed'].includes(phase)){phase='ready';$('success').hidden=true;setStatus('Kéo hộp về sau rồi thả')}updateControls();draw();
+  box={x:origin.x,y:origin.y,side};angle=defaultAngle;power=.76;drag=null;trail=[];rotation=0;if(!['won','closed'].includes(phase)){phase='ready';$('success').hidden=true;setStatus(dodged&&shots?'Thùng đứng yên rồi. Bắn lần nữa nhé!':'Kéo hộp về sau rồi thả')}updateControls();draw();
  }
  function currentVelocity(){if(drag)return{x:(origin.x-box.x)*factor,y:(origin.y-box.y)*factor};const speed=maxPull*factor*power,r=angle*Math.PI/180;return{x:Math.cos(r)*speed,y:-Math.sin(r)*speed}}
  function updateControls(){const disabled=phase!=='ready';$('launch').disabled=disabled;$('resetAim').disabled=disabled;$('attempts').textContent=shots?'Đã bắn '+shots+' lần':'Sẵn sàng cho cú bắn đầu tiên';if(origin){const v=currentVelocity(),percent=drag?Math.hypot(box.x-origin.x,box.y-origin.y)/maxPull:power;$('aimInfo').textContent='Góc '+Math.round(Math.atan2(-v.y,v.x)*180/Math.PI)+'° · Lực '+Math.round(clamp(percent,0,1)*100)+'% · Thả để bắn'}canvas.classList.toggle('dragging',!!drag)}
- function reset(count=false){if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;if(count){shots=0;misses=0}phase='ready';$('success').hidden=true;drag=null;trail=[];particles=[];rotation=0;resize(true);box={x:origin.x,y:origin.y,side:box.side};angle=defaultAngle;power=.76;updateControls();setStatus('Kéo hộp về sau rồi thả');draw()}
- function open(){dialog.showModal();phase='ready';shots=0;misses=0;$('success').hidden=true;$('modeLabel').textContent=mode==='study'?'Ôn luyện · Kết thúc':'Thi thử · Nộp bài';resize(true);canvas.focus({preventScroll:true})}
+ function reset(count=false){if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;if(count){shots=0;misses=0;dodged=false;targetFraction=.77}phase='ready';$('success').hidden=true;drag=null;trail=[];particles=[];rotation=0;resize(true);box={x:origin.x,y:origin.y,side:box.side};angle=defaultAngle;power=.76;updateControls();setStatus(dodged&&shots?'Thùng đứng yên rồi. Bắn lần nữa nhé!':'Kéo hộp về sau rồi thả');draw()}
+ function open(){dialog.showModal();phase='ready';shots=0;misses=0;dodged=false;targetFraction=.77;dodge=null;$('success').hidden=true;$('modeLabel').textContent=mode==='study'?'Ôn luyện · Kết thúc':'Thi thử · Nộp bài';resize(true);canvas.focus({preventScroll:true})}
  function close(){phase='closed';drag=null;if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;dialog.close();$('openGame').focus()}
  $('openGame').onclick=open;$('closeGame').onclick=close;$('back').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close()});$('again').onclick=()=>{reset(true);canvas.focus({preventScroll:true})};$('resetAim').onclick=()=>{reset();canvas.focus({preventScroll:true})};
- function ensureAudio(){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume()}catch{}}
+ function ensureAudio(){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{})}catch{}}
  function chime(){if(!sound||!audio)return;try{for(const [i,f]of [523.25,659.25,783.99].entries()){const osc=audio.createOscillator(),gain=audio.createGain(),at=audio.currentTime+i*.08;osc.type='sine';osc.frequency.value=f;gain.gain.setValueAtTime(0,at);gain.gain.linearRampToValueAtTime(.035,at+.015);gain.gain.exponentialRampToValueAtTime(.001,at+.24);osc.connect(gain);gain.connect(audio.destination);osc.start(at);osc.stop(at+.26)}}catch{}}
  $('sound').onclick=()=>{sound=!sound;$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('aria-label',sound?'Tắt âm thanh':'Bật âm thanh');$('sound').style.color=sound?'var(--purple)':'';ensureAudio()};
  function point(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
@@ -68,16 +68,24 @@ dialog{border:1px solid var(--line);padding:0;color:var(--text);background:var(-
  canvas.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||phase!=='ready')return;const p=point(e),dx=p.x-origin.x,dy=p.y-origin.y,len=Math.hypot(dx,dy),ratio=len>maxPull?maxPull/len:1;box.x=clamp(origin.x+dx*ratio,box.side/2+4,w-box.side/2-4);box.y=clamp(origin.y+dy*ratio,box.side/2+8,target.floor-box.side/2-4);updateControls();draw()});
  canvas.addEventListener('pointerup',e=>{if(!drag||drag.id!==e.pointerId||phase!=='ready')return;const v=currentVelocity(),distance=Math.hypot(box.x-origin.x,box.y-origin.y);drag=null;try{canvas.releasePointerCapture(e.pointerId)}catch{}if(distance<10){reset();return}fire(v)});
  canvas.addEventListener('pointercancel',()=>{if(drag&&phase==='ready')reset()});canvas.addEventListener('lostpointercapture',()=>{if(drag&&phase==='ready')reset()});
- function fire(v=currentVelocity()){if(phase!=='ready')return;ensureAudio();velocity=v;drag=null;phase='flying';phaseTime=0;flightTime=0;shots++;trail=[];setStatus('Chiếc hộp đang bay…');updateControls();lastTime=0;animate()}
+ function fire(v=currentVelocity()){if(phase!=='ready')return;ensureAudio();velocity=v;drag=null;phase='flying';evadedThisShot=false;phaseTime=0;flightTime=0;shots++;trail=[];setStatus('Chiếc hộp đang bay…');updateControls();lastTime=0;animate()}
  $('launch').onclick=()=>fire();
  dialog.addEventListener('keydown',e=>{if(e.target!==canvas||phase!=='ready')return;if(e.code==='Space'){e.preventDefault();fire();return}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();if(e.key==='ArrowLeft')angle=clamp(angle+2,10,85);if(e.key==='ArrowRight')angle=clamp(angle-2,10,85);if(e.key==='ArrowUp')power=clamp(power+.025,.15,1);if(e.key==='ArrowDown')power=clamp(power-.025,.15,1);updateControls();draw()}});
+ function beginDodge(){
+  const distance=Math.max(target.width*.98,box.side*1.2+target.width*.5),minimum=target.width/2+12,maximum=w-target.width/2-12;
+  const candidates=[target.x-distance,target.x+distance].filter(x=>x>=minimum&&x<=maximum),to=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:clamp(target.x-distance,minimum,maximum);
+  dodged=true;evadedThisShot=true;dodge={from:target.x,to,elapsed:0,duration:reduced.matches ? 0.01 : 0.2};
+  setStatus('Ơ kìa, thùng né mất rồi! 😏');
+ }
  function animate(){if(frame||document.hidden||!dialog.open)return;frame=requestAnimationFrame(tick)}
  function tick(time){frame=0;const dt=lastTime?Math.min((time-lastTime)/1000,.025):0;lastTime=time;phaseTime+=dt;
+  if(dodge){dodge.elapsed+=dt;const p=clamp(dodge.elapsed/dodge.duration,0,1),ease=1-(1-p)**3;target.x=mix(dodge.from,dodge.to,ease);if(p>=1){targetFraction=target.x/w;dodge=null}}
   if(phase==='flying'){
    const previous={x:box.x,y:box.y};box.x+=velocity.x*dt;box.y+=velocity.y*dt+.5*gravity*dt*dt;velocity.y+=gravity*dt;rotation+=velocity.x*dt*.008;flightTime+=dt;
    trail.push({x:box.x,y:box.y});if(trail.length>10)trail.shift();
-   if(previous.y<=target.y&&box.y>=target.y&&velocity.y>0){const t=(target.y-previous.y)/(box.y-previous.y||1),cross=mix(previous.x,box.x,t);if(Math.abs(cross-target.x)<target.width*.46-box.side*.13){phase='capture';phaseTime=0;box.x=cross;box.y=target.y;box.captureX=cross;setStatus('Vào rồi! Một cú bắn thật đẹp.');chime()}}
-   if(phase==='flying'&&(box.y>target.floor-box.side*.3||box.x< -100||box.x>w+100||flightTime>5)){phase='miss';phaseTime=0;misses++;setStatus(misses>1?'Căn lại sẽ cho bạn đường bắn mẫu nhé.':'Chệch một chút — thử lại nhé!')}
+   if(!dodged&&velocity.y>0&&box.y<=target.y){const until=(-velocity.y+Math.sqrt(velocity.y**2+2*gravity*(target.y-box.y)))/gravity,landingX=box.x+velocity.x*until;if(until<=.24&&Math.abs(landingX-target.x)<target.width*.46-box.side*.13)beginDodge()}
+   if(!evadedThisShot&&previous.y<=target.y&&box.y>=target.y&&velocity.y>0){const t=(target.y-previous.y)/(box.y-previous.y||1),cross=mix(previous.x,box.x,t);if(Math.abs(cross-target.x)<target.width*.46-box.side*.13){phase='capture';phaseTime=0;box.x=cross;box.y=target.y;box.captureX=cross;setStatus('Vào rồi! Một cú bắn thật đẹp.');chime()}}
+   if(phase==='flying'&&(box.y>target.floor-box.side*.3||box.x< -100||box.x>w+100||flightTime>5)){phase='miss';phaseTime=0;misses++;setStatus(evadedThisShot?'Thùng hết né rồi. Bắn thêm lần nữa nhé!':misses>1?'Căn lại sẽ cho bạn đường bắn mẫu nhé.':'Chệch một chút — thử lại nhé!')}
   }else if(phase==='capture'){
    const t=clamp(phaseTime/.48,0,1);box.x=mix(box.captureX,target.x,t);box.y=target.y+t*target.height*.7;rotation*=.87;
    if(t>=1){phase='celebrate';phaseTime=0;particles=reduced.matches?[]:Array.from({length:24},(_,i)=>({x:target.x,y:target.y,vx:(Math.random()-.5)*280,vy:-70-Math.random()*180,rotation:Math.random()*6,color:['#af97e5','#e7b56d','#79b79c','#eaa69b'][i%4]}))}

@@ -1,3 +1,4 @@
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.14.32';
 import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.14.32';
 import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.14.32';
 import { parseExamFile } from './universal-parser.mjs?v=2026.11.14.32';
@@ -1616,21 +1617,14 @@ function renderQuiz() {
     write("sot-session", session);
     refreshQuizState();
   };
-  $("submit").onclick = async () => {
-    if (
-      await askConfirm(
-        `${study ? "Kết thúc buổi học" : "Nộp bài thi"}? Bạn đã trả lời ${Object.keys(session.answers).length}/${qs.length} câu.`,
-        { title: study ? "Kết thúc buổi học" : "Nộp bài thi", okText: study ? "Kết thúc" : "Nộp bài" }
-      )
-    )
-      finish();
-  };
+  $("submit").onclick = () => completionGate.request();
   updateTimer();
   setTimeout(() => {
     loadQuizSlideImage(q).then(()=>{if(session?.questions===qs&&session.questions[session.current]?.id===q.id)scheduleNeighborImages(qs,session.current)});
   }, 0);
 }
 $('practice').onclick = (e) => {
+ if(completionGate.active)return;
  if(e.target.closest('#checkMultiple')&&session&&!session.done){
    const q=session.questions[session.current];
    if(confirmQuestion(session,q.id)){
@@ -1677,6 +1671,7 @@ $('practice').onclick = (e) => {
   }
 };
 window.addEventListener("keydown", (e) => {
+  if(completionGate.active)return;
   if (
     !session ||
     session.done ||
@@ -1868,6 +1863,10 @@ function triggerConfetti() {
   }
   requestAnimationFrame(loop);
 }
+const completionGate=createCompletionGate({getSession:()=>session,saveSession:value=>write('sot-session',value),complete:finish,
+ play:async options=>{const version=new URL(import.meta.url).searchParams.get('v')||document.querySelector('meta[name="app-version"]')?.content||'development';const {playCompletionGame}=await import(new URL('./slingshot-game.mjs?v='+encodeURIComponent(version),import.meta.url));return playCompletionGame({...options,theme:document.documentElement.dataset.theme,soundEnabled:quizSound.enabled,onSoundChange:enabled=>{if(quizSound.enabled!==enabled)quizSound.toggleSound();const control=$('soundToggle');if(control){control.textContent=enabled?'🔊':'🔇';control.title=enabled?'Tắt âm thanh':'Bật âm thanh'}}})},
+ onError:async(_error,{signal})=>{const close=()=>document.getElementById('appConfirmDialog')?.close();signal.addEventListener('abort',close,{once:true});try{return await askConfirm('Màn chơi chưa tải được. Bài làm đã được lưu. Bạn có muốn hoàn thành bài trực tiếp?',{title:'Không tải được màn chơi',okText:session?.mode==='study'?'Kết thúc':'Nộp bài'})}finally{signal.removeEventListener('abort',close)}}
+});
 function updateTimer() {
   clearTimeout(quizClockTimer);
   if (!session || session.done) return;
@@ -1886,6 +1885,7 @@ function updateTimer() {
 }
 function finish() {
   if (!session || session.done) return;
+  completionGate.cancel();
   explanationQueue.cancel();clearTimeout(quizClockTimer);
   if(session.mode==='study')for(const q of session.questions){const last=session.wrongAttempts?.[q.id]?.at(-1);if(last&&!session.answers[q.id])session.answers[q.id]=last}
   session.done = true;
@@ -1903,6 +1903,7 @@ function finish() {
   resultFilter = "all";
   quizSound.celebrate();
   switchView("result");
+  const resultHeading=$("result").querySelector("h2");if(resultHeading){resultHeading.tabIndex=-1;resultHeading.focus({preventScroll:true})}
   message("Đã lưu kết quả buổi học trên thiết bị này.");
 }
 function renderResult(r) {

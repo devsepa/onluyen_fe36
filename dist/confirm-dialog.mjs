@@ -49,6 +49,7 @@ export function askConfirm(message, {
       e.preventDefault();
       finish(false);
     };
+    dialog.onclose = () => { if (!dialog.open && !settled) { settled = true; resolve(false); } };
 
     dialog.showModal();
     (danger ? cancelBtn : okBtn).focus();
