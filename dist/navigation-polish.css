@@ -1,0 +1,33 @@
+/* Keep navigation compact and study actions in reach. */
+body:not(.quiz-active):not(.exam-active) .page-heading{padding:16px 22px;min-height:0;margin-bottom:16px;gap:8px;border-radius:16px;background:var(--panel);box-shadow:none;}
+body:not(.quiz-active):not(.exam-active) .page-heading h1{color:var(--text);font-size:25px;margin:0;}
+body:not(.quiz-active):not(.exam-active) .page-heading p{margin:6px 0 0;}
+.community-heading{font-size:18px;margin:20px 0 8px;}
+#shared .study-tools{margin-bottom:16px;}
+#shared .study-tools + .community-heading{margin-top:16px;}
+.app-update-notice{padding:8px 12px!important;margin:16px 0!important;gap:12px;align-items:center;justify-content:space-between;flex-wrap:nowrap!important;font-size:12px;}
+.app-update-notice:not([hidden]){display:flex;}
+.app-update-notice .app-update-control{flex:none;min-height:44px;}
+.history-top-actions{position:relative;align-items:center;}
+.history-options{position:relative;flex:none;}
+.history-options>summary{list-style:none;display:grid;place-items:center;width:44px;height:44px;cursor:pointer;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font-weight:700;}
+.history-options>summary::-webkit-details-marker{display:none;}
+.history-options-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:20;padding:8px;width:220px;border:1px solid var(--line);border-radius:12px;background:var(--panel);box-shadow:var(--shadow);}
+.history-options-menu button{min-height:44px;width:100%;}
+.history-options summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+#refreshDecks{min-height:44px;}
+@media(max-width:760px){
+ body:not(.quiz-active):not(.exam-active) .topbar{height:56px;min-height:56px;padding:6px 12px;margin-bottom:0;display:flex;justify-content:flex-end;}
+ .topbar .topbar-left,.topbar .topbar-center{display:none!important;}
+ .topbar .top-actions{gap:10px;margin:0;position:static;}
+ .topbar .icon-button,.topbar .avatar,.topbar #soundToggle{width:44px;height:44px;min-width:44px;}
+ body:not(.quiz-active):not(.exam-active) .page-content{padding-top:12px;}
+ body:not(.quiz-active):not(.exam-active) .page-heading{padding:12px 16px;margin-bottom:12px;}
+ body:not(.quiz-active):not(.exam-active) .page-heading h1{font-size:22px;}
+ .history-top-actions .btn-new-quiz-action{min-height:44px;}
+ .history-top-actions .history-options{margin-left:auto;}
+}
+/* Maintain legibility when the theme's decorative heading gradient is disabled. */
+body:not(.quiz-active):not(.exam-active) .page-heading h1{-webkit-text-fill-color:var(--text);background:none;}
+[data-theme="light"] .sidebar .brand strong{color:var(--text);}
+@media(max-width:760px){.topbar .top-actions{margin-left:auto!important;}}

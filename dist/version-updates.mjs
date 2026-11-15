@@ -7,7 +7,7 @@ export function setupVersionUpdates({beforeUpdate=async()=>true,fetcher=fetch,re
  const label=/^[a-f0-9]{40}$/.test(current)?current.slice(0,7):current;
  const controls=new Set();let latest=null,lastChecked=0,checking=null;
  const notice=document.createElement('div');notice.className='app-update-notice';notice.hidden=true;notice.setAttribute('role','status');
- const text=document.createElement('span');text.textContent='Có phiên bản mới. Dữ liệu đã lưu sẽ được giữ khi cập nhật.';notice.append(text);document.querySelector('#message')?.before(notice);
+ const text=document.createElement('span');text.textContent='Có bản cập nhật mới.';notice.append(text);document.querySelector('#shared')?.append(notice);
  async function update(){if(!latest||!await beforeUpdate())return;const url=new URL(location.href);url.searchParams.set('v',latest.version);reload(url.href)}
  function refresh(){notice.hidden=!latest;for(const entry of [...controls]){if(!entry.button.isConnected){controls.delete(entry);continue}entry.button.hidden=!latest;entry.button.textContent='↑ Cập nhật';entry.button.title='Có phiên bản mới. Bấm để cập nhật.'}}
  function mount(container,{compact=false}={}){if(!container)return;const existing=container.querySelector('.app-update-control');if(existing)return;const button=document.createElement('button');button.type='button';button.className='secondary app-update-control';button.setAttribute('aria-label','Cập nhật phiên bản web');button.onclick=()=>latest?update():check(true);button.hidden=!latest;container.append(button);controls.add({button,compact});refresh()}

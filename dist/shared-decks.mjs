@@ -1,6 +1,6 @@
-import { presentationIdFromLink } from './resources.mjs?v=2026.11.15.42';
-import { readyForPractice } from './ai.mjs?v=2026.11.15.42';
-import { askConfirm } from './confirm-dialog.mjs?v=2026.11.15.42';
+import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.1';
+import { readyForPractice } from './ai.mjs?v=2026.11.16.1';
+import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.1';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
@@ -16,7 +16,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  const $=id=>document.getElementById(id),section=$('shared'),dialog=document.createElement('dialog'),publishButton=document.createElement('button');publishButton.id='publishDeck';publishButton.className='secondary';publishButton.textContent='↑ Đăng vào kho chung';$('library').querySelector('.section-heading .row').prepend(publishButton);dialog.className='publish-dialog';dialog.setAttribute('aria-labelledby','publishTitle');
  dialog.innerHTML='<form id="publishForm"><div class="modal-heading"><h2 id="publishTitle">Đăng bộ đề vào kho chung</h2><button type="button" class="secondary" id="closePublish">Đóng</button></div><label>Tên bộ đề<input id="deckTitle" required maxlength="160" placeholder="Ví dụ: DBI202 · Học kỳ 3"></label><p id="publishCount"></p><p>Ảnh slide, đáp án và giải thích sẽ công khai cho mọi người. Link Google riêng vẫn giữ quyền truy cập của Google. Lịch sử và thông tin tài khoản không được chia sẻ.</p><label class="check-label"><input id="publishRights" type="checkbox" required> Tôi có quyền chia sẻ các ảnh slide và nội dung này.</label><p id="publishStatus" role="status" aria-live="polite"></p><progress id="publishBar" value="0" max="1" hidden></progress><div class="modal-actions"><button type="submit" id="publishSubmit">Đăng bộ đề</button><button type="button" id="stopPublish" class="secondary" hidden>Dừng tải lên</button></div></form>';
  dialog.querySelector('p:not([id])').textContent='Ảnh slide, đáp án và giải thích sẽ công khai; tài khoản và lịch sử vẫn riêng. Link Google giữ nguyên quyền xem. Có thể đóng hộp thoại để ôn tiếp, nhưng cần giữ tab này mở đến khi tải xong.';
- document.body.append(dialog);let controller=null,items=[],loading=false;
+ document.body.append(dialog);let controller=null,items=[],loading=false,loadError=false;
  let preparations=new Map(),preparationLoading=false,lastPreparation=0;
  function preparationBadge(deck){const job=preparations.get(deck.id);if(!job||job.status==='not-started')return 'Giải thích AI khi làm bài';const ready=job.ready||0,total=job.total||deck.count;if(job.status==='waiting')return `AI đang nghỉ · ${ready}/${total} câu sẵn`;if(job.status==='paused')return `Tạm dừng · ${ready}/${total} câu sẵn`;if(job.status==='done')return `${ready}/${total} câu có giải thích`;return `Đang chuẩn bị · ${ready}/${total} câu sẵn`}
  async function loadPreparation(){if(!preparationBase||preparationLoading||document.hidden||section.hidden)return;preparationLoading=true;try{const response=await fetch(new URL('/v1/preparation',preparationBase),{credentials:'omit',signal:AbortSignal.timeout(15000)});if(!response.ok)return;const data=await response.json();if(!Array.isArray(data.jobs))return;preparations=new Map(data.jobs.map(job=>[job.id,job]));lastPreparation=Date.now();cards()}catch{/* The public deck remains usable while progress is offline. */}finally{preparationLoading=false}}
@@ -178,12 +178,12 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
        </div>
      </div>
    </article>`;
-   }).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>');
+   }).join(''):(loadError?'<div class="empty"><h2>Chưa tải được kho đề cộng đồng</h2><p>Kiểm tra kết nối rồi bấm Tải lại. Các bộ đề trên thiết bị vẫn có thể dùng để ôn.</p></div>':term?'<div class="empty"><h2>Không tìm thấy bộ đề cộng đồng phù hợp</h2><p>Thử từ khóa khác hoặc xóa nội dung tìm kiếm để xem tất cả bộ đề.</p></div>':'<div class="empty"><h2>Kho đề cộng đồng chưa có bộ đề</h2><p>Bạn vẫn có thể ôn các bộ đề trên thiết bị, hoặc nhập tài liệu và chia sẻ bộ đề đã kiểm tra.</p><button data-view="sources">Chọn tài liệu →</button></div>'));
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
-  try{items=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(items))throw Error('Không đọc được danh sách bộ đề.');cards();$('deckStatus').textContent=''}
-  catch(error){$('deckStatus').textContent=navigator.onLine?error.message:'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
+  try{const nextItems=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(nextItems))throw Error('Không đọc được danh sách bộ đề.');items=nextItems;loadError=false;cards();$('deckStatus').textContent=''}
+  catch(error){loadError=true;cards();$('deckStatus').textContent=navigator.onLine?'Chưa kết nối được kho đề cộng đồng. Bấm Tải lại để thử lại.':'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
   finally{loading=false;loadPreparation()}
  }
  if($('refreshDecks'))$('refreshDecks').onclick=load;if($('deckSearch'))$('deckSearch').oninput=cards;

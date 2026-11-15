@@ -1,5 +1,5 @@
 // Only temporary application files belong here. Archive/private image caches are separate.
-const RELEASE_VERSION='2026.11.15.42';
+const RELEASE_VERSION='2026.11.16.1';
 const CACHE_PREFIX='sot-static-v2-';
 const CACHE_NAME=CACHE_PREFIX+RELEASE_VERSION;
 const BASE=new URL(self.registration.scope).pathname;
