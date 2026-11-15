@@ -10,12 +10,12 @@
  </script>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
- <meta name="app-version" content="2026.11.15.38">
+ <meta name="app-version" content="2026.11.15.39">
  <link rel="icon" type="image/jpeg" href="logo.jpg">
  <link rel="apple-touch-icon" href="logo.jpg"><link rel="manifest" href="./manifest.json">
- <link rel="stylesheet" href="app.css?v=2026.11.15.38"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.15.38"><link rel="stylesheet" href="library-manager.css?v=2026.11.15.38"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.15.38"></script>
- <link rel="stylesheet" href="quality.css?v=2026.11.15.38">
- <link rel="stylesheet" href="resource-saving.css?v=2026.11.15.38"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.15.38">
+ <link rel="stylesheet" href="app.css?v=2026.11.15.39"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.15.39"><link rel="stylesheet" href="library-manager.css?v=2026.11.15.39"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.15.39"></script>
+ <link rel="stylesheet" href="quality.css?v=2026.11.15.39">
+ <link rel="stylesheet" href="resource-saving.css?v=2026.11.15.39"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.15.39">
 </head>
 <body class="sidebar-collapsed">
  <div class="app-ambient-bg" aria-hidden="true" id="appAmbientBg">
@@ -65,9 +65,24 @@
           <span class="yt-status-badge is-playing" id="ytStatusBadge">● Đang phát</span>
         </div>
 
-        <!-- Khung Video YouTube có thanh tua (Seek bar) -->
-        <div class="yt-screen-container">
+        <!-- Khung Video YouTube sạch đẹp không bị thao tác che -->
+        <div class="yt-screen-container" id="ytScreenContainer" title="Bấm để Phát / Tạm dừng">
           <div id="ytPlayerMount" class="yt-player-mount"></div>
+          <div id="ytScreenOverlay" class="yt-screen-overlay"></div>
+        </div>
+
+        <!-- Thanh tua bài hát tuỳ biến mượt mà (Scrubber Timeline) -->
+        <div class="yt-timeline-box">
+          <div class="yt-timeline-row">
+            <span id="ytCurrentTime" class="yt-time-text">00:00</span>
+            <input type="range" id="ytSeekBar" class="yt-seek-slider" min="0" max="100" value="0" step="0.1" aria-label="Tua thời gian bài hát">
+            <span id="ytTotalTime" class="yt-time-text">59:39</span>
+          </div>
+          <div class="yt-quick-seek-row">
+            <button type="button" class="yt-quick-btn" id="ytSeekBackBtn" title="Tua lùi 30 giây">⏪ -30s</button>
+            <button type="button" class="yt-quick-btn" id="ytSeekRestartBtn" title="Bắt đầu lại từ đầu">↺ Lại từ đầu</button>
+            <button type="button" class="yt-quick-btn" id="ytSeekFwdBtn" title="Tua tới 30 giây">+30s ⏩</button>
+          </div>
         </div>
 
         <div class="yt-controls-row">

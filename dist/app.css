@@ -1616,26 +1616,97 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
   border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
-/* Khung Video YouTube với thanh tua (Seek Bar) */
+/* Khung Video YouTube sạch đẹp (Không bị nút che màn hình) */
 .yt-screen-container {
   width: 100%;
-  height: 165px;
+  height: 155px;
   border-radius: 13px;
   overflow: hidden;
-  background: #000;
+  background: #090d16;
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
   position: relative;
   box-shadow: 0 4px 18px rgba(0,0,0,0.45);
+  cursor: pointer;
 }
 .yt-player-mount {
   width: 100%;
   height: 100%;
+  pointer-events: none !important; /* RẤT QUAN TRỌNG: Ngăn YouTube hiện controls, icon, watermark che video */
 }
 .yt-player-mount iframe {
   width: 100% !important;
   height: 100% !important;
   border: none !important;
   display: block;
+  pointer-events: none !important;
+}
+.yt-screen-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  cursor: pointer;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+.yt-screen-overlay:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+/* Custom Music Timeline & Scrubber Bar */
+.yt-timeline-box {
+  background: color-mix(in srgb, var(--panel2) 65%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.yt-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.yt-time-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  min-width: 36px;
+}
+#ytCurrentTime {
+  color: var(--accent);
+}
+.yt-seek-slider {
+  flex: 1;
+  height: 5px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  border-radius: 99px;
+}
+.yt-quick-seek-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+}
+.yt-quick-btn {
+  flex: 1;
+  height: 26px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.yt-quick-btn:hover {
+  background: var(--soft);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
 }
 
 /* Player Controls Row */

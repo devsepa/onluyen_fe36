@@ -1,25 +1,25 @@
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.38';
-import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.38';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.38';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.38';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.38';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.38';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.38';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.38';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.38';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.38';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.15.38';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.15.38';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.15.38';
-import {createBankTracker} from './library-data.mjs?v=2026.11.15.38';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.38';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.38';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.38';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.38';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.38';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.38";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.38";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.38";
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.39';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.39';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.39';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.39';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.39';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.39';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.39';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.39';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.39';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.39';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.15.39';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.15.39';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.15.39';
+import {createBankTracker} from './library-data.mjs?v=2026.11.15.39';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.39';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.39';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.39';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.39';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.39';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.39";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.39";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.39";
 import {
   shuffle,
   grade,
@@ -30,30 +30,30 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.15.38";
-import { setupResources } from "./resources-ui.js?v=2026.11.15.38";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.38';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.38";
-import { validateBank } from "./banks.mjs?v=2026.11.15.38";
-import { setupAccount } from "./account-ui.js?v=2026.11.15.38";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.38";
+} from "./core.mjs?v=2026.11.15.39";
+import { setupResources } from "./resources-ui.js?v=2026.11.15.39";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.39';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.39";
+import { validateBank } from "./banks.mjs?v=2026.11.15.39";
+import { setupAccount } from "./account-ui.js?v=2026.11.15.39";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.39";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.15.38";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.38";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.38";
+} from "./ai.mjs?v=2026.11.15.39";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.39";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.39";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.15.38";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.38";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.38";
-import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.38";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.38";
+} from "./shared-decks.mjs?v=2026.11.15.39";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.39";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.39";
+import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.39";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.39";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
@@ -2221,6 +2221,13 @@ themeToggle?.addEventListener('click',()=>{
  const ytPlayIcon=$('ytPlayIcon');
  const ytPlayText=$('ytPlayText');
  const ytResetBtn=$('ytResetBtn');
+ const ytSeekBar=$('ytSeekBar');
+ const ytCurrentTime=$('ytCurrentTime');
+ const ytTotalTime=$('ytTotalTime');
+ const ytSeekBackBtn=$('ytSeekBackBtn');
+ const ytSeekFwdBtn=$('ytSeekFwdBtn');
+ const ytSeekRestartBtn=$('ytSeekRestartBtn');
+ const ytScreenOverlay=$('ytScreenOverlay');
  const ytUrlInput=$('ytUrlInput');
  const ytLoadBtn=$('ytLoadBtn');
  const ytInputMsg=$('ytInputMsg');
@@ -2230,6 +2237,35 @@ themeToggle?.addEventListener('click',()=>{
  let ytPlayer = null;
  let isApiLoading = false;
  let autoplayAttempted = false;
+ let timelineTimer = null;
+ let isUserScrubbing = false;
+
+ function formatTime(sec){
+   if(isNaN(sec) || sec < 0) return '00:00';
+   const m = Math.floor(sec / 60);
+   const s = Math.floor(sec % 60);
+   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+ }
+
+ function startTimelineTracker(){
+   clearInterval(timelineTimer);
+   timelineTimer = setInterval(()=>{
+     if(!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function' || isUserScrubbing) return;
+     try {
+       const cur = ytPlayer.getCurrentTime() || 0;
+       const dur = ytPlayer.getDuration() || 3579;
+       if(ytCurrentTime) ytCurrentTime.textContent = formatTime(cur);
+       if(ytTotalTime && dur > 0) ytTotalTime.textContent = formatTime(dur);
+       if(ytSeekBar && dur > 0){
+         ytSeekBar.value = ((cur / dur) * 100).toFixed(1);
+       }
+     } catch(e){}
+   }, 500);
+ }
+
+ function stopTimelineTracker(){
+   clearInterval(timelineTimer);
+ }
 
  function loadYouTubeApi(onReadyCallback){
    if(window.YT && window.YT.Player){
@@ -2271,7 +2307,9 @@ themeToggle?.addEventListener('click',()=>{
        videoId: ytAudio.videoId,
        playerVars: {
          autoplay: autoStart ? 1 : 0,
-         controls: 1, // Bật controls để tua (Seek bar) thoải mái
+         controls: 0, // Tắt controls YouTube để video siêu mượt, sạch bóng không bị nút che
+         disablekb: 1,
+         iv_load_policy: 3,
          loop: 1,
          playlist: ytAudio.videoId,
          playsinline: 1,
@@ -2284,9 +2322,15 @@ themeToggle?.addEventListener('click',()=>{
            if(autoStart){
              e.target.playVideo();
            }
+           startTimelineTracker();
          },
          onStateChange: (e)=>{
            ytAudio.handleStateChange(e.data);
+           if(e.data === 1){
+             startTimelineTracker();
+           } else {
+             stopTimelineTracker();
+           }
          }
        }
      });
@@ -2297,12 +2341,16 @@ themeToggle?.addEventListener('click',()=>{
  function triggerAutoplayGesture(){
    if(!autoplayAttempted){
      autoplayAttempted = true;
-     if(!ytAudio.isPlaying){
-       if(ytPlayer && typeof ytPlayer.playVideo === 'function'){
-         ytPlayer.playVideo();
-       } else {
-         initPlayer(true);
-       }
+     if(ytPlayer && typeof ytPlayer.unMute === 'function'){
+       try {
+         ytPlayer.unMute();
+         ytPlayer.setVolume(ytAudio.volume);
+         if(!ytAudio.isPlaying){
+           ytPlayer.playVideo();
+         }
+       } catch(e){}
+     } else if(!ytPlayer){
+       initPlayer(true);
      }
    }
    document.removeEventListener('pointerdown', triggerAutoplayGesture);
@@ -2377,6 +2425,71 @@ themeToggle?.addEventListener('click',()=>{
      initPlayer(true);
    } else {
      ytAudio.togglePlay();
+   }
+ });
+
+ ytScreenOverlay?.addEventListener('click', (e)=>{
+   e.stopPropagation();
+   if(!ytPlayer){
+     initPlayer(true);
+   } else {
+     ytAudio.togglePlay();
+   }
+ });
+
+ ytSeekBar?.addEventListener('input', ()=>{
+   isUserScrubbing = true;
+   if(!ytPlayer || typeof ytPlayer.getDuration !== 'function') return;
+   try {
+     const dur = ytPlayer.getDuration() || 3579;
+     const targetSec = (Number(ytSeekBar.value) / 100) * dur;
+     if(ytCurrentTime) ytCurrentTime.textContent = formatTime(targetSec);
+   } catch(e){}
+ });
+
+ ytSeekBar?.addEventListener('change', ()=>{
+   if(!ytPlayer || typeof ytPlayer.seekTo !== 'function'){
+     isUserScrubbing = false;
+     return;
+   }
+   try {
+     const dur = ytPlayer.getDuration() || 3579;
+     const targetSec = (Number(ytSeekBar.value) / 100) * dur;
+     ytPlayer.seekTo(targetSec, true);
+   } catch(e){}
+   setTimeout(()=>{ isUserScrubbing = false; }, 300);
+ });
+
+ ytSeekBackBtn?.addEventListener('click', ()=>{
+   if(ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
+     try {
+       const cur = ytPlayer.getCurrentTime() || 0;
+       const target = Math.max(0, cur - 30);
+       ytPlayer.seekTo(target, true);
+       if(ytCurrentTime) ytCurrentTime.textContent = formatTime(target);
+     } catch(e){}
+   }
+ });
+
+ ytSeekFwdBtn?.addEventListener('click', ()=>{
+   if(ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
+     try {
+       const cur = ytPlayer.getCurrentTime() || 0;
+       const dur = ytPlayer.getDuration() || 3579;
+       const target = Math.min(dur, cur + 30);
+       ytPlayer.seekTo(target, true);
+       if(ytCurrentTime) ytCurrentTime.textContent = formatTime(target);
+     } catch(e){}
+   }
+ });
+
+ ytSeekRestartBtn?.addEventListener('click', ()=>{
+   if(ytPlayer && typeof ytPlayer.seekTo === 'function'){
+     try {
+       ytPlayer.seekTo(0, true);
+       if(ytCurrentTime) ytCurrentTime.textContent = '00:00';
+       if(ytSeekBar) ytSeekBar.value = 0;
+     } catch(e){}
    }
  });
 
