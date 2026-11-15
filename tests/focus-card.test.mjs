@@ -1,0 +1,2 @@
+﻿import test from 'node:test';import assert from 'node:assert/strict';import {focusPeriod} from '../dist/focus-card.mjs';
+test('focus landscape follows local-hour period boundaries',()=>{for(const [hour,expected] of [[0,'night'],[4,'night'],[5,'dawn'],[6,'dawn'],[7,'morning'],[10,'morning'],[11,'day'],[15,'day'],[16,'sunset'],[18,'sunset'],[19,'night'],[23,'night']])assert.equal(focusPeriod(hour),expected,`hour ${hour}`)});

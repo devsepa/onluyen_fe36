@@ -10,15 +10,16 @@
  </script>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
- <meta name="app-version" content="2026.11.16.9">
+ <meta name="app-version" content="2026.11.16.10">
  <link rel="icon" type="image/jpeg" href="logo.jpg">
  <link rel="apple-touch-icon" href="logo.jpg"><link rel="manifest" href="./manifest.json">
- <link rel="stylesheet" href="app.css?v=2026.11.16.9"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.16.9"><link rel="stylesheet" href="library-manager.css?v=2026.11.16.9"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.16.9"></script>
- <link rel="stylesheet" href="quality.css?v=2026.11.16.9">
- <link rel="stylesheet" href="resource-saving.css?v=2026.11.16.9"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.16.9">
- <link rel="stylesheet" href="navigation-polish.css?v=2026.11.16.9">
- <link rel="stylesheet" href="interactions.css?v=2026.11.16.9">
- <link rel="stylesheet" href="workspace-layout.css?v=2026.11.16.9">
+ <link rel="stylesheet" href="app.css?v=2026.11.16.10"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.16.10"><link rel="stylesheet" href="library-manager.css?v=2026.11.16.10"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.16.10"></script>
+ <link rel="stylesheet" href="quality.css?v=2026.11.16.10">
+ <link rel="stylesheet" href="resource-saving.css?v=2026.11.16.10"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.16.10">
+ <link rel="stylesheet" href="navigation-polish.css?v=2026.11.16.10">
+ <link rel="stylesheet" href="interactions.css?v=2026.11.16.10">
+ <link rel="stylesheet" href="workspace-layout.css?v=2026.11.16.10">
+ <link rel="stylesheet" href="focus-card.css?v=2026.11.16.10">
 </head>
 <body>
  <div class="app-ambient-bg" aria-hidden="true" id="appAmbientBg">
@@ -239,8 +240,21 @@
      <div id="deckList" class="shared-grid"></div>
     </div>
     <aside class="study-workspace-tools" aria-label="Góc tập trung">
-     <section class="card study-clock-card"><h2>Nhịp học của bạn</h2><div id="topbarClock" class="study-clock-mount"></div></section>
-     <section class="card study-music-card"><div class="study-tool-heading"><h2>Âm thanh học tập</h2><span aria-hidden="true">♫</span></div><p id="studyMusicTitle">Nhạc nền khi ôn luyện</p><div class="study-music-actions"><button id="studyMusicPlay" class="secondary" type="button">Phát / Tạm dừng</button><button id="studyMusicSettings" class="text-button" type="button" aria-haspopup="true" aria-controls="soundMenu">Mở trình phát ↗</button></div></section>
+     <section class="card focus-card" id="focusCard" data-period="night" aria-label="Đồng hồ và âm thanh học tập">
+      <div class="focus-landscape" aria-hidden="true">
+       <div class="focus-sky"></div><div class="focus-stars"></div><div class="focus-orb"></div>
+       <svg class="focus-mountains" viewBox="0 0 320 245" preserveAspectRatio="xMidYMax slice" fill="none">
+        <defs><linearGradient id="focusMist" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".13"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><path id="focusPine" d="M0 0l-6 14h4l-8 15h6l-9 16h11v8h4v-8h11L4 29h6L2 14h4Z"/></defs>
+        <path class="focus-ridge far" d="M-10 162L33 121 61 147 110 96 153 140 186 111 224 145 260 103 330 166V245H-10Z"/>
+        <path class="focus-ridge mid" d="M-10 182L34 147 81 182 133 143 170 169 220 129 270 176 330 139V245H-10Z"/>
+        <path class="focus-ridge near" d="M-10 199L30 180 70 195 107 173 150 205 192 180 231 195 275 169 330 190V245H-10Z"/>
+        <path d="M-10 196Q78 164 150 203T330 183V245H-10Z" fill="url(#focusMist)"/>
+        <g class="focus-forest"><use href="#focusPine" transform="translate(1 127) scale(1.8)"/><use href="#focusPine" transform="translate(22 146) scale(1.5)"/><use href="#focusPine" transform="translate(46 157) scale(1.25)"/><use href="#focusPine" transform="translate(66 180)"/><use href="#focusPine" transform="translate(87 193) scale(.8)"/><use href="#focusPine" transform="translate(316 120) scale(2)"/><use href="#focusPine" transform="translate(291 144) scale(1.6)"/><use href="#focusPine" transform="translate(270 161) scale(1.3)"/><use href="#focusPine" transform="translate(247 181)"/><use href="#focusPine" transform="translate(225 195) scale(.8)"/><path d="M0 218Q80 231 160 236T320 216V245H0Z"/></g>
+       </svg>
+      </div>
+      <div class="focus-clock"><h2>Nhịp học của bạn</h2><span id="focusPeriodLabel" class="focus-period-label">Ban đêm</span><div id="topbarClock"><time id="focusTime" class="focus-time" aria-label="Giờ trên thiết bị">--:--:--</time></div></div>
+      <section class="focus-player" aria-label="Âm thanh học tập"><div class="focus-player-heading"><button id="studyMusicSettings" type="button" class="focus-settings" aria-haspopup="true" aria-controls="soundMenu" title="Mở trình phát và đổi video">♫ Âm thanh học tập <span aria-hidden="true">↗</span></button></div><div class="focus-track-row"><p id="studyMusicTitle">Nhạc nền học tập</p><div class="focus-eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div></div><div class="focus-transport"><button id="studyMusicBack" class="focus-seek" type="button" aria-label="Tua lùi 30 giây" title="Tua lùi 30 giây">⏮</button><button id="studyMusicPlay" class="focus-play" type="button" aria-label="Phát nhạc" title="Phát nhạc">▶</button><button id="studyMusicForward" class="focus-seek" type="button" aria-label="Tua tới 30 giây" title="Tua tới 30 giây">⏭</button></div></section>
+     </section>
     </aside>
    </section>
    <section id="practice" hidden></section><section id="history" hidden></section><section id="result" hidden></section>
