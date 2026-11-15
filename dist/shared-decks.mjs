@@ -1,6 +1,6 @@
-import { presentationIdFromLink } from './resources.mjs?v=2026.11.15.40';
-import { readyForPractice } from './ai.mjs?v=2026.11.15.40';
-import { askConfirm } from './confirm-dialog.mjs?v=2026.11.15.40';
+import { presentationIdFromLink } from './resources.mjs?v=2026.11.15.41';
+import { readyForPractice } from './ai.mjs?v=2026.11.15.41';
+import { askConfirm } from './confirm-dialog.mjs?v=2026.11.15.41';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
@@ -18,7 +18,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  dialog.querySelector('p:not([id])').textContent='Ảnh slide, đáp án và giải thích sẽ công khai; tài khoản và lịch sử vẫn riêng. Link Google giữ nguyên quyền xem. Có thể đóng hộp thoại để ôn tiếp, nhưng cần giữ tab này mở đến khi tải xong.';
  document.body.append(dialog);let controller=null,items=[],loading=false;
  let preparations=new Map(),preparationLoading=false,lastPreparation=0;
- function preparationBadge(deck){const job=preparations.get(deck.id);if(!job||job.status==='not-started')return '💡 Giải thích AI khi làm bài';const ready=job.ready||0,total=job.total||deck.count;if(job.status==='waiting')return `💡 AI đang nghỉ · ${ready}/${total} câu sẵn`;if(job.status==='paused')return `💡 Tạm dừng · ${ready}/${total} câu sẵn`;if(job.status==='done')return `💡 ${ready}/${total} câu có giải thích`;return `💡 Đang chuẩn bị · ${ready}/${total} câu sẵn`}
+ function preparationBadge(deck){const job=preparations.get(deck.id);if(!job||job.status==='not-started')return 'Giải thích AI khi làm bài';const ready=job.ready||0,total=job.total||deck.count;if(job.status==='waiting')return `AI đang nghỉ · ${ready}/${total} câu sẵn`;if(job.status==='paused')return `Tạm dừng · ${ready}/${total} câu sẵn`;if(job.status==='done')return `${ready}/${total} câu có giải thích`;return `Đang chuẩn bị · ${ready}/${total} câu sẵn`}
  async function loadPreparation(){if(!preparationBase||preparationLoading||document.hidden||section.hidden)return;preparationLoading=true;try{const response=await fetch(new URL('/v1/preparation',preparationBase),{credentials:'omit',signal:AbortSignal.timeout(15000)});if(!response.ok)return;const data=await response.json();if(!Array.isArray(data.jobs))return;preparations=new Map(data.jobs.map(job=>[job.id,job]));lastPreparation=Date.now();cards()}catch{/* The public deck remains usable while progress is offline. */}finally{preparationLoading=false}}
  setInterval(()=>{if(Date.now()-lastPreparation>=60000)loadPreparation()},60000);
 
@@ -87,32 +87,95 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
 
  function cards(){
   const searchEl=$('deckSearch'),term=searchEl?searchEl.value.trim().toLocaleLowerCase():'',filtered=term?items.filter(d=>d.title.toLocaleLowerCase().includes(term)):items;
-   $('deckList').innerHTML=(filtered.length?filtered.map(d=>{
+   $('deckList').innerHTML=(filtered.length?filtered.map((d, idx)=>{
    const isOwner=owned().includes(d.id);
-   return `<article class="card shared-deck ${isOwner?'is-owner-deck':''}">
-     <div class="shared-deck-topbar">
-       <span class="deck-type-tag ${isOwner?'owner-tag':'community-tag'}">
-         ${isOwner?'⭐ Bộ đề của bạn':'🌐 Bộ đề công khai'}
-       </span>
-       <span class="shared-deck-date">📅 ${new Date(d.created).toLocaleDateString('vi-VN')}</span>
+   const isPurple = idx % 2 === 0;
+   const themeClass = isPurple ? 'theme-purple' : 'theme-cyan';
+   const primaryColor = isPurple ? '#c084fc' : '#38bdf8';
+   const secColor = isPurple ? '#a855f7' : '#0ea5e9';
+   const endColor = isPurple ? '#6366f1' : '#3b82f6';
+   const dateFormatted = d.created ? new Date(d.created).toLocaleDateString('vi-VN') : 'Mới cập nhật';
+   return `<article class="card shared-deck ${isOwner?'is-owner-deck':''} ${themeClass}">
+     <div class="deck-aurora-bg" aria-hidden="true">
+       <svg class="deck-wave-svg" viewBox="0 0 540 220" fill="none" preserveAspectRatio="none">
+         <defs>
+           <linearGradient id="waveGrad-${d.id}" x1="0%" y1="15%" x2="100%" y2="85%">
+             <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.8" />
+             <stop offset="45%" stop-color="${secColor}" stop-opacity="0.5" />
+             <stop offset="100%" stop-color="${endColor}" stop-opacity="0.75" />
+           </linearGradient>
+           <filter id="waveBlur-${d.id}" x="-20%" y="-20%" width="140%" height="140%">
+             <feGaussianBlur stdDeviation="10" />
+           </filter>
+         </defs>
+         <path d="M -30,50 Q 150,-15 320,110 T 570,135" stroke="url(#waveGrad-${d.id})" stroke-width="26" fill="none" opacity="0.32" filter="url(#waveBlur-${d.id})" />
+         <path d="M -30,50 Q 150,-15 320,110 T 570,135" stroke="url(#waveGrad-${d.id})" stroke-width="1.6" fill="none" opacity="0.75" />
+         <path d="M -30,100 Q 180,30 350,160 T 570,170" stroke="url(#waveGrad-${d.id})" stroke-width="1.2" fill="none" opacity="0.4" />
+       </svg>
      </div>
-     <div class="shared-deck-main">
-       <h3 class="shared-deck-title" title="${esc(d.title)}">${esc(d.title)}</h3>
-       <div class="shared-deck-badges">
-         <span class="shared-badge count">📚 <b>${d.count}</b> câu</span>
-         <span class="shared-badge">🖼️ Slide gốc</span>
-         <span class="shared-badge" title="Giải thích được chuẩn bị trên máy chủ và dùng chung cho các lần ôn sau.">${esc(preparationBadge(d))}</span>
+
+     <div class="deck-card-content">
+       <div class="deck-illu-col" aria-hidden="true">
+         <div class="deck-doc-stack">
+           <svg class="doc-stack-svg" viewBox="0 0 68 76" fill="none" xmlns="http://www.w3.org/2000/svg">
+             <defs>
+               <filter id="docGlow-${d.id}" x="-30%" y="-30%" width="160%" height="160%">
+                 <feGaussianBlur stdDeviation="4" result="blur" />
+                 <feComposite in="SourceGraphic" in2="blur" operator="over" />
+               </filter>
+               <linearGradient id="backSheetGrad-${d.id}" x1="0" y1="0" x2="1" y2="1">
+                 <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.65" />
+                 <stop offset="100%" stop-color="${secColor}" stop-opacity="0.2" />
+               </linearGradient>
+               <linearGradient id="frontSheetGrad-${d.id}" x1="0" y1="0" x2="1" y2="1">
+                 <stop offset="0%" stop-color="${primaryColor}" stop-opacity="0.9" />
+                 <stop offset="100%" stop-color="${secColor}" stop-opacity="0.6" />
+               </linearGradient>
+             </defs>
+             <rect x="5" y="14" width="42" height="54" rx="9" transform="rotate(-14 26 41)" fill="url(#backSheetGrad-${d.id})" stroke="${isPurple ? 'rgba(216, 180, 254, 0.4)' : 'rgba(125, 211, 252, 0.4)'}" stroke-width="1.2" />
+             <g filter="url(#docGlow-${d.id})">
+               <rect x="16" y="8" width="44" height="56" rx="9" fill="url(#frontSheetGrad-${d.id})" stroke="rgba(255, 255, 255, 0.45)" stroke-width="1.2" />
+               <line x1="24" y1="22" x2="44" y2="22" stroke="rgba(255, 255, 255, 0.75)" stroke-width="2.5" stroke-linecap="round" />
+               <line x1="24" y1="30" x2="52" y2="30" stroke="rgba(255, 255, 255, 0.75)" stroke-width="2.5" stroke-linecap="round" />
+               <line x1="24" y1="38" x2="48" y2="38" stroke="rgba(255, 255, 255, 0.75)" stroke-width="2.5" stroke-linecap="round" />
+               <line x1="24" y1="46" x2="38" y2="46" stroke="rgba(255, 255, 255, 0.75)" stroke-width="2.5" stroke-linecap="round" />
+             </g>
+           </svg>
+         </div>
        </div>
-     </div>
-     <div class="shared-deck-footer shared-deck-actions">
-       <button class="btn-deck-use shared-use-btn" data-use-deck="${esc(d.id)}">
-         <span>Vào ôn luyện ngay</span>
-         <span class="btn-arrow">→</span>
-       </button>
-       ${isOwner?`<button class="btn-deck-remove" data-delete-deck="${esc(d.id)}" title="Gỡ bộ đề khỏi kho chung" aria-label="Gỡ bộ đề khỏi kho chung">
-         <span class="del-icon">🗑️</span>
-         <span class="del-text">Gỡ đề</span>
-       </button>`:''}
+
+       <div class="deck-info-col">
+         <div class="shared-deck-topbar">
+           <span class="deck-type-tag ${isOwner?'owner-tag':'community-tag'}">
+             ${isOwner?'⭐ Bộ đề của bạn':'🌐 Bộ đề công khai'}
+           </span>
+           <div class="deck-top-right">
+             <span class="shared-deck-date">📅 ${dateFormatted}</span>
+             <button type="button" class="deck-more-btn" title="Tuỳ chọn" aria-label="Tuỳ chọn">•••</button>
+           </div>
+         </div>
+         
+         <div class="shared-deck-main">
+           <h3 class="shared-deck-title" title="${esc(d.title)}">${esc(d.title)}</h3>
+           <div class="shared-deck-badges">
+             <span class="shared-badge count">📄 <b>${d.count}</b> câu</span>
+             <span class="shared-badge slide">📄 Slide gốc</span>
+             <span class="shared-badge ai" title="Giải thích được chuẩn bị trên máy chủ và dùng chung cho các lần ôn sau.">⚡ ${esc(preparationBadge(d))}</span>
+           </div>
+         </div>
+
+         <div class="shared-deck-footer shared-deck-actions">
+           <button class="btn-deck-use shared-use-btn" data-use-deck="${esc(d.id)}">
+             <span class="btn-play-icon">▶</span>
+             <span>Vào ôn luyện ngay</span>
+             <span class="btn-arrow">→</span>
+           </button>
+           ${isOwner?`<button class="btn-deck-remove" data-delete-deck="${esc(d.id)}" title="Gỡ bộ đề khỏi kho chung" aria-label="Gỡ bộ đề khỏi kho chung">
+             <span class="del-icon">🗑</span>
+             <span class="del-text">Gỡ đề</span>
+           </button>`:''}
+         </div>
+       </div>
      </div>
    </article>`;
    }).join(''):'<div class="empty"><h2>Chưa có bộ đề phù hợp</h2><p>Nhập và kiểm tra tài liệu của bạn, sau đó chủ động đăng vào kho chung.</p><button data-view="sources">Chọn tài liệu →</button></div>');

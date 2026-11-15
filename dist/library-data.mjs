@@ -1,6 +1,6 @@
-import {presentationIdFromLink} from './resources.mjs?v=2026.11.15.40';
-import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.40';
-import {validateOptionReasons,explanationKey} from './explanation-data.mjs?v=2026.11.15.40';
+import {presentationIdFromLink} from './resources.mjs?v=2026.11.15.41';
+import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.41';
+import {validateOptionReasons,explanationKey} from './explanation-data.mjs?v=2026.11.15.41';
 export const MAX_LIBRARY_QUESTIONS=5000,MAX_IMAGE_BYTES=2100000,MAX_LIBRARY_BYTES=200*1024*1024;
 export const validMediaId=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 export async function sha256(value){const bytes=typeof value==='string'?new TextEncoder().encode(value):value;return [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('')}
