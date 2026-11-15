@@ -1,25 +1,25 @@
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.1';
-import {setupStudyTools} from './study-tools.mjs?v=2026.11.16.1';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.16.1';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.16.1';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.16.1';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.16.1';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.16.1';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.16.1';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.1';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.16.1';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.16.1';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.16.1';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.16.1';
-import {createBankTracker} from './library-data.mjs?v=2026.11.16.1';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.16.1';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.16.1';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.16.1';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.16.1';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.16.1';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.16.1";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.16.1";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.16.1";
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.2';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.16.2';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.16.2';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.16.2';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.16.2';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.16.2';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.16.2';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.16.2';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.2';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.16.2';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.16.2';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.16.2';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.16.2';
+import {createBankTracker} from './library-data.mjs?v=2026.11.16.2';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.16.2';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.16.2';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.16.2';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.16.2';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.16.2';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.16.2";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.16.2";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.16.2";
 import {
   shuffle,
   grade,
@@ -30,30 +30,30 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.16.1";
-import { setupResources } from "./resources-ui.js?v=2026.11.16.1";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.1';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.16.1";
-import { validateBank } from "./banks.mjs?v=2026.11.16.1";
-import { setupAccount } from "./account-ui.js?v=2026.11.16.1";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.16.1";
+} from "./core.mjs?v=2026.11.16.2";
+import { setupResources } from "./resources-ui.js?v=2026.11.16.2";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.2';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.16.2";
+import { validateBank } from "./banks.mjs?v=2026.11.16.2";
+import { setupAccount } from "./account-ui.js?v=2026.11.16.2";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.16.2";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.16.1";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.16.1";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.16.1";
+} from "./ai.mjs?v=2026.11.16.2";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.16.2";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.16.2";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.16.1";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.16.1";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.16.1";
-import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.16.1";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.1";
+} from "./shared-decks.mjs?v=2026.11.16.2";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.16.2";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.16.2";
+import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.16.2";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.2";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
@@ -2247,15 +2247,40 @@ themeToggle?.addEventListener('click',()=>{
    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
  }
 
+ function videoDuration(){
+   try {
+     if(ytPlayer?.getVideoData?.().video_id !== ytAudio.videoId) return 0;
+     const duration = Number(ytPlayer?.getDuration?.());
+     return Number.isFinite(duration) && duration > 0 ? duration : 0;
+   } catch { return 0; }
+ }
+ function updateSeekAvailability(duration){
+   for(const control of [ytSeekBar,ytSeekBackBtn,ytSeekFwdBtn,ytSeekRestartBtn]){
+     if(control) control.disabled = !duration;
+   }
+ }
+ let timelineVideoId = ytAudio.videoId;
+ ytAudio.subscribe(({videoId})=>{
+   if(timelineVideoId === videoId) return;
+   timelineVideoId = videoId;
+   isUserScrubbing = false;
+   if(ytCurrentTime) ytCurrentTime.textContent = '00:00';
+   if(ytTotalTime) ytTotalTime.textContent = '--:--';
+   if(ytSeekBar) ytSeekBar.value = 0;
+   updateSeekAvailability(0);
+   if(ytPlayer) startTimelineTracker();
+ });
+ updateSeekAvailability(0);
  function startTimelineTracker(){
    clearInterval(timelineTimer);
    timelineTimer = setInterval(()=>{
      if(!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function' || isUserScrubbing) return;
      try {
        const cur = ytPlayer.getCurrentTime() || 0;
-       const dur = ytPlayer.getDuration() || 3579;
+       const dur = videoDuration();
        if(ytCurrentTime) ytCurrentTime.textContent = formatTime(cur);
-       if(ytTotalTime && dur > 0) ytTotalTime.textContent = formatTime(dur);
+       if(ytTotalTime) ytTotalTime.textContent = dur > 0 ? formatTime(dur) : '--:--';
+       updateSeekAvailability(dur);
        if(ytSeekBar && dur > 0){
          ytSeekBar.value = ((cur / dur) * 100).toFixed(1);
        }
@@ -2326,11 +2351,7 @@ themeToggle?.addEventListener('click',()=>{
          },
          onStateChange: (e)=>{
            ytAudio.handleStateChange(e.data);
-           if(e.data === 1){
-             startTimelineTracker();
-           } else {
-             stopTimelineTracker();
-           }
+           startTimelineTracker();
          }
        }
      });
@@ -2439,21 +2460,21 @@ themeToggle?.addEventListener('click',()=>{
 
  ytSeekBar?.addEventListener('input', ()=>{
    isUserScrubbing = true;
-   if(!ytPlayer || typeof ytPlayer.getDuration !== 'function') return;
+   if(!videoDuration()){ isUserScrubbing = false; return; }
    try {
-     const dur = ytPlayer.getDuration() || 3579;
+     const dur = videoDuration();
      const targetSec = (Number(ytSeekBar.value) / 100) * dur;
      if(ytCurrentTime) ytCurrentTime.textContent = formatTime(targetSec);
    } catch(e){}
  });
 
  ytSeekBar?.addEventListener('change', ()=>{
-   if(!ytPlayer || typeof ytPlayer.seekTo !== 'function'){
+   if(!videoDuration() || !ytPlayer || typeof ytPlayer.seekTo !== 'function'){
      isUserScrubbing = false;
      return;
    }
    try {
-     const dur = ytPlayer.getDuration() || 3579;
+     const dur = videoDuration();
      const targetSec = (Number(ytSeekBar.value) / 100) * dur;
      ytPlayer.seekTo(targetSec, true);
    } catch(e){}
@@ -2461,7 +2482,7 @@ themeToggle?.addEventListener('click',()=>{
  });
 
  ytSeekBackBtn?.addEventListener('click', ()=>{
-   if(ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
+   if(videoDuration() && ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
      try {
        const cur = ytPlayer.getCurrentTime() || 0;
        const target = Math.max(0, cur - 30);
@@ -2472,10 +2493,10 @@ themeToggle?.addEventListener('click',()=>{
  });
 
  ytSeekFwdBtn?.addEventListener('click', ()=>{
-   if(ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
+   if(videoDuration() && ytPlayer && typeof ytPlayer.getCurrentTime === 'function' && typeof ytPlayer.seekTo === 'function'){
      try {
        const cur = ytPlayer.getCurrentTime() || 0;
-       const dur = ytPlayer.getDuration() || 3579;
+       const dur = videoDuration();
        const target = Math.min(dur, cur + 30);
        ytPlayer.seekTo(target, true);
        if(ytCurrentTime) ytCurrentTime.textContent = formatTime(target);
@@ -2484,7 +2505,7 @@ themeToggle?.addEventListener('click',()=>{
  });
 
  ytSeekRestartBtn?.addEventListener('click', ()=>{
-   if(ytPlayer && typeof ytPlayer.seekTo === 'function'){
+   if(videoDuration() && ytPlayer && typeof ytPlayer.seekTo === 'function'){
      try {
        ytPlayer.seekTo(0, true);
        if(ytCurrentTime) ytCurrentTime.textContent = '00:00';

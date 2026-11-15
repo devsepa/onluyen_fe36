@@ -1,11 +1,11 @@
-import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs?v=2026.11.16.1';
-import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs?v=2026.11.16.1';
-import {solveBatch,blobToBase64} from './ai.mjs?v=2026.11.16.1';
-import {selectQuestionSlides,inspectedQuestion} from './question-slides.mjs?v=2026.11.16.1';
-import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs?v=2026.11.16.1';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.1';
-import {directSlideImage} from './direct-slide-image.mjs?v=2026.11.16.1';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=2026.11.16.1';
+import {GOOGLE_SCOPES,listSlides,suggestedResources,presentationIdFromLink,readSelectedResources} from './resources.mjs?v=2026.11.16.2';
+import {resolveGoogleClientId,AI_API_BASE} from './site-config.mjs?v=2026.11.16.2';
+import {solveBatch,blobToBase64} from './ai.mjs?v=2026.11.16.2';
+import {selectQuestionSlides,inspectedQuestion} from './question-slides.mjs?v=2026.11.16.2';
+import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs?v=2026.11.16.2';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.2';
+import {directSlideImage} from './direct-slide-image.mjs?v=2026.11.16.2';
+import {detailsFromNotes,speakerNotesText} from './core.mjs?v=2026.11.16.2';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,onDeferredQuestion=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
