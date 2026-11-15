@@ -12,6 +12,7 @@ export class StoredExplanationCache{
   try{
    const path=new URL(request.url).pathname,record=await this.storage.get('result');
    const etag=record?.etag||(record?'legacy:'+record.createdAt:'missing');
+   if(path==='/reviewed'&&request.method==='GET')return record?.reviewed&&!record.invalidated?Response.json({etag,result:record.result}):Response.json({error:'Chưa có bản đã duyệt.'},{status:404});
    if(path==='/status'&&request.method==='GET')return Response.json({etag,available:!!record&&!record.invalidated});
    if(path==='/moderate'&&request.method==='GET')return record?Response.json({etag,result:record.result,invalidated:!!record.invalidated,reviewed:!!record.reviewed}):Response.json({error:'Chưa có giải thích lưu chung cho câu này.'},{status:404});
    if(path==='/moderate'&&request.method==='PUT'){

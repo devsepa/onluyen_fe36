@@ -1,4 +1,5 @@
 import {createCompletionGate} from './completion-gate.mjs?v=2026.11.14.34';
+import {setupStudyTools} from './study-tools.mjs';
 import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.14.34';
 import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.14.34';
 import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.14.34';
@@ -54,6 +55,7 @@ import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.14.34";
 import { setupSidebar } from "./sidebar.mjs?v=2026.11.14.34";
 
 const $ = (id) => document.getElementById(id);
+let studyTools;
 const quizAccountControl=document.querySelector('.account-control'),accountHome=document.querySelector('.top-actions');
 const quizSound = createQuizSound();
 setupSidebar();
@@ -287,6 +289,7 @@ function switchView(next, mode) {
   if (
     session &&
     !session.done &&
+    !session.paused &&
     next !== "practice"
   )
     return message(session.mode === "study" ? "Hãy bấm 'Kết thúc' để hoàn thành buổi ôn trước khi rời giao diện này." : "Hãy nộp bài thi thử trước khi mở tài liệu hoặc kết quả.");
@@ -320,7 +323,7 @@ function switchView(next, mode) {
     !!session && !session.done && session.mode !== "study",
   );
   refreshStats();
-  if (view === "shared") shared.load();
+  if (view === "shared") {shared.load();studyTools?.render();}
   if (view === "library") renderLibrary();
   if (view === "practice") renderPractice();
   if (view === "history") renderHistory();
@@ -1641,7 +1644,11 @@ function renderQuiz() {
       _fadeCard.classList.add('quiz-question-fade');
     }
   }
-  if(study)$('practice').querySelector('.quiz-head-actions').append(quizAccountControl);
+  if(study){
+    const pause=document.createElement('button');pause.type='button';pause.id='pauseStudy';pause.className='secondary';pause.textContent='Tạm dừng';
+    pause.onclick=()=>{if(!session||session.done)return;const paused={...session,paused:true};if(!write('sot-session',paused))return;session=paused;switchView('shared')};
+    $('practice').querySelector('.quiz-head-actions').append(pause,quizAccountControl);
+  }
   $("flagCurrent").onchange = (e) => {
     session.flags = e.target.checked
       ? [...new Set([...session.flags, q.id])]
@@ -2111,6 +2118,7 @@ function renderHistory() {
           "practice",
           "Bắt đầu luyện tập →",
         ));
+  studyTools?.analytics($('history'));
 }
 $("history").onclick = async (e) => {
   const clearBtn = e.target.closest("#clearAllHistory");
@@ -2171,8 +2179,12 @@ setTimeout(scheduleAutoAi, 0);
 document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden)resumeLibraryImages();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy);setTimeout(()=>publicSlideBlobs.prune().catch(()=>{}),1000);resourcePolicy.subscribe(()=>{publicSlideBlobs.prune().catch(()=>{});clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 
+studyTools=setupStudyTools({getBank:()=>bank,getSession:()=>session,getHistory:()=>history,saveBank:(q,details)=>{if(details?.reviewed)explanationQueue.adoptReviewed(q,details);return write('sot-bank',bank)},getBlob:questionBlob,media:libraryMedia,base:AI_API_BASE,
+ resume:()=>{if(!session||session.done)return;const active={...session,paused:false};if(!write('sot-session',active))return;session=active;switchView('practice')},
+ practice:key=>{if(session&&!session.done){message('Hãy học tiếp hoặc hoàn thành bài đang dở trước khi mở bộ khác.');return}preferredSubject=key;write('sot-practice-subject',key);switchView('practice')}
+});
 refreshStats();
-switchView(session && !session.done ? "practice" : view);
+switchView(session && !session.done && !session.paused ? "practice" : session?.paused?'shared':view);
 if (session && !session.done) startSessionPreload(session.questions);
 // Theme toggle
 const themeToggle = document.getElementById('themeToggle');

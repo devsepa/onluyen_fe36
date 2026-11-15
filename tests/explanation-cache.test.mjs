@@ -6,6 +6,14 @@ import {normalizeExplanation} from '../dist/explanation-data.mjs';
 const question=()=>({id:'first-user',stem:'Which clause filters aggregated groups?',options:[{id:'A',text:'WHERE'},{id:'B',text:'HAVING'}],explain:true});
 const answer=q=>({id:q.id,status:'answered',answer:'B',explanation:'HAVING filters groups after aggregation.',optionReasons:q.options.map(o=>({...o,reason:o.id==='B'?'Filters aggregated groups.':'Filters individual rows before aggregation.'}))});
 const memory=()=>{const data=new Map();return{data,async get(k){return structuredClone(data.get(k))},async put(k,v){data.set(k,structuredClone(v))}}};
+test('reviewed read endpoint never generates and hides unreviewed or invalidated records',async()=>{
+ const storage=memory(),cache=new StoredExplanationCache({storage},{},()=>assert.fail('must not generate'),validateResults);
+ const request=()=>new Request('https://cache/reviewed');assert.equal((await cache.fetch(request())).status,404);
+ const record={etag:'v1',result:{answers:[answer(question())],model:'reviewed'}};
+ await storage.put('result',record);assert.equal((await cache.fetch(request())).status,404);
+ await storage.put('result',{...record,reviewed:true});const response=await cache.fetch(request());assert.equal(response.status,200);assert.equal((await response.json()).etag,'v1');
+ await storage.put('result',{...record,reviewed:true,invalidated:true});assert.equal((await cache.fetch(request())).status,404);
+});
 function namespace(generate){const objects=new Map(),stores=new Map();const env={GEMINI_MODEL:'test-model',EXPLANATION_CACHE:{idFromName:k=>k,get:k=>{if(!objects.has(k)){const storage=stores.get(k)||memory();stores.set(k,storage);objects.set(k,new StoredExplanationCache({storage},env,generate,validateResults))}return objects.get(k)}}};return {env,objects,stores}}
 test('shared explanations persist across users, client ids and cache object restarts',async()=>{
  let calls=0;const n=namespace(async qs=>{calls++;return {answers:qs.map(answer),model:'test-model'}});

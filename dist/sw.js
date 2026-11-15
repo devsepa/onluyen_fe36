@@ -3,7 +3,7 @@ const RELEASE_VERSION='2026.11.14.34';
 const CACHE_PREFIX='sot-static-v2-';
 const CACHE_NAME=CACHE_PREFIX+RELEASE_VERSION;
 const BASE=new URL(self.registration.scope).pathname;
-const MAX_ENTRIES=96;
+const MAX_ENTRIES=160;
 const asset=url=>url.origin===self.location.origin&&url.pathname.startsWith(BASE)&&/\.(?:js|mjs|css|jpg|jpeg|png|svg|ico|json)$/.test(url.pathname)&&!url.pathname.endsWith('/version.json');
 async function save(request,response){
  if(!response?.ok||response.type==='opaque')return false;

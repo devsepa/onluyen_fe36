@@ -120,7 +120,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
   try{items=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(items))throw Error('Không đọc được danh sách bộ đề.');cards();$('deckStatus').textContent=''}
-  catch(error){$('deckStatus').textContent=error.message}
+  catch(error){$('deckStatus').textContent=navigator.onLine?error.message:'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
   finally{loading=false;loadPreparation()}
  }
  if($('refreshDecks'))$('refreshDecks').onclick=load;if($('deckSearch'))$('deckSearch').oninput=cards;
