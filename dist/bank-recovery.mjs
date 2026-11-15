@@ -1,4 +1,4 @@
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.39';
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.40';
 
 // Separate durable metadata store: deleting a bank never deletes its slide images.
 export function createBankRecoveryStore({indexedDB=globalThis.indexedDB}={}){

@@ -253,21 +253,8 @@ body.sidebar-collapsed .topbar {
 }
 
 @media (max-width: 760px) {
-  body:not(.quiz-active) .topbar {
-    height: auto;
-    min-height: 54px;
-    margin: 10px 14px 0;
-    padding: 8px 14px;
-    border-radius: 20px;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
   .topbar-center {
-    position: static;
-    transform: none;
-    order: 3;
-    width: 100%;
-    margin-top: 4px;
+    display: none !important;
   }
 }
 
@@ -1880,54 +1867,51 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
 /* ==========================================================================
    MOBILE RESPONSIVE FIX (NO OVERLAPPING / KHỚP TUYỆT ĐỐI)
    ========================================================================== */
-@media (max-width: 680px) {
-  /* 1. Nút Capsule trên Mobile: Tự ẩn chữ 1H Focus, chỉ giữ đĩa than xoay + 5 cột sóng âm (~54px) */
-  .sound-capsule-btn {
-    padding: 0 8px 0 6px;
-    gap: 5px;
-    height: 36px;
-  }
-  .capsule-title {
-    display: none !important;
-  }
-  .capsule-eq {
-    height: 12px;
-    gap: 1.5px;
-  }
-  .capsule-eq span {
-    width: 2px;
-  }
-
-  /* 2. Topbar trên Mobile: Cố định 1 hàng không flex-wrap, khoảng cách chuẩn */
+@media (max-width: 760px) {
+  /* 1. Topbar trên Mobile: Cố định 1 hàng không flex-wrap, thanh thoát chuẩn Dynamic Island */
+  body.sidebar-collapsed:not(.quiz-active) .topbar,
   body:not(.quiz-active) .topbar {
-    margin: 8px 10px 0 !important;
-    padding: 6px 12px !important;
-    height: auto !important;
+    height: 48px !important;
     min-height: 48px !important;
+    margin: 8px 10px 0 !important;
+    padding: 0 10px 0 12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 8px !important;
     flex-wrap: nowrap !important;
+    gap: 8px !important;
+    border-radius: 999px !important;
   }
   .topbar-left {
     min-width: 0 !important;
     flex: 1 1 auto !important;
+    display: flex !important;
+    align-items: center !important;
   }
-  .breadcrumb {
-    padding: 0 !important;
-    font-size: 11px !important;
+  .topbar .breadcrumb {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 4px 10px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-radius: 999px !important;
+    max-width: 140px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    max-width: 130px !important;
   }
-  .breadcrumb span:first-child,
-  .breadcrumb .crumb-separator {
-    display: none !important; /* Chỉ giữ tên trang để không chèn ép các nút */
+  .topbar .breadcrumb span:first-child,
+  .topbar .breadcrumb .crumb-separator {
+    display: none !important; /* Giữ tên trang để không chèn ép các nút */
+  }
+  .topbar .breadcrumb b {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
   .topbar-center {
-    display: none !important; /* Ẩn đồng hồ giữa trên màn hình hẹp dưới 680px để nhường chỗ tuyệt đối */
+    display: none !important; /* Ẩn đồng hồ giữa trên màn hình hẹp dưới 760px để nhường chỗ tuyệt đối */
   }
   .topbar .top-actions {
     display: flex !important;
@@ -1939,11 +1923,127 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
   .topbar .avatar {
     width: 34px !important;
     height: 34px !important;
+    flex: none !important;
   }
+
+  /* 2. Nút Capsule trên Mobile: Tinh gọn, đĩa than xoay + 5 cột sóng âm (~54px) */
+  .sound-capsule-btn {
+    height: 34px !important;
+    padding: 0 8px 0 6px !important;
+    gap: 5px !important;
+    border-radius: 999px !important;
+    flex: none !important;
+  }
+  .capsule-title {
+    display: none !important;
+  }
+  .capsule-disc {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 10px !important;
+  }
+  .capsule-eq {
+    height: 12px !important;
+    gap: 1.5px !important;
+  }
+  .capsule-eq span {
+    width: 2px !important;
+  }
+
+  /* 3. MENU ÂM THANH TRÊN MOBILE: Căn giữa tuyệt đối, không tràn màn hình, cuộn mượt mà */
   .sound-menu {
-    right: -8px !important;
-    width: min(310px, calc(100vw - 20px)) !important;
-    max-width: calc(100vw - 20px) !important;
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    max-width: 400px !important;
+    margin: 0 auto !important;
+    box-sizing: border-box !important;
+    max-height: calc(100dvh - 78px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 10000 !important;
+    border-radius: 18px !important;
+    padding: 14px !important;
+    gap: 10px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.12) !important;
+  }
+
+  /* Khung Video 16:9 trên mobile */
+  .yt-screen-container {
+    height: 145px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Timeline Scrubber trên mobile */
+  .yt-timeline-box {
+    padding: 7px 10px !important;
+    gap: 6px !important;
+    border-radius: 11px !important;
+  }
+  .yt-time-text {
+    font-size: 10.5px !important;
+    min-width: 32px !important;
+  }
+  .yt-seek-slider {
+    min-width: 0 !important;
+    height: 5px !important;
+  }
+  .yt-quick-seek-row {
+    gap: 5px !important;
+  }
+  .yt-quick-btn {
+    height: 27px !important;
+    font-size: 10.5px !important;
+    padding: 0 4px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Nút Play / Pause to rõ trên mobile */
+  .yt-main-play-btn {
+    height: 38px !important;
+    font-size: 12.5px !important;
+    border-radius: 10px !important;
+  }
+  .yt-sec-btn {
+    height: 38px !important;
+    font-size: 11px !important;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+  }
+
+  /* Thẻ điều khiển âm lượng trên mobile */
+  .sound-slider-card {
+    padding: 8px 12px !important;
+    border-radius: 11px !important;
+    gap: 5px !important;
+  }
+  .sound-slider-label {
+    font-size: 9.5px !important;
+  }
+  .sound-slider-value {
+    font-size: 11px !important;
+  }
+  .sound-slider-track-wrap input[type="range"] {
+    min-width: 0 !important;
+    height: 5px !important;
+  }
+
+  /* Form đổi link YouTube: input không bị kéo giãn */
+  .yt-input-row {
+    gap: 6px !important;
+  }
+  .yt-input-row input {
+    min-width: 0 !important;
+    height: 32px !important;
+    font-size: 11.5px !important;
+  }
+  .yt-input-row button {
+    height: 32px !important;
+    padding: 0 12px !important;
+    font-size: 11.5px !important;
+    flex: none !important;
   }
 }
 /* Universal Upload Card Styles */

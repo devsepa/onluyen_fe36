@@ -1,25 +1,25 @@
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.39';
-import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.39';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.39';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.39';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.39';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.39';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.39';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.39';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.39';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.39';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.15.39';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.15.39';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.15.39';
-import {createBankTracker} from './library-data.mjs?v=2026.11.15.39';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.39';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.39';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.39';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.39';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.39';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.39";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.39";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.39";
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.40';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.40';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.40';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.40';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.40';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.40';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.40';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.40';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.40';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.40';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.15.40';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.15.40';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.15.40';
+import {createBankTracker} from './library-data.mjs?v=2026.11.15.40';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.40';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.40';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.40';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.40';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.40';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.40";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.40";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.40";
 import {
   shuffle,
   grade,
@@ -30,30 +30,30 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.15.39";
-import { setupResources } from "./resources-ui.js?v=2026.11.15.39";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.39';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.39";
-import { validateBank } from "./banks.mjs?v=2026.11.15.39";
-import { setupAccount } from "./account-ui.js?v=2026.11.15.39";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.39";
+} from "./core.mjs?v=2026.11.15.40";
+import { setupResources } from "./resources-ui.js?v=2026.11.15.40";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.40';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.40";
+import { validateBank } from "./banks.mjs?v=2026.11.15.40";
+import { setupAccount } from "./account-ui.js?v=2026.11.15.40";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.40";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.15.39";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.39";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.39";
+} from "./ai.mjs?v=2026.11.15.40";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.40";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.40";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.15.39";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.39";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.39";
-import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.39";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.39";
+} from "./shared-decks.mjs?v=2026.11.15.40";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.40";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.40";
+import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.40";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.40";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
@@ -2555,13 +2555,15 @@ themeToggle?.addEventListener('click',()=>{
 
  menu?.addEventListener('click', (e)=>e.stopPropagation());
 
- document.addEventListener('click', (e)=>{
-   if(!menu?.hasAttribute('hidden') && !menu?.contains(e.target) && e.target !== btn){
+ function closeSoundMenuIfOutside(e){
+   if(!menu?.hasAttribute('hidden') && !menu?.contains(e.target) && e.target !== btn && !btn?.contains(e.target)){
      menu?.setAttribute('hidden', '');
      btn.setAttribute('aria-expanded', 'false');
      btn.classList.remove('is-active');
    }
- });
+ }
+ document.addEventListener('pointerdown', closeSoundMenuIfOutside);
+ document.addEventListener('click', closeSoundMenuIfOutside);
 
  document.addEventListener('keydown', (e)=>{
    if(e.key === 'Escape' && !menu?.hasAttribute('hidden')){
