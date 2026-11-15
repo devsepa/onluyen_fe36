@@ -31,3 +31,14 @@ body:not(.quiz-active):not(.exam-active) .page-heading p{margin:6px 0 0;}
 body:not(.quiz-active):not(.exam-active) .page-heading h1{-webkit-text-fill-color:var(--text);background:none;}
 [data-theme="light"] .sidebar .brand strong{color:var(--text);}
 @media(max-width:760px){.topbar .top-actions{margin-left:auto!important;}}
+/* Reserve the same width for the sidebar and page, including hover/keyboard expansion. */
+@media(min-width:761px){
+ body:not(.quiz-active):not(.exam-active){--sidebar-space:252px;}
+ body.sidebar-collapsed:not(.quiz-active):not(.exam-active){--sidebar-space:74px;}
+ body.sidebar-collapsed:not(.quiz-active):not(.exam-active):has(.sidebar:hover),
+ body.sidebar-collapsed:not(.quiz-active):not(.exam-active):has(.sidebar:focus-within){--sidebar-space:256px;}
+ body:not(.quiz-active):not(.exam-active) .sidebar{width:var(--sidebar-space);transition:width .35s cubic-bezier(.22,1,.36,1),padding .35s cubic-bezier(.22,1,.36,1),box-shadow .35s cubic-bezier(.22,1,.36,1);}
+ body:not(.quiz-active):not(.exam-active) main{margin-left:var(--sidebar-space);min-width:0;transition:margin-left .35s cubic-bezier(.22,1,.36,1);}
+ body.sidebar-collapsed .sidebar:focus-within nav{align-items:stretch;}
+ body.sidebar-collapsed .sidebar:focus-within .nav{width:auto;height:auto;min-height:48px;padding:11px 14px;}
+}
