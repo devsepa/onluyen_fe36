@@ -1,6 +1,6 @@
-import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.7';
-import { readyForPractice } from './ai.mjs?v=2026.11.16.7';
-import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.7';
+import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.8';
+import { readyForPractice } from './ai.mjs?v=2026.11.16.8';
+import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.8';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
@@ -178,15 +178,15 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
        </div>
      </div>
    </article>`;
-   }).join(''):(loadError?'<div class="empty"><h2>Chưa tải được kho đề cộng đồng</h2><p>Kiểm tra kết nối rồi bấm Tải lại. Các bộ đề trên thiết bị vẫn có thể dùng để ôn.</p></div>':term?'<div class="empty"><h2>Không tìm thấy bộ đề cộng đồng phù hợp</h2><p>Thử từ khóa khác hoặc xóa nội dung tìm kiếm để xem tất cả bộ đề.</p></div>':'<div class="empty"><h2>Kho đề cộng đồng chưa có bộ đề</h2><p>Bạn vẫn có thể ôn các bộ đề trên thiết bị, hoặc nhập tài liệu và chia sẻ bộ đề đã kiểm tra.</p><button data-view="sources">Chọn tài liệu →</button></div>'));
+   }).join(''):(loadError?'<div class="empty"><h2>Chưa tải được kho đề cộng đồng</h2><p>Kiểm tra kết nối rồi tải lại trang. Các bộ đề trên thiết bị vẫn có thể dùng để ôn.</p></div>':term?'<div class="empty"><h2>Không tìm thấy bộ đề cộng đồng phù hợp</h2><p>Thử từ khóa khác hoặc xóa nội dung tìm kiếm để xem tất cả bộ đề.</p></div>':'<div class="empty"><h2>Kho đề cộng đồng chưa có bộ đề</h2><p>Bạn vẫn có thể ôn các bộ đề trên thiết bị, hoặc nhập tài liệu và chia sẻ bộ đề đã kiểm tra.</p><button data-view="sources">Chọn tài liệu →</button></div>'));
  }
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
   try{const nextItems=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(nextItems))throw Error('Không đọc được danh sách bộ đề.');items=nextItems;loadError=false;cards();$('deckStatus').textContent=''}
-  catch(error){loadError=true;cards();$('deckStatus').textContent=navigator.onLine?'Chưa kết nối được kho đề cộng đồng. Bấm Tải lại để thử lại.':'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
+  catch(error){loadError=true;cards();$('deckStatus').textContent=navigator.onLine?'Chưa kết nối được kho đề cộng đồng. Tải lại trang để thử lại.':'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
   finally{loading=false;loadPreparation()}
  }
- if($('refreshDecks'))$('refreshDecks').onclick=load;if($('deckSearch'))$('deckSearch').oninput=cards;
+ if($('deckSearch'))$('deckSearch').oninput=cards;
  section.addEventListener('click',async e=>{
   const useLocal=e.target.closest('[data-use-local]');
   if(useLocal){
