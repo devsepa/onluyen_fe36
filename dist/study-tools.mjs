@@ -1,13 +1,13 @@
-import {practiceSubjects,subjectKey} from './subjects.mjs?v=2026.11.16.3';
-import {sessionSummary,learningStats} from './study-progress.mjs?v=2026.11.16.3';
-import {explanationKey} from './explanation-data.mjs?v=2026.11.16.3';
+import {practiceSubjects,subjectKey} from './subjects.mjs?v=2026.11.16.4';
+import {sessionSummary,learningStats} from './study-progress.mjs?v=2026.11.16.4';
+import {explanationKey} from './explanation-data.mjs?v=2026.11.16.4';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
 export function setupStudyTools({getBank,getSession,getHistory,saveBank,getBlob,media,resume,practice,base}){
- const root=el('section',undefined,'study-tools'),resumeBox=el('div'),offlineBox=el('details',undefined,'card study-downloads');root.append(resumeBox,offlineBox);document.getElementById('shared').prepend(root);
+ const root=el('section',undefined,'study-tools'),resumeBox=el('div'),offlineBox=el('details',undefined,'card study-downloads');root.append(resumeBox);document.getElementById('shared').prepend(root);
  let downloading=false;
  const read=()=>{try{return JSON.parse(localStorage.getItem('sot-offline-packs')||'{}')}catch{return {}}};
  function render(){
-  resumeBox.replaceChildren();const summary=sessionSummary(getSession());
+  resumeBox.replaceChildren();const summary=sessionSummary(getSession());root.hidden=!summary;
   if(summary){const card=el('article',undefined,'card study-resume'),body=el('div');body.append(el('h2','Bài đang dở'),el('p',`${summary.title} · ${summary.answered}/${summary.total} câu đã trả lời · đang ở câu ${summary.current}${summary.expired?' · Đã hết giờ':''}`));const button=el('button',summary.expired?'Xem bài đã hết giờ':'Học tiếp');button.onclick=resume;card.append(body,button);resumeBox.append(card)}
   if(downloading)return;
   offlineBox.replaceChildren(el('summary','Bộ đề trên thiết bị · Offline & giải thích đã duyệt'));
