@@ -10,12 +10,12 @@
  </script>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
- <meta name="app-version" content="2026.11.15.36">
+ <meta name="app-version" content="2026.11.15.37">
  <link rel="icon" type="image/jpeg" href="logo.jpg">
  <link rel="apple-touch-icon" href="logo.jpg"><link rel="manifest" href="./manifest.json">
- <link rel="stylesheet" href="app.css?v=2026.11.15.36"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.15.36"><link rel="stylesheet" href="library-manager.css?v=2026.11.15.36"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.15.36"></script>
- <link rel="stylesheet" href="quality.css?v=2026.11.15.36">
- <link rel="stylesheet" href="resource-saving.css?v=2026.11.15.36"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.15.36">
+ <link rel="stylesheet" href="app.css?v=2026.11.15.37"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.15.37"><link rel="stylesheet" href="library-manager.css?v=2026.11.15.37"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.15.37"></script>
+ <link rel="stylesheet" href="quality.css?v=2026.11.15.37">
+ <link rel="stylesheet" href="resource-saving.css?v=2026.11.15.37"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.15.37">
 </head>
 <body class="sidebar-collapsed">
  <div class="app-ambient-bg" aria-hidden="true" id="appAmbientBg">
@@ -46,9 +46,12 @@
   </div>
   <div class="top-actions topbar-right">
     <div class="sound-control">
-      <button id="soundToggle" class="icon-button sound-toggle-btn" type="button" aria-label="Âm thanh học tập" aria-haspopup="true" aria-expanded="false" aria-controls="soundMenu" title="Âm thanh học tập">
-        <span id="soundIcon" class="sound-icon-indicator">🔊</span>
-        <span class="sound-waves" id="soundWaves" aria-hidden="true"><span></span><span></span><span></span></span>
+      <button id="soundToggle" class="sound-capsule-btn" type="button" aria-label="Âm thanh học tập" aria-haspopup="true" aria-expanded="false" aria-controls="soundMenu" title="Âm thanh học tập">
+        <span class="capsule-disc" id="capsuleDisc">🎵</span>
+        <span class="capsule-title" id="capsuleTitle">1H Focus</span>
+        <span class="capsule-eq" id="capsuleEq" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span>
+        </span>
       </button>
       <div id="soundMenu" class="sound-menu" hidden>
         <div class="sound-menu-header">
@@ -56,63 +59,57 @@
             <span class="sound-badge-icon">🎧</span>
             <div>
               <strong>Âm thanh học tập</strong>
-              <small>Thư giãn & Tăng tập trung</small>
+              <small>Tự động phát khi vào web</small>
             </div>
           </div>
+          <span class="yt-status-badge is-playing" id="ytStatusBadge">● Đang phát</span>
         </div>
+
+        <div class="yt-track-banner">
+          <div class="yt-track-art">🎵</div>
+          <div class="yt-track-meta">
+            <div class="yt-track-name" id="ytTrackTitle">Học bài trong 1h với nhạc tập trung</div>
+            <div class="yt-track-artist">Study with me · YouTube Stream</div>
+          </div>
+        </div>
+
+        <div class="yt-controls-row">
+          <button type="button" id="ytPlayBtn" class="yt-main-play-btn is-playing" title="Bật / Tạm dừng nhạc">
+            <span id="ytPlayIcon">⏸</span>
+            <span id="ytPlayText">Tạm dừng</span>
+          </button>
+          <button type="button" id="ytResetBtn" class="yt-sec-btn" title="Quay lại video mặc định" hidden>
+            ↺ Mặc định
+          </button>
+        </div>
+
         <div class="sound-section">
-          <div class="sound-section-label">HIỆU ỨNG TƯƠNG TÁC</div>
           <label class="sound-toggle-row">
             <span>Âm chuông Celesta khi trả lời</span>
             <input type="checkbox" id="celestaSoundCheck" checked>
           </label>
         </div>
-        <div class="sound-section youtube-section">
-          <div class="sound-section-label">
-            <span>NHẠC TẬP TRUNG YOUTUBE</span>
-            <span class="yt-status-badge" id="ytStatusBadge">Sẵn sàng</span>
-          </div>
 
-          <div class="yt-player-box">
-            <div id="ytPlayerContainer" class="yt-player-container">
-              <div id="ytPlayerPlaceholder" class="yt-placeholder">
-                <span class="yt-placeholder-icon">🎧</span>
-                <span class="yt-placeholder-title">Học bài trong 1h với nhạc tập trung</span>
-                <small class="muted">Bấm "Phát nhạc" để nghe nền</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="yt-actions-row">
-            <button type="button" id="ytPlayBtn" class="yt-play-btn" title="Bật / Dừng nhạc">
-              <span id="ytPlayIcon">▶</span>
-              <span id="ytPlayText">Phát nhạc</span>
-            </button>
-            <button type="button" id="ytResetBtn" class="yt-reset-btn" title="Quay lại video mặc định" hidden>
-              ↺ Mặc định
-            </button>
-          </div>
-
-          <details class="yt-custom-box">
-            <summary>Đổi link YouTube khác</summary>
-            <div class="yt-input-row">
-              <input type="url" id="ytUrlInput" placeholder="Dán link YouTube (vd: https://youtu.be/...)" aria-label="Link YouTube">
-              <button type="button" id="ytLoadBtn" class="secondary">Nạp</button>
-            </div>
-            <div id="ytInputMsg" class="yt-input-msg" hidden></div>
-          </details>
-        </div>
         <div class="sound-section">
           <div class="sound-section-label sound-slider-header">
-            <span>ÂM LƯỢNG NỀN</span>
-            <span id="ambienceVolPercent">45%</span>
+            <span>ÂM LƯỢNG NHẠC</span>
+            <span id="ambienceVolPercent">70%</span>
           </div>
           <div class="sound-slider-row">
             <span class="slider-icon">🔉</span>
-            <input type="range" id="ambienceVolSlider" min="0" max="100" value="45" aria-label="Âm lượng nền">
+            <input type="range" id="ambienceVolSlider" min="0" max="100" value="70" aria-label="Âm lượng nhạc">
             <span class="slider-icon">🔊</span>
           </div>
         </div>
+
+        <details class="yt-custom-box">
+          <summary>Đổi link YouTube khác</summary>
+          <div class="yt-input-row">
+            <input type="url" id="ytUrlInput" placeholder="Dán link YouTube mới…" aria-label="Link YouTube">
+            <button type="button" id="ytLoadBtn" class="secondary">Nạp</button>
+          </div>
+          <div id="ytInputMsg" class="yt-input-msg" hidden></div>
+        </details>
       </div>
     </div>
     <button id="themeToggle" class="icon-button theme-toggle-btn" type="button" aria-label="Đổi giao diện Sáng / Tối" title="Đổi giao diện Sáng / Tối"><span id="themeIcon">🌓</span></button>
@@ -176,4 +173,5 @@
  <input id="bankFile" type="file" accept=".json,application/json" hidden>
  <dialog id="filePicker"><form method="dialog"><div class="modal-heading"><h2>Chọn tài liệu Google Slides</h2><button class="secondary" value="close">Xong</button></div><p>Chọn một hoặc nhiều tài liệu làm nguồn ôn luyện.</p><input id="resourceSearch" type="search" placeholder="Tìm theo tên tài liệu…" aria-label="Tìm tài liệu"><p id="pickerCount"></p><div id="fileList"></div></form></dialog>
  <dialog id="editQuestion"><form id="editForm"><div class="modal-heading"><h2>Kiểm tra câu hỏi</h2><button type="button" id="closeEdit" class="icon-button" aria-label="Đóng">×</button></div><p>Sửa nội dung nhận dạng chưa chính xác rồi xác nhận đáp án.</p><div id="editFields"></div><div class="modal-actions"><button type="submit">Lưu thay đổi</button><button type="button" id="cancelEdit" class="secondary">Hủy</button></div></form></dialog>
+ <div id="ytGlobalHost" class="yt-global-host" aria-hidden="true"></div>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{})}</script></body></html>

@@ -1,25 +1,25 @@
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.36';
-import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.36';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.36';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.36';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.36';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.36';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.36';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.36';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.36';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.36';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.15.36';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.15.36';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.15.36';
-import {createBankTracker} from './library-data.mjs?v=2026.11.15.36';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.36';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.36';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.36';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.36';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.36';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.36";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.36";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.36";
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.37';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.37';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.37';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.37';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.37';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.37';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.37';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.37';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.37';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.37';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.15.37';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.15.37';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.15.37';
+import {createBankTracker} from './library-data.mjs?v=2026.11.15.37';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.37';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.37';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.37';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.37';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.37';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.37";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.37";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.37";
 import {
   shuffle,
   grade,
@@ -30,30 +30,30 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.15.36";
-import { setupResources } from "./resources-ui.js?v=2026.11.15.36";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.36';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.36";
-import { validateBank } from "./banks.mjs?v=2026.11.15.36";
-import { setupAccount } from "./account-ui.js?v=2026.11.15.36";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.36";
+} from "./core.mjs?v=2026.11.15.37";
+import { setupResources } from "./resources-ui.js?v=2026.11.15.37";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.37';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.37";
+import { validateBank } from "./banks.mjs?v=2026.11.15.37";
+import { setupAccount } from "./account-ui.js?v=2026.11.15.37";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.37";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.15.36";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.36";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.36";
+} from "./ai.mjs?v=2026.11.15.37";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.37";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.37";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.15.36";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.36";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.36";
-import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.36";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.36";
+} from "./shared-decks.mjs?v=2026.11.15.37";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.37";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.37";
+import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.15.37";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.37";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
@@ -1985,9 +1985,12 @@ function updateTimer() {
   if ($("timer") && !study)
     $("timer").textContent =
       `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  if ($("progress"))
-    $("progress").textContent =
-      `${Object.keys(session.answers).length}/${session.questions.length} câu đã trả lời${study ? " · Đúng " + grade(session.questions, session.answers) + " câu" : ""}`;
+  if ($("progress")) {
+    const answeredCount = Object.keys(session.answers).length;
+    const totalCount = session.questions.length;
+    const pct = Math.round((answeredCount / totalCount) * 100);
+    $("progress").textContent = `${answeredCount}/${totalCount} câu đã làm (${pct}%)`;
+  }
   if (!study && !seconds){finish();return}
   if(!study)quizClockTimer=setTimeout(updateTimer,document.hidden?Math.max(1,session.deadline-Date.now()):1000);
 }
@@ -2202,15 +2205,18 @@ themeToggle?.addEventListener('click',()=>{
  const current=document.documentElement.getAttribute('data-theme')||'light';
  applyThemeMode(current==='dark'?'light':'dark');
 });
-// Sound toggle & YouTube Study Audio
+// Sound toggle & YouTube Study Audio (Combined 5 & 1 with Autoplay)
 (function(){
  const btn=$('soundToggle');
  const menu=$('soundMenu');
- const soundIcon=$('soundIcon');
+ const capsuleDisc=$('capsuleDisc');
+ const capsuleTitle=$('capsuleTitle');
+ const capsuleEq=$('capsuleEq');
  const celestaCheck=$('celestaSoundCheck');
  const volSlider=$('ambienceVolSlider');
  const volPercent=$('ambienceVolPercent');
  const ytStatusBadge=$('ytStatusBadge');
+ const ytTrackTitle=$('ytTrackTitle');
  const ytPlayBtn=$('ytPlayBtn');
  const ytPlayIcon=$('ytPlayIcon');
  const ytPlayText=$('ytPlayText');
@@ -2218,12 +2224,12 @@ themeToggle?.addEventListener('click',()=>{
  const ytUrlInput=$('ytUrlInput');
  const ytLoadBtn=$('ytLoadBtn');
  const ytInputMsg=$('ytInputMsg');
- const ytContainer=$('ytPlayerContainer');
+ const ytHost=$('ytGlobalHost') || document.body;
  if(!btn)return;
 
  let ytPlayer = null;
  let isApiLoading = false;
- let pendingAutoplay = false;
+ let autoplayAttempted = false;
 
  function loadYouTubeApi(onReadyCallback){
    if(window.YT && window.YT.Player){
@@ -2249,22 +2255,24 @@ themeToggle?.addEventListener('click',()=>{
    }
  }
 
- function initPlayer(autoStart = false){
-   if(ytPlayer || !ytContainer) return;
+ function initPlayer(autoStart = true){
+   if(ytPlayer) return;
    loadYouTubeApi(()=>{
      if(ytPlayer) return;
-     const mountDiv = document.createElement('div');
-     mountDiv.id = 'sotYtFrameInstance';
-     ytContainer.innerHTML = '';
-     ytContainer.appendChild(mountDiv);
+     let mountDiv = document.getElementById('sotYtFrameInstance');
+     if(!mountDiv){
+       mountDiv = document.createElement('div');
+       mountDiv.id = 'sotYtFrameInstance';
+       ytHost.appendChild(mountDiv);
+     }
 
      ytPlayer = new window.YT.Player('sotYtFrameInstance', {
-       height: '130',
-       width: '100%',
+       height: '90',
+       width: '160',
        videoId: ytAudio.videoId,
        playerVars: {
          autoplay: autoStart ? 1 : 0,
-         controls: 1,
+         controls: 0,
          loop: 1,
          playlist: ytAudio.videoId,
          playsinline: 1,
@@ -2274,8 +2282,7 @@ themeToggle?.addEventListener('click',()=>{
        events: {
          onReady: (e)=>{
            ytAudio.setPlayer(e.target);
-           if(autoStart || pendingAutoplay){
-             pendingAutoplay = false;
+           if(autoStart){
              e.target.playVideo();
            }
          },
@@ -2287,36 +2294,53 @@ themeToggle?.addEventListener('click',()=>{
    });
  }
 
+ // Seamless Autoplay on First Interaction Fallback
+ function triggerAutoplayGesture(){
+   if(!autoplayAttempted){
+     autoplayAttempted = true;
+     if(!ytAudio.isPlaying){
+       if(ytPlayer && typeof ytPlayer.playVideo === 'function'){
+         ytPlayer.playVideo();
+       } else {
+         initPlayer(true);
+       }
+     }
+   }
+   document.removeEventListener('pointerdown', triggerAutoplayGesture);
+   document.removeEventListener('keydown', triggerAutoplayGesture);
+ }
+ document.addEventListener('pointerdown', triggerAutoplayGesture, { once: true, passive: true });
+ document.addEventListener('keydown', triggerAutoplayGesture, { once: true, passive: true });
+
  function updateSoundButtonState(){
    const playing = ytAudio.isPlaying;
    btn.classList.toggle('is-playing', playing);
-   if(soundIcon){
-     if(playing){
-       soundIcon.textContent = '🎵';
-     } else {
-       soundIcon.textContent = quizSound.enabled ? '🔊' : '🔇';
-     }
+   if(capsuleTitle){
+     capsuleTitle.textContent = playing ? '1H Focus' : 'Nhạc tắt';
    }
    btn.title = playing
-     ? 'Đang phát nhạc tập trung YouTube'
-     : (quizSound.enabled ? 'Âm thanh học tập: Đang bật' : 'Âm thanh học tập: Đang tắt');
+     ? 'Đang phát nhạc tập trung (1H Focus) · Bấm để chỉnh'
+     : (quizSound.enabled ? 'Âm thanh học tập: Đang tắt nhạc nền' : 'Âm thanh học tập: Đang tắt');
+
+   if(ytStatusBadge){
+     ytStatusBadge.textContent = playing ? '● Đang phát' : '○ Tạm dừng';
+     ytStatusBadge.style.color = playing ? '#34d399' : '#94a3b8';
+   }
+
+   if(ytTrackTitle){
+     ytTrackTitle.textContent = ytAudio.isDefault
+       ? 'Học bài trong 1h với nhạc tập trung'
+       : `YouTube (${ytAudio.videoId})`;
+   }
 
    if(ytPlayBtn && ytPlayIcon && ytPlayText){
      ytPlayBtn.classList.toggle('is-playing', playing);
      if(playing){
        ytPlayIcon.textContent = '⏸';
        ytPlayText.textContent = 'Tạm dừng';
-       if(ytStatusBadge){
-         ytStatusBadge.textContent = 'Đang phát 🎵';
-         ytStatusBadge.classList.add('is-playing');
-       }
      } else {
        ytPlayIcon.textContent = '▶';
        ytPlayText.textContent = 'Phát nhạc';
-       if(ytStatusBadge){
-         ytStatusBadge.textContent = 'Sẵn sàng';
-         ytStatusBadge.classList.remove('is-playing');
-       }
      }
    }
 
@@ -2351,9 +2375,7 @@ themeToggle?.addEventListener('click',()=>{
 
  ytPlayBtn?.addEventListener('click', ()=>{
    if(!ytPlayer){
-     pendingAutoplay = true;
      initPlayer(true);
-     if(ytStatusBadge) ytStatusBadge.textContent = 'Đang tải…';
    } else {
      ytAudio.togglePlay();
    }
@@ -2411,7 +2433,7 @@ themeToggle?.addEventListener('click',()=>{
      menu?.removeAttribute('hidden');
      btn.setAttribute('aria-expanded', 'true');
      btn.classList.add('is-active');
-     if(!ytPlayer) initPlayer(false);
+     if(!ytPlayer) initPlayer(true);
    } else {
      menu?.setAttribute('hidden', '');
      btn.setAttribute('aria-expanded', 'false');
@@ -2438,6 +2460,8 @@ themeToggle?.addEventListener('click',()=>{
  });
 
  updateSoundButtonState();
+ // Start player immediately on page load
+ setTimeout(()=>initPlayer(true), 300);
 })();
 
 // Tumadam Clock & Greeting Widget
