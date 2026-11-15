@@ -1,5 +1,5 @@
-import {validateLibraryQuestions,libraryBaseline,mergePrivateLibrary,validMediaId,sha256} from './library-data.mjs?v=2026.11.16.2';
-import {prepareLibraryQuestions} from './library-backup.mjs?v=2026.11.16.2';
+import {validateLibraryQuestions,libraryBaseline,mergePrivateLibrary,validMediaId,sha256} from './library-data.mjs?v=2026.11.16.3';
+import {prepareLibraryQuestions} from './library-backup.mjs?v=2026.11.16.3';
 export function createLibrarySync({base,getToken,getQuestions,applyQuestions,getGeneration=()=>0,media,getBlob,getDetails,storage,onStatus=()=>{},onConflict=async()=>null,fetcher=fetch}={}){
  let owner='',controller=null,applying=false,timer,enabled=false,dirty=false;
  const stateKey=account=>'sot-private-library:'+account.toLowerCase();

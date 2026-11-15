@@ -1,0 +1,45 @@
+﻿/* Short, reversible interactions; no delayed clicks or changes to quiz timing. */
+:root{--motion-ease:cubic-bezier(.22,1,.36,1);--motion-fast:180ms;--motion-panel:260ms;}
+button,summary,.nav,a,input,select,textarea{transition:background-color var(--motion-fast) ease,border-color var(--motion-fast) ease,color var(--motion-fast) ease,box-shadow var(--motion-fast) ease,transform var(--motion-fast) var(--motion-ease);}
+button:active:not(:disabled){transform:scale(.98);}
+button:disabled{cursor:default;}
+@media(hover:hover) and (pointer:fine){
+ button:not(:disabled):hover{translate:0 -1px;}
+ button{transition:background-color var(--motion-fast) ease,border-color var(--motion-fast) ease,color var(--motion-fast) ease,box-shadow var(--motion-fast) ease,transform var(--motion-fast) var(--motion-ease),translate var(--motion-fast) var(--motion-ease);}
+ .shared-deck,.history-item,.source-card,.study-resume{transition:transform var(--motion-panel) var(--motion-ease),box-shadow var(--motion-panel) ease,border-color var(--motion-fast) ease;}
+ .shared-deck:hover,.history-item:hover,.source-card:hover,.study-resume:hover{transform:translateY(-3px);box-shadow:0 12px 30px color-mix(in srgb,var(--accent) 12%,transparent);border-color:color-mix(in srgb,var(--accent) 35%,var(--line));}
+}
+/* Discrete display transitions preserve native hidden and dialog semantics. */
+.account-menu{opacity:1;transform:translateY(0) scale(1);transform-origin:top right;transition:opacity var(--motion-fast) ease,transform var(--motion-panel) var(--motion-ease),display var(--motion-panel) allow-discrete;}
+.account-menu[hidden]{opacity:0;transform:translateY(-6px) scale(.98);pointer-events:none;}
+.sound-menu{transition:opacity var(--motion-fast) ease,transform var(--motion-panel) var(--motion-ease),visibility var(--motion-panel);transform-origin:top right;}
+.sound-menu[hidden]{transition:opacity var(--motion-fast) ease,transform var(--motion-panel) var(--motion-ease),visibility 0s var(--motion-panel);}
+dialog{opacity:0;transform:translateY(12px) scale(.98);transition:opacity var(--motion-fast) ease,transform var(--motion-panel) var(--motion-ease),display var(--motion-panel) allow-discrete,overlay var(--motion-panel) allow-discrete;}
+dialog[open]{opacity:1;transform:translateY(0) scale(1);}
+dialog::backdrop{opacity:0;transition:opacity var(--motion-panel) ease,display var(--motion-panel) allow-discrete,overlay var(--motion-panel) allow-discrete;}
+dialog[open]::backdrop{opacity:1;}
+@starting-style{
+ .account-menu:not([hidden]){opacity:0;transform:translateY(-6px) scale(.98);}
+ dialog[open]{opacity:0;transform:translateY(12px) scale(.98);}
+ dialog[open]::backdrop{opacity:0;}
+}
+@supports(interpolate-size:allow-keywords){
+ details{interpolate-size:allow-keywords;}
+ details::details-content{height:0;opacity:0;overflow:clip;transition:height var(--motion-panel) var(--motion-ease),opacity var(--motion-fast) ease,content-visibility var(--motion-panel) allow-discrete;}
+ details[open]::details-content{height:auto;opacity:1;}
+ /* The history menu floats outside the details box. */
+ .history-options::details-content{overflow:visible;}
+}
+@media(max-width:760px){
+ .sidebar nav{opacity:0;transform:translateY(-6px);transition:opacity var(--motion-fast) ease,transform var(--motion-panel) var(--motion-ease),display var(--motion-panel) allow-discrete;}
+ body.mobile-menu-open .sidebar nav{opacity:1;transform:translateY(0);}
+ @starting-style{body.mobile-menu-open .sidebar nav{opacity:0;transform:translateY(-6px);}}
+}
+/* Avoid positional motion inside fixed-height question screens. */
+body.quiz-active button:hover{translate:none;}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after,::backdrop{transition:none!important;animation:none!important;scroll-behavior:auto!important;}
+ button:hover,.shared-deck:hover,.history-item:hover,.source-card:hover,.study-resume:hover{translate:none;transform:none;}
+}
+html.economy-mode *,html.economy-mode *::before,html.economy-mode *::after,html.economy-mode ::backdrop{transition:none!important;animation:none!important;}
+html.economy-mode button:hover,html.economy-mode .card:hover{translate:none;transform:none;}

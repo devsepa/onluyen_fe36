@@ -1,5 +1,5 @@
-import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.2';
-import {shuffle} from './core.mjs?v=2026.11.16.2';
+import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.3';
+import {shuffle} from './core.mjs?v=2026.11.16.3';
 export const selectionKey=q=>JSON.stringify([bankQuestionKey(q),q.sourceVersion||'']);
 export function createStudySelection(storage,history=[],session){
  let used=new Set();
