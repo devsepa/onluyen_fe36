@@ -43,3 +43,11 @@ body.quiz-active button:hover{translate:none;}
 }
 html.economy-mode *,html.economy-mode *::before,html.economy-mode *::after,html.economy-mode ::backdrop{transition:none!important;animation:none!important;}
 html.economy-mode button:hover,html.economy-mode .card:hover{translate:none;transform:none;}
+/* Keep the explicitly requested playback indicator moving even when general decorative motion is disabled. */
+html #soundToggle.is-playing .capsule-disc{animation:spinDisc 3s linear infinite!important;}
+html #soundToggle.is-playing .capsule-eq span{animation:eqBar .9s ease-in-out infinite alternate!important;}
+html #soundToggle.is-playing .capsule-eq span:nth-child(1){animation-delay:.1s!important;}
+html #soundToggle.is-playing .capsule-eq span:nth-child(2){animation-delay:.5s!important;}
+html #soundToggle.is-playing .capsule-eq span:nth-child(3){animation-delay:.15s!important;}
+html #soundToggle.is-playing .capsule-eq span:nth-child(4){animation-delay:.45s!important;}
+html #soundToggle.is-playing .capsule-eq span:nth-child(5){animation-delay:.3s!important;}

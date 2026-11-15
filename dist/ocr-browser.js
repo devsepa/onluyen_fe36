@@ -1,4 +1,4 @@
-import {checkAbort} from './ocr.mjs?v=2026.11.16.8';
+import {checkAbort} from './ocr.mjs?v=2026.11.16.9';
 
 const OCR_SCRIPT='https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
 let scriptPromise;

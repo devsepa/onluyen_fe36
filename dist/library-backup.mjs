@@ -1,6 +1,6 @@
-import {validateLibraryQuestions,sha256,imageMime,MAX_LIBRARY_BYTES} from './library-data.mjs?v=2026.11.16.8';
-import {writeBackupZip,readBackupZip} from './backup-zip.mjs?v=2026.11.16.8';
-import {explanationKey} from './explanation-data.mjs?v=2026.11.16.8';
+import {validateLibraryQuestions,sha256,imageMime,MAX_LIBRARY_BYTES} from './library-data.mjs?v=2026.11.16.9';
+import {writeBackupZip,readBackupZip} from './backup-zip.mjs?v=2026.11.16.9';
+import {explanationKey} from './explanation-data.mjs?v=2026.11.16.9';
 export async function prepareLibraryQuestions(questions,{media,getBlob,getDetails=()=>null,signal,onProgress=()=>{}}){
  const output=structuredClone(questions),images=new Map();let bytes=0;
  for(let i=0;i<output.length;i++){
