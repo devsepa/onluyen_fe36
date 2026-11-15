@@ -1428,7 +1428,211 @@ main,.page-content,.setup-card-v2,.setup-grid-v2>*,.shared-deck{min-width:0}
 .mobile-swipe-guide .swipe-arrow:first-child {
   animation-delay: -0.7s;
 }
-.sound-toggle-btn{width:36px;height:36px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,transform .1s}.sound-toggle-btn:hover{background:var(--panel);transform:scale(1.07)}
+.sound-control{position:relative;flex:none}
+.sound-toggle-btn{
+  position:relative;
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  color:var(--text);
+  font-size:16px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  padding:0;
+  transition:all .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sound-toggle-btn:hover{background:var(--panel);transform:scale(1.06);border-color:color-mix(in srgb, var(--accent) 50%, var(--line))}
+.sound-toggle-btn.is-active{border-color:var(--accent);box-shadow:0 0 12px color-mix(in srgb, var(--accent) 35%, transparent)}
+
+/* Mini Audio Waves in Button */
+.sound-waves{
+  display:none;
+  align-items:flex-end;
+  gap:2px;
+  height:14px;
+  width:12px;
+}
+.sound-toggle-btn.is-playing .sound-waves{display:inline-flex}
+.sound-waves span{
+  width:2px;
+  background:var(--accent);
+  border-radius:1px;
+  animation:soundWaveBars 1.2s ease-in-out infinite alternate;
+}
+.sound-waves span:nth-child(1){height:4px;animation-delay:0s}
+.sound-waves span:nth-child(2){height:12px;animation-delay:0.25s}
+.sound-waves span:nth-child(3){height:7px;animation-delay:0.5s}
+
+@keyframes soundWaveBars{
+  0%{height:3px}
+  100%{height:14px}
+}
+
+/* Sound Floating Popover Menu */
+.sound-menu{
+  position:absolute;
+  right:0;
+  top:calc(100% + 12px);
+  width:320px;
+  max-width:calc(100vw - 28px);
+  background:color-mix(in srgb, var(--panel) 92%, #0f172a 8%);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border:1px solid color-mix(in srgb, var(--line) 75%, var(--accent) 25%);
+  box-shadow:0 18px 45px rgba(0,0,0,0.42), 0 0 0 1px rgba(255,255,255,0.04) inset;
+  border-radius:16px;
+  padding:16px;
+  z-index:60;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  animation:soundMenuSlideIn .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sound-menu[hidden]{display:none !important}
+
+@keyframes soundMenuSlideIn{
+  from{opacity:0;transform:translateY(-8px) scale(0.97)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+
+.sound-menu-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding-bottom:12px;
+  border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+.sound-menu-title{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.sound-badge-icon{
+  width:34px;
+  height:34px;
+  border-radius:9px;
+  background:color-mix(in srgb, var(--accent) 15%, transparent);
+  border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:17px;
+}
+.sound-menu-title strong{
+  display:block;
+  font-size:13.5px;
+  font-weight:700;
+  color:var(--text);
+  line-height:1.2;
+}
+.sound-menu-title small{
+  display:block;
+  font-size:11px;
+  color:var(--muted);
+  margin-top:2px;
+}
+
+.sound-section{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.sound-section-label{
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:0.8px;
+  color:var(--muted);
+  text-transform:uppercase;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.sound-toggle-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:9px 12px;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  font-size:12.5px;
+  font-weight:500;
+  cursor:pointer;
+  transition:background .15s;
+}
+.sound-toggle-row:hover{
+  background:color-mix(in srgb, var(--accent) 6%, var(--panel2));
+}
+.sound-toggle-row input[type="checkbox"]{
+  cursor:pointer;
+  width:18px;
+  height:18px;
+  accent-color:var(--accent);
+}
+
+/* Preset Buttons Grid */
+.sound-preset-grid{
+  display:grid;
+  grid-template-columns:repeat(5, 1fr);
+  gap:6px;
+}
+.preset-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:8px 4px;
+  gap:4px;
+  min-height:56px;
+  border-radius:10px;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  color:var(--text);
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.preset-btn:hover{
+  background:var(--soft);
+  transform:translateY(-1px);
+  border-color:color-mix(in srgb, var(--accent) 40%, var(--line));
+}
+.preset-btn.active{
+  background:color-mix(in srgb, var(--accent) 18%, var(--panel2));
+  border-color:var(--accent);
+  box-shadow:0 0 10px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.preset-icon{font-size:18px;line-height:1}
+.preset-name{font-size:10.5px;font-weight:600}
+
+/* Slider Row */
+.sound-slider-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:var(--panel2);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px 12px;
+}
+.slider-icon{font-size:13px;color:var(--muted)}
+.sound-slider-row input[type="range"]{
+  flex:1;
+  accent-color:var(--accent);
+  cursor:pointer;
+  height:6px;
+  border-radius:3px;
+}
+#ambienceVolPercent{
+  font-size:10.5px;
+  font-weight:700;
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+}
 /* Universal Upload Card Styles */
 .universal-upload-card{border-top:4px solid #10b981!important}
 .universal-upload-dropzone{border:2px dashed var(--line);border-radius:12px;padding:26px 20px;text-align:center;background:var(--panel2);display:flex;flex-direction:column;align-items:center;gap:14px;cursor:pointer;transition:border-color .2s,background .2s;margin-top:16px}

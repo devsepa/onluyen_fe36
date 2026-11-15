@@ -1,25 +1,25 @@
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.14.34';
-import {setupStudyTools} from './study-tools.mjs';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.14.34';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.14.34';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.14.34';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.14.34';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.14.34';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.14.34';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.14.34';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.14.34';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.14.34';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.14.34';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.14.34';
-import {createBankTracker} from './library-data.mjs?v=2026.11.14.34';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.14.34';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.14.34';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.14.34';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.14.34';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.14.34';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.14.34";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.14.34";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.14.34";
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.15.35';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.15.35';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.15.35';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.15.35';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.15.35';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.15.35';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.15.35';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.15.35';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.15.35';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.15.35';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.15.35';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.15.35';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.15.35';
+import {createBankTracker} from './library-data.mjs?v=2026.11.15.35';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.15.35';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.15.35';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.15.35';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.15.35';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.15.35';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.15.35";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.15.35";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.15.35";
 import {
   shuffle,
   grade,
@@ -30,34 +30,36 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.14.34";
-import { setupResources } from "./resources-ui.js?v=2026.11.14.34";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.14.34';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.14.34";
-import { validateBank } from "./banks.mjs?v=2026.11.14.34";
-import { setupAccount } from "./account-ui.js?v=2026.11.14.34";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.14.34";
+} from "./core.mjs?v=2026.11.15.35";
+import { setupResources } from "./resources-ui.js?v=2026.11.15.35";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.15.35';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.15.35";
+import { validateBank } from "./banks.mjs?v=2026.11.15.35";
+import { setupAccount } from "./account-ui.js?v=2026.11.15.35";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.15.35";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.14.34";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.14.34";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.14.34";
+} from "./ai.mjs?v=2026.11.15.35";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.15.35";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.15.35";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.14.34";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.14.34";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.14.34";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.14.34";
+} from "./shared-decks.mjs?v=2026.11.15.35";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.15.35";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.15.35";
+import { createStudyAmbience } from "./study-ambience.mjs?v=2026.11.15.35";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.15.35";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
 const quizAccountControl=document.querySelector('.account-control'),accountHome=document.querySelector('.top-actions');
 const quizSound = createQuizSound();
+const studyAmbience = createStudyAmbience();
 setupSidebar();
 const esc = (s) =>
   String(s ?? "").replace(
@@ -1970,7 +1972,7 @@ function triggerConfetti() {
   requestAnimationFrame(loop);
 }
 const completionGate=createCompletionGate({getSession:()=>session,saveSession:value=>write('sot-session',value),complete:finish,
- play:async options=>{const version=new URL(import.meta.url).searchParams.get('v')||document.querySelector('meta[name="app-version"]')?.content||'development';const {playCompletionGame}=await import(new URL('./slingshot-game.mjs?v='+encodeURIComponent(version),import.meta.url));return playCompletionGame({...options,theme:document.documentElement.dataset.theme,soundEnabled:quizSound.enabled,onSoundChange:enabled=>{if(quizSound.enabled!==enabled)quizSound.toggleSound();const control=$('soundToggle');if(control){control.textContent=enabled?'🔊':'🔇';control.title=enabled?'Tắt âm thanh':'Bật âm thanh'}}})},
+ play:async options=>{const version=new URL(import.meta.url).searchParams.get('v')||document.querySelector('meta[name="app-version"]')?.content||'development';const {playCompletionGame}=await import(new URL('./slingshot-game.mjs?v='+encodeURIComponent(version),import.meta.url));return playCompletionGame({...options,theme:document.documentElement.dataset.theme,soundEnabled:quizSound.enabled,onSoundChange:enabled=>{if(quizSound.enabled!==enabled)quizSound.toggleSound();const icon=$('soundIcon')||$('soundToggle');if(icon){icon.textContent=enabled?'🔊':'🔇';const btn=$('soundToggle');if(btn)btn.title=enabled?'Tắt âm thanh':'Bật âm thanh'}}})},
  onError:async(_error,{signal})=>{const close=()=>document.getElementById('appConfirmDialog')?.close();signal.addEventListener('abort',close,{once:true});try{return await askConfirm('Màn chơi chưa tải được. Bài làm đã được lưu. Bạn có muốn hoàn thành bài trực tiếp?',{title:'Không tải được màn chơi',okText:session?.mode==='study'?'Kết thúc':'Nộp bài'})}finally{signal.removeEventListener('abort',close)}}
 });
 function updateTimer() {
@@ -2200,16 +2202,109 @@ themeToggle?.addEventListener('click',()=>{
  const current=document.documentElement.getAttribute('data-theme')||'light';
  applyThemeMode(current==='dark'?'light':'dark');
 });
-// Sound toggle
+// Sound toggle & Study Ambience
 (function(){
- const btn=document.getElementById('soundToggle');
+ const btn=$('soundToggle');
+ const menu=$('soundMenu');
+ const soundIcon=$('soundIcon');
+ const celestaCheck=$('celestaSoundCheck');
+ const volSlider=$('ambienceVolSlider');
+ const volPercent=$('ambienceVolPercent');
+ const presetGrid=$('ambiencePresetGrid');
  if(!btn)return;
- btn.textContent=quizSound.enabled?'🔊':'🔇';
- btn.addEventListener('click',()=>{
-  const on=quizSound.toggleSound();
-  btn.textContent=on?'🔊':'🔇';
-  btn.title=on?'Tắt âm thanh':'Bật âm thanh';
+
+ function updateSoundButtonState(){
+   const isAmbiencePlaying = studyAmbience.isPlaying;
+   btn.classList.toggle('is-playing', isAmbiencePlaying);
+   if (soundIcon) {
+     if (isAmbiencePlaying) {
+       const iconMap = { rain: '🌧️', waves: '🌊', campfire: '☕', lofi: '🎵' };
+       soundIcon.textContent = iconMap[studyAmbience.currentPreset] || '🎧';
+     } else {
+       soundIcon.textContent = quizSound.enabled ? '🔊' : '🔇';
+     }
+   }
+   btn.title = isAmbiencePlaying
+     ? `Đang phát âm thanh tập trung (${studyAmbience.currentPreset})`
+     : (quizSound.enabled ? 'Âm thanh học tập: Đang bật' : 'Âm thanh học tập: Đang tắt');
+ }
+
+ function updatePresetButtons(activePreset){
+   if(!presetGrid)return;
+   for(const b of presetGrid.querySelectorAll('.preset-btn')){
+     b.classList.toggle('active', b.dataset.preset === activePreset);
+   }
+ }
+
+ if(celestaCheck){
+   celestaCheck.checked = quizSound.enabled;
+   celestaCheck.addEventListener('change', ()=>{
+     if(quizSound.enabled !== celestaCheck.checked){
+       quizSound.toggleSound();
+     }
+     updateSoundButtonState();
+   });
+ }
+
+ if(volSlider && volPercent){
+   volSlider.value = Math.round(studyAmbience.volume * 100);
+   volPercent.textContent = `${volSlider.value}%`;
+   volSlider.addEventListener('input', ()=>{
+     const val = Number(volSlider.value) / 100;
+     studyAmbience.setVolume(val);
+     volPercent.textContent = `${volSlider.value}%`;
+   });
+ }
+
+ studyAmbience.subscribe((state)=>{
+   updatePresetButtons(state.currentPreset);
+   updateSoundButtonState();
  });
+
+ presetGrid?.addEventListener('click', (e)=>{
+   const targetBtn = e.target.closest('.preset-btn');
+   if(!targetBtn)return;
+   const preset = targetBtn.dataset.preset;
+   if(preset === 'off'){
+     studyAmbience.stop();
+   } else {
+     studyAmbience.playPreset(preset);
+   }
+ });
+
+ btn.addEventListener('click', (e)=>{
+   e.stopPropagation();
+   const isHidden = menu?.hasAttribute('hidden');
+   if(isHidden){
+     menu?.removeAttribute('hidden');
+     btn.setAttribute('aria-expanded', 'true');
+     btn.classList.add('is-active');
+   } else {
+     menu?.setAttribute('hidden', '');
+     btn.setAttribute('aria-expanded', 'false');
+     btn.classList.remove('is-active');
+   }
+ });
+
+ menu?.addEventListener('click', (e)=>e.stopPropagation());
+
+ document.addEventListener('click', (e)=>{
+   if(!menu?.hasAttribute('hidden') && !menu?.contains(e.target) && e.target !== btn){
+     menu?.setAttribute('hidden', '');
+     btn.setAttribute('aria-expanded', 'false');
+     btn.classList.remove('is-active');
+   }
+ });
+
+ document.addEventListener('keydown', (e)=>{
+   if(e.key === 'Escape' && !menu?.hasAttribute('hidden')){
+     menu?.setAttribute('hidden', '');
+     btn.setAttribute('aria-expanded', 'false');
+     btn.classList.remove('is-active');
+   }
+ });
+
+ updateSoundButtonState();
 })();
 
 // Tumadam Clock & Greeting Widget
