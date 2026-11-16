@@ -1,6 +1,6 @@
-import {isCorrect} from './core.mjs?v=2026.11.16.13';
-import {subjectKey,questionSubject} from './subjects.mjs?v=2026.11.16.13';
-import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.13';
+import {isCorrect} from './core.mjs?v=2026.11.16.15';
+import {subjectKey,questionSubject} from './subjects.mjs?v=2026.11.16.15';
+import {bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.15';
 export function sessionSummary(s,now=Date.now()){
  if(!s||s.done||!s.questions?.length)return null;
  return {title:s.questions[0].sourceName||'Bài đang làm',total:s.questions.length,answered:s.questions.filter(q=>!!s.answers?.[q.id]).length,current:Math.min(s.questions.length,Math.max(1,(s.current||0)+1)),expired:s.mode==='exam'&&s.deadline<=now};
