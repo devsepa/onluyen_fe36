@@ -2931,3 +2931,15 @@ html .sidebar .sidebar-heading .brand-text strong:after{background:linear-gradie
 @keyframes fe36-orbit-sweep{from{background-position:150% 0}to{background-position:-150% 0}}
 @keyframes fe36-orbit-line{from{background-position:180% 0;opacity:.65}50%{opacity:1}to{background-position:-80% 0;opacity:.65}}
 @media(prefers-reduced-motion:reduce){html .sidebar .sidebar-heading .brand-text strong,html .sidebar .sidebar-heading .brand-text strong:after{animation-duration:5s!important}}
+
+/* Distinct identities for practice and timed exams. */
+#practice .controller-card{--mode-color:#67e8f9;--mode-rgb:34,211,238;--mode-button:#0e7490}
+#practice .controller-card:has(input[name=mode][value=exam]:checked){--mode-color:#fdba74;--mode-rgb:251,146,60;--mode-button:#9a3412}
+#practice .mode-segment:has(input[value=study]){--segment-color:#67e8f9;--segment-rgb:34,211,238}
+#practice .mode-segment:has(input[value=exam]){--segment-color:#fdba74;--segment-rgb:251,146,60}
+#practice .mode-segment{border-color:rgba(var(--segment-rgb),.2);background:rgba(var(--segment-rgb),.035)}
+#practice .mode-segment .segment-title{color:var(--segment-color)}
+#practice .mode-segment.active{background:rgba(var(--segment-rgb),.11);border-color:var(--segment-color);box-shadow:inset 0 0 0 1px var(--segment-color),0 4px 16px rgba(var(--segment-rgb),.12)}
+#practice .mode-segment:focus-within{outline:2px solid var(--segment-color);outline-offset:3px}
+#practice #start{background:linear-gradient(110deg,var(--mode-button),rgba(var(--mode-rgb),.7));border-color:rgba(var(--mode-rgb),.5);box-shadow:0 5px 18px rgba(var(--mode-rgb),.15);color:#fff}
+#practice .controller-card input[type=range]{accent-color:var(--mode-color)}
