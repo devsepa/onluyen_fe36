@@ -1,6 +1,6 @@
-import {practiceSubjects,subjectKey} from './subjects.mjs?v=2026.11.16.24';
-import {sessionSummary,learningStats} from './study-progress.mjs?v=2026.11.16.24';
-import {explanationKey} from './explanation-data.mjs?v=2026.11.16.24';
+import {practiceSubjects,subjectKey} from './subjects.mjs?v=2026.11.16.26';
+import {sessionSummary,learningStats} from './study-progress.mjs?v=2026.11.16.26';
+import {explanationKey} from './explanation-data.mjs?v=2026.11.16.26';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
 export function setupStudyTools({getBank,getSession,getHistory,saveBank,getBlob,media,resume,practice,base}){
  const root=el('section',undefined,'study-tools'),resumeBox=el('div'),offlineBox=el('details',undefined,'card study-downloads');root.append(resumeBox);(document.getElementById('sharedMain')||document.getElementById('shared')).prepend(root);
