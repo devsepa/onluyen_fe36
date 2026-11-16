@@ -13,7 +13,7 @@ await run(`if(location.origin!=='http://localhost:8080')throw Error('Not isolate
 await wait(`document.querySelector('#selectedResources input')`);
 await run(`document.querySelector('[data-view="sources"]').click()`);
 assert.ok(await run(`document.querySelector('[aria-label="Tài liệu cần kiểm tra"]').selectedOptions[0]?.textContent.length>0`));
-await run(`[...document.querySelectorAll('#slideImportReview button')].find(b=>b.textContent==='Tải nội dung để kiểm tra').click()`);
+await run(`[...document.querySelectorAll('#slideImportReview button')].find(b=>b.textContent==='Tải nội dung để kiểm tra').click();if(![...document.querySelectorAll('#slideImportReview button')].find(b=>b.textContent==='Kiểm tra tải ảnh').disabled)throw Error('Image scan enabled during source reload')`);
 await wait(`document.querySelector('#slideImportReview')?.textContent.includes('4 slide')`);
 assert.equal(await run(`JSON.parse(localStorage.getItem('sot-bank')).length`),0);await run(`document.querySelector('[data-view="sources"]').click();document.querySelector('#sourceAutoAI').checked=false;document.querySelector('#selectedResources input').click();document.querySelector('#useResources').click()`);await wait(`document.querySelector('#slideImportReview')?.textContent.includes('4 slide')`);
 assert.equal(await run(`JSON.parse(localStorage.getItem('sot-bank')).length`),2);

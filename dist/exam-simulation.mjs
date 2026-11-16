@@ -6,7 +6,7 @@ export function setupExamSimulation({getSession,persist}){
  function show(){if(!active()){clear();return}if(warning){warning.querySelector('p').textContent=reason;return}
   warning=document.createElement('dialog');warning.className='exam-simulation-warning';warning.setAttribute('aria-labelledby','examWarningTitle');
   warning.innerHTML='<span class="exam-warning-symbol" aria-hidden="true">!</span><h2 id="examWarningTitle">Quay lại bài thi</h2><p></p><small>Thời gian làm bài vẫn tiếp tục chạy. Câu trả lời của bạn được giữ nguyên.</small><button type="button">Tiếp tục làm bài · Toàn màn hình</button><span class="exam-fullscreen-status" role="status"></span>';
-  warning.querySelector('p').textContent=reason;warning.addEventListener('cancel',e=>e.preventDefault());warning.querySelector('button').onclick=async()=>{await fullscreen();clear()};document.body.append(warning);warning.showModal();document.body.classList.add('exam-warning-active');
+  warning.querySelector('p').textContent=reason;warning.addEventListener('cancel',e=>e.preventDefault());warning.querySelector('button').onclick=async()=>{await fullscreen();reason='';clear()};document.body.append(warning);warning.showModal();document.body.classList.add('exam-warning-active');
  }
  async function fullscreen(){if(document.fullscreenElement)return true;try{if(!document.documentElement.requestFullscreen)throw Error();await document.documentElement.requestFullscreen();return true}catch{return false}}
  document.addEventListener('visibilitychange',()=>{if(!active())return;if(document.hidden)warn('Bạn đã chuyển tab hoặc rời màn hình làm bài. Hãy quay lại để tiếp tục thi.');else if(reason)show()});

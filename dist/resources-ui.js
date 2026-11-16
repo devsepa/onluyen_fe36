@@ -101,8 +101,8 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
   backgroundId++;classifying=false;controller?.abort();const run=epoch;controller=new AbortController();setBusy(true);status('Đang tìm tài liệu trong tài khoản Google…');
   try{
    const found=await listSlides(request);if(run!==epoch)return;files=found;
-   suggestions=suggestedResources(files);selected.clear();
-   status(suggestions.length?`Tìm thấy ${suggestions.length} tài liệu đúng mẫu tên. Chưa chọn tài liệu nào; tích chọn nguồn bạn muốn ôn luyện.`:'Không có slide tên SEMESTER, SEMETER hoặc Sever kèm số. Bấm Chọn tài liệu khác hoặc dán link slide của bạn.');
+   suggestions=suggestedResources(files);selected=new Map([...selected].map(([id,resource])=>[id,files.find(f=>f.id===id)||resource]));
+   status(selected.size?`Đã cập nhật danh sách. Giữ ${selected.size} tài liệu bạn đang chọn.`:suggestions.length?`Tìm thấy ${suggestions.length} tài liệu đúng mẫu tên. Chưa chọn tài liệu nào; tích chọn nguồn bạn muốn ôn luyện.`:'Không có slide tên SEMESTER, SEMETER hoặc Sever kèm số. Bấm Chọn tài liệu khác hoặc dán link slide của bạn.');
    renderSelected();renderFiles(files);
   }catch(error){if(run!==epoch||error.name==='AbortError')return;status('Chưa tìm được danh sách tài liệu.');message(error.message)}
   finally{if(run===epoch)setBusy(false)}
@@ -136,8 +136,16 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
   if(busy)return;
   const id=presentationIdFromLink($('slideLink').value);if(!id)return message('Dán link Google Slides hợp lệ: https://docs.google.com/presentation/d/…');
   if(!active())return message('Hãy kết nối Google trước khi thêm tài liệu.');
-  selected.set(id,files.find(f=>f.id===id)||{id,name:`Slide được chọn qua link (${id})`});renderSelected();
-  status('Đã thêm link vào danh sách nguồn. Bấm Dùng tài liệu đã chọn để nhập câu hỏi.');
+  if(selected.has(id)){status('Tài liệu này đã có trong danh sách đang chọn.');return}
+  const run=epoch;setBusy(true);status('Đang kiểm tra quyền đọc tài liệu…');
+  try{
+   const p=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(id)}`);
+   if(run!==epoch)return;
+   if(p.presentationId!==id)throw Error('Tài liệu trả về không khớp link đã chọn.');
+   rememberPresentation(p);selected.set(id,{...(files.find(f=>f.id===id)||{}),id,name:p.title||'Tài liệu Google Slides'});renderSelected();
+   $('slideLink').value='';status('Đã kiểm tra và thêm tài liệu. Bấm Dùng tài liệu đã chọn để nhập câu hỏi.');
+  }catch(error){if(run===epoch&&error.name!=='AbortError'){status('Chưa thêm được tài liệu. Danh sách nguồn trước đó được giữ nguyên.');message(error.message)}}
+  finally{if(run===epoch)setBusy(false)}
  };
  $('useResources').onclick=async()=>{
   if(slideReview.isBusy())return message('Dừng kiểm tra ảnh trước khi nhập tài liệu khác.');
