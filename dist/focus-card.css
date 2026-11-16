@@ -20,12 +20,12 @@
 .focus-clock #topbarClock{text-align:center;margin-top:20px;}
 .focus-time{display:inline-flex;align-items:center;justify-content:center;gap:2px;font-family:'JetBrains Mono',system-ui,-apple-system,monospace;font-size:30px;line-height:1;font-weight:800;color:#ffffff;text-shadow:0 2px 14px rgba(170,183,247,0.5),0 0 20px rgba(139,92,246,0.35);font-variant-numeric:tabular-nums;}
 .time-reel-wrap{display:inline-flex;align-items:center;justify-content:center;gap:1px;}
-.digit-flip-slot{display:inline-flex;align-items:center;justify-content:center;position:relative;width:0.68em;height:1.25em;overflow:hidden;vertical-align:middle;}
-.digit-val{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1;color:inherit;font-weight:800;will-change:transform,opacity;}
-.digit-exit{animation:digitRollExit 0.4s cubic-bezier(0.34,1.2,0.64,1) forwards;}
-.digit-enter{animation:digitRollEnterSpring 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;}
-@keyframes digitRollExit{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(-115%);opacity:0;}}
-@keyframes digitRollEnterSpring{0%{transform:translateY(115%) scale(0.92);opacity:0.3;}60%{transform:translateY(-4%) scale(1.12);opacity:1;}100%{transform:translateY(0) scale(1);opacity:1;}}
+.digit-flip-slot{perspective:180px;perspective-origin:50% 50%;display:inline-flex;align-items:center;justify-content:center;position:relative;width:0.68em;height:1.25em;overflow:hidden;vertical-align:middle;}
+.digit-val{backface-visibility:hidden;transform-origin:50% 55%;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1;color:inherit;font-weight:800;will-change:transform,opacity;}
+.digit-exit{animation:digitFlipFadeExit .42s cubic-bezier(.22,1,.36,1) both;}
+.digit-enter{animation:digitFlipFadeEnter .42s cubic-bezier(.22,1,.36,1) both;}
+@keyframes digitFlipFadeExit{0%{transform:rotateX(0deg);opacity:1;}100%{transform:rotateX(-72deg);opacity:0;}}
+@keyframes digitFlipFadeEnter{0%{transform:rotateX(72deg);opacity:0;}100%{transform:rotateX(0deg);opacity:1;}}
 .reel-colon{display:inline-flex;align-items:center;justify-content:center;width:0.35em;height:1.25em;opacity:.85;color:#c084fc;font-weight:700;animation:reelColonBreath 1.5s infinite ease-in-out;}
 @keyframes reelColonBreath{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(0.9);}}
 @media(max-width:760px){

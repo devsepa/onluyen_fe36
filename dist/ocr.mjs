@@ -1,4 +1,4 @@
-import {parsePresentation,textOf} from './core.mjs?v=2026.11.16.19';
+import {parsePresentation,textOf} from './core.mjs?v=2026.11.16.20';
 
 export function checkAbort(signal){if(signal?.aborted)throw new DOMException('Đã dừng nhập tài liệu.','AbortError')}
 export async function cacheKey(p,slide,resource={},language='eng'){

@@ -1,6 +1,6 @@
-import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.19';
-import { readyForPractice } from './ai.mjs?v=2026.11.16.19';
-import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.19';
+import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.20';
+import { readyForPractice } from './ai.mjs?v=2026.11.16.20';
+import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.20';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
