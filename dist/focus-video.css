@@ -1,0 +1,10 @@
+﻿/* One existing YouTube player supplies both the music and this live video background. */
+.focus-card .focus-player{position:relative;isolation:isolate;overflow:hidden;background:#111a2b;backdrop-filter:none;-webkit-backdrop-filter:none;}
+.focus-video-background{position:absolute;inset:0;z-index:-2;pointer-events:none;overflow:hidden;}
+.focus-video-background>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.focus-video-mount{position:absolute;inset:0;width:100%;height:100%;}
+.focus-video-mount iframe,.focus-video-mount>div{display:block;width:100%!important;height:100%!important;border:0;pointer-events:none;}
+.focus-card .focus-player:before{content:'';position:absolute;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(120deg,rgba(7,13,28,.76),rgba(12,18,34,.52));}
+.focus-card .focus-player .focus-transport{background:rgba(13,20,37,.55);border-color:rgba(255,255,255,.13);}
+.focus-card .focus-player .focus-settings{color:#f3f4ff!important;text-shadow:0 1px 3px #0008;}
+.focus-card .focus-track-row #studyMusicTitle{color:#e2e6f7;text-shadow:0 1px 3px #0009;}
