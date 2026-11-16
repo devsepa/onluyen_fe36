@@ -29,3 +29,4 @@
  .focus-card .focus-transport .focus-play{min-width:36px;width:36px;min-height:36px;height:36px;font-size:17px;}
 }
 @media(max-width:760px){.focus-card .focus-transport .focus-play{min-width:44px;width:44px;min-height:44px;height:44px;}}
+@media(max-width:760px){.focus-card .reel-digit-strip{height:280px;flex:none;align-self:flex-start;}}
