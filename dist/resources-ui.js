@@ -67,6 +67,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
   }
  }
  function renderSelected(){
+  slideReview?.setSources([...files,...selected.values()]);
   $('selectedResources').replaceChildren();
   const visible=new Map([...suggestions,...selected.values()].map(r=>[r.id,r]));
   for(const r of visible.values()){
