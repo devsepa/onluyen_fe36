@@ -21,7 +21,7 @@ export async function selectQuestionSlides(p,{startSlide=1,endSlide=Infinity,max
   const slide=p.slides[page.slide-1],notes=detailsFromNotes(slide,'ABCDEFGH'.split('').map(id=>({id,text:''}))),known=native.get(page.slide),kind=fastSlideKind(page,known,notes);
   const options='ABCDEFGH'.slice(0,Math.max(4,...[...(notes.answer||'')].map(c=>c.charCodeAt(0)-64))).split('').map(id=>({id,text:''}));
   let q={id:crypto.randomUUID(),stem:`Câu hỏi slide ${page.slide}`,content:'',options,answer:notes.answer,explanation:notes.explanation,verified:!!notes.answer,answerSource:notes.answer?'speaker-notes':null,slide:page.slide,url:`https://docs.google.com/presentation/d/${encodeURIComponent(p.presentationId)}/edit#slide=id.${encodeURIComponent(slide.objectId)}`,extraction:'ocr',slideKind:'question'};
-  let accepted=kind==='question',reason=kind;
+  let accepted=kind==='question',reason=kind,importError;
   if(accepted&&known?.options.every(o=>o.text?.trim()))q={...known,extraction:'ocr',slideKind:'question'};
   else if(accepted&&known?.options.length>q.options.length)q={...q,options:known.options};
   if(kind==='inspect'&&inspect&&deferInspection)deferred.push({...q,slideKind:'pending'});
@@ -30,10 +30,10 @@ export async function selectQuestionSlides(p,{startSlide=1,endSlide=Infinity,max
     const {result,model}=await inspect(q,slide);
     if(signal?.aborted)throw new DOMException('Đã dừng nhập.','AbortError');
     const inspected=inspectedQuestion(q,{result,model});if(inspected){q=inspected;accepted=true;reason='question'}else reason=result.kind==='other'?'other':'uncertain';
-   }catch(error){if(error.name==='AbortError')throw error;reason='uncertain';unavailable=error.code!=='AI_IMAGE_INVALID'}
+   }catch(error){if(error.name==='AbortError')throw error;reason='uncertain';importError=error.message;unavailable=error.code!=='AI_IMAGE_INVALID'}
   }
   if(accepted)questions.push(q);else if(reason==='other')skipped.push(page.slide);else unresolved.push(page.slide);
-  pages.push({...page,recognized:accepted,classification:accepted?'question':reason});onProgress({slide:page.slide,totalSlides:p.slides.length,found:questions.length,skipped:skipped.length,unresolved:unresolved.length});
+  pages.push({...page,recognized:accepted,classification:accepted?'question':reason,...(importError?{importError}:{})});onProgress({slide:page.slide,totalSlides:p.slides.length,found:questions.length,skipped:skipped.length,unresolved:unresolved.length});
  }
  const visited=new Set(pages.map(page=>page.slide)),unread=parsed.diagnostics.pages.filter(page=>page.slide>=startSlide&&page.slide<=endSlide&&!visited.has(page.slide)).map(page=>page.slide);
  return {questions,skipped,unresolved,deferred,diagnostics:{...parsed.diagnostics,pages,excluded:skipped.length,unresolved:unresolved.length,unread}};

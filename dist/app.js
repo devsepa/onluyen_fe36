@@ -393,6 +393,12 @@ const account = setupAccount({
   },
 });
 const resources = setupResources({
+  onManualApprove: (question) => {
+    if(aiRunning||session&&!session.done){message('Hoàn thành bài đang làm và dừng AI trước khi duyệt câu hỏi.','sources');return false}
+    const key=bankQuestionKey(question),existing=bank.find(q=>bankQuestionKey(q)===key),approved=cleanQuestion({...question,id:existing?.id||question.id});
+    const next=existing?bank.map(q=>bankQuestionKey(q)===key?approved:q):[...bank,approved];
+    if(!write('sot-bank',next))return false;bank=next;sourceSummary=sources().map(([,name])=>name).join(' · ');write('sot-source',sourceSummary);refreshStats();return true;
+  },
   onAccountChange: (profile) => {
     account.update(profile);
     libraryProfile=profile;setTimeout(()=>{libraryManager?.account(profile);quality?.setProfile(profile)},0);
