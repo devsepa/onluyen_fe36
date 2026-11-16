@@ -1,3 +1,4 @@
+import {setupExamSimulation} from './exam-simulation.mjs';
 import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.26';
 import {describeUserError,contextualError} from './user-errors.mjs';
 import {labelsFromImageText,resizeQuestionChoices,croppedChoiceImage} from './question-choices.mjs';
@@ -157,6 +158,7 @@ let view = "shared",
   editing = null,
   resultFilter = "all";
 libraryTracker=createBankTracker(bank);bank=libraryTracker.stamp(bank);
+const examSimulation=setupExamSimulation({getSession:()=>session,persist:()=>write('sot-session',session)});
 const pageSize = 10;
 const pageInfo = {
   shared: [
@@ -327,7 +329,7 @@ function switchView(next, mode) {
     !session.paused &&
     next !== "practice"
   )
-    return message(session.mode === "study" ? "Hãy bấm 'Kết thúc' để hoàn thành buổi ôn trước khi rời giao diện này." : "Hãy nộp bài thi thử trước khi mở tài liệu hoặc kết quả.");
+    {if(session.mode==='exam')examSimulation.warn('Đang trong giờ thi. Hãy nộp bài trước khi rời giao diện làm bài.');return message(session.mode === "study" ? "Hãy bấm 'Kết thúc' để hoàn thành buổi ôn trước khi rời giao diện này." : "Hãy nộp bài thi thử trước khi mở tài liệu hoặc kết quả.");}
   if (mode) preferredMode = mode;
   if (next === "result" && !lastResult) next = "history";
   view = next;
@@ -1499,6 +1501,7 @@ function renderPractice() {
   });
 
   $("start").onclick = async () => {
+   if(preferredMode==='exam')await examSimulation.begin();
    const createSession=()=>{
     const questions = pool(),
       count = Number($("count").value),
@@ -1529,6 +1532,7 @@ function renderPractice() {
     message("");
     renderQuiz();
     startSessionPreload(session.questions);
+    if(session?.mode==='exam')examSimulation.arm();
    };return navigator.locks?navigator.locks.request('sot-study-draw',createSession):createSession();
   };
   updateDashboard();
@@ -2049,6 +2053,7 @@ function finish() {
   explanationQueue.cancel();clearTimeout(quizClockTimer);
   if(session.mode==='study')for(const q of session.questions){const last=session.wrongAttempts?.[q.id]?.at(-1);if(last&&!session.answers[q.id])session.answers[q.id]=last}
   session.done = true;
+  examSimulation.finish();
   lastResult = {
     ...session,
     id: crypto.randomUUID(),
