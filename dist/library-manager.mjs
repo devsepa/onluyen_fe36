@@ -26,11 +26,11 @@ async function chooseConflict(conflicts,getImage){return new Promise(resolve=>{
 })}
 export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken,getBlob,getDetails,media,canChange,onPractice,getRecoveryQuestions=()=>[],getSharedRecovery,storage=localStorage}={}){
  const root=document.getElementById('library'),panel=document.createElement('section');panel.className='card library-manager';panel.setAttribute('aria-label','Quản lý môn và đồng bộ riêng tư');root.querySelector('.section-heading').before(panel);
- const heading=add(panel,'div',undefined,'library-manager-heading');add(heading,'h2','Thư viện theo môn');const toolbar=add(heading,'div',undefined,'row');const exportAll=button(toolbar,'↓ Sao lưu trọn bộ',()=>exportQuestions(getBank(),'thu-vien'));
+ const heading=add(panel,'div',undefined,'library-manager-heading');add(heading,'h2','Môn học của bạn');const toolbar=add(heading,'div',undefined,'row');const exportAll=button(toolbar,'↓ Sao lưu trọn bộ',()=>exportQuestions(getBank(),'thu-vien'));
  const restore=button(toolbar,'↑ Khôi phục sao lưu',()=>document.getElementById('bankFile').click());
  const recoveryStore=createBankRecoveryStore();
  const recover=button(toolbar,'↶ Khôi phục câu đã xóa',()=>showRecovery());recover.id='recoverDeletedBank';
- add(panel,'p','Bản ZIP chứa câu hỏi, đáp án, giải thích và ảnh gốc. Khôi phục được cả khi nguồn cũ không còn truy cập được.','muted');
+ const backupHelp=add(panel,'p','Bản ZIP chứa câu hỏi, đáp án, giải thích và ảnh gốc. Khôi phục được cả khi nguồn cũ không còn truy cập được.','muted');
  const syncPanel=add(panel,'div',undefined,'library-sync-panel'),identity=add(syncPanel,'strong','Thư viện riêng tư'),syncText=add(syncPanel,'p','Đăng nhập Google ở ảnh đại diện để đồng bộ giữa các thiết bị.');syncText.setAttribute('role','status');
  add(syncPanel,'p','Kho riêng hỗ trợ tối đa 5.000 câu và 200 MB ảnh. Chỉ đồng bộ thư viện; bài đang làm và lịch sử vẫn lưu riêng trên thiết bị.','muted');
  const actions=add(syncPanel,'div',undefined,'row'),syncButton=button(actions,'↻ Đồng bộ ngay',()=>runSync());
@@ -38,10 +38,13 @@ export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken
  const progress=add(panel,'p','', 'library-operation-status');progress.hidden=true;progress.setAttribute('role','status');
  const stop=button(panel,'Dừng',()=>{operation?.abort();sync.cancel()},'secondary library-stop');stop.hidden=true;
  const cards=add(panel,'div',undefined,'subject-library-grid');let operation=null,profile=null;
+ const privacy=add(panel,'p','Tài liệu bạn nhập không tự đăng lên kho cộng đồng. Đồng bộ riêng tư chỉ lưu vào kho của tài khoản Google đang kết nối.','library-privacy-note');
+ heading.after(privacy,cards);
+ const management=add(panel,'details',undefined,'library-management-details');add(management,'summary','Sao lưu, khôi phục & đồng bộ riêng tư');management.append(toolbar,backupHelp,syncPanel);
  function status(text){progress.textContent=text;progress.hidden=!text}
  const sync=createLibrarySync({base,getToken,getQuestions:getBank,applyQuestions:questions=>setBank(questions,{sync:true}),getGeneration,media,getBlob,getDetails,storage,onConflict:(conflicts,context)=>document.body.classList.contains('quiz-active')?null:chooseConflict(conflicts,context?.getImage),onStatus:state=>{if(!state.keepText)syncText.textContent=state.text;identity.textContent=state.owner?'Kho riêng · '+state.owner:'Thư viện riêng tư';auto.checked=state.enabled;stop.hidden=!state.busy&&!operation;syncButton.disabled=state.busy||!!operation||!profile;auto.disabled=!profile||!!operation;refreshButtons()}});sync.watch();
  function busy(){return !!operation||sync.isBusy()}
- function refreshButtons(){exportAll.disabled=busy()||!getBank().length;restore.disabled=busy();recover.disabled=busy();for(const b of cards.querySelectorAll('button'))b.disabled=busy();syncButton.disabled=busy()||!profile}
+ function refreshButtons(){exportAll.disabled=busy()||!getBank().length;restore.disabled=busy();recover.disabled=busy();for(const b of cards.querySelectorAll('button'))b.disabled=busy()||b.dataset.noReady==='true';syncButton.disabled=busy()||!profile}
  async function deleteQuestions(select,label){
   if(busy()||!canChange())return;
   try{const deleted=await deleteQuestionsSafely({getBank,setBank,select,label,archive:recoveryStore.archive,canChange:()=>!busy()&&canChange(),confirm:questions=>askConfirm(`Xóa riêng ${questions.length} câu của ${label}? Các môn khác và lịch sử vẫn giữ. Câu đã xóa được lưu trong mục Khôi phục trên thiết bị này. Nếu bật đồng bộ riêng tư, việc xóa cũng sẽ đồng bộ sang thiết bị khác.`,{title:'Xóa riêng '+label,okText:'Xóa '+questions.length+' câu',danger:true})});if(deleted){status('Đã xóa riêng '+label+'. Có thể lấy lại bằng nút Khôi phục câu đã xóa.');render()}}
@@ -94,8 +97,18 @@ export function setupLibraryManager({base,getBank,setBank,getGeneration,getToken
  }
  async function runSync(){if(busy()||!canChange())return;try{if(!profile)throw Error('Đăng nhập Google ở ảnh đại diện trước khi đồng bộ.');if(storage.getItem('sot-private-library-owner')!==profile.email?.toLowerCase()&&!await askConfirm(`Hợp nhất thư viện trên máy với kho riêng của ${profile.email}? Câu hỏi và ảnh sẽ được lưu riêng theo tài khoản này, không đăng vào Kho đề chung.`,{title:'Đồng bộ riêng tư',okText:'Đồng bộ'}))return;await sync.sync();render()}catch(error){syncText.textContent=error.message}finally{refreshButtons()}}
  auto.onchange=async()=>{if(!canChange()){auto.checked=sync.enabled;return}try{sync.setEnabled(auto.checked);if(auto.checked)await runSync()}catch(error){syncText.textContent=error.message;auto.checked=false}};
- function render(){cards.replaceChildren();const bank=getBank(),groups=practiceSubjects(bank);
-  for(const group of groups){const questions=bank.filter(q=>subjectKey(q)===group.key),article=add(cards,'article',undefined,'subject-library-card');add(article,'h3',group.label);add(article,'p',`${questions.length} câu · ${questions.filter(readyForPractice).length} sẵn sàng · ${new Set(questions.map(q=>q.sourceId)).size} tài liệu`);const updated=Math.max(0,...questions.map(q=>q.updatedAt||q.savedAt||0));add(article,'small',updated?'Cập nhật: '+new Date(updated).toLocaleString('vi-VN'):'Chưa có ngày lưu');const row=add(article,'div',undefined,'row');button(row,'Ôn môn này',()=>{if(canChange())onPractice(group.key)});button(row,'Sao lưu môn',()=>exportQuestions(questions,group.label));button(row,'Xóa môn',()=>deleteQuestions(q=>subjectKey(q)===group.key,group.label),'text-button danger')}
+ function render(){cards.replaceChildren();const bank=getBank(),groups=practiceSubjects(bank).sort((a,b)=>Number(bank.some(q=>subjectKey(q)===b.key&&readyForPractice(q)))-Number(bank.some(q=>subjectKey(q)===a.key&&readyForPractice(q))));
+  for(const group of groups){
+   const questions=bank.filter(q=>subjectKey(q)===group.key),ready=questions.filter(readyForPractice).length,community=questions.filter(q=>q.sharedDeck).length;
+   const article=add(cards,'article',undefined,'subject-library-card personal-subject-card'),top=add(article,'div',undefined,'personal-subject-top');
+   add(top,'span',community===questions.length?'Từ kho cộng đồng':community?'Nguồn riêng + cộng đồng':'Tài liệu nhập riêng','personal-subject-badge');
+   add(top,'span','THƯ VIỆN CỦA BẠN','personal-subject-kicker');add(article,'h3',group.label);
+   const metrics=add(article,'div',undefined,'personal-subject-metrics');add(metrics,'strong',String(ready));add(metrics,'span',`câu sẵn sàng / ${questions.length} câu`);
+   add(article,'p',`${new Set(questions.map(q=>q.sourceId)).size} tài liệu · giữ nguyên thứ tự lựa chọn`,'personal-subject-caption');
+   const start=button(article,ready?'Vào ôn ngay →':'Chưa có câu đủ đáp án',()=>{if(canChange())onPractice(group.key)},'personal-subject-start');start.dataset.noReady=String(!ready);start.setAttribute('aria-label',`Ôn môn ${group.label}`);
+   const more=add(article,'details',undefined,'personal-subject-more');add(more,'summary','Quản lý môn');const row=add(more,'div',undefined,'row');button(row,'Sao lưu môn',()=>exportQuestions(questions,group.label));button(row,'Xóa môn',()=>deleteQuestions(q=>subjectKey(q)===group.key,group.label),'text-button danger');
+   const updated=Math.max(0,...questions.map(q=>q.updatedAt||q.savedAt||0));if(updated)add(more,'small','Cập nhật: '+new Date(updated).toLocaleString('vi-VN'));
+  }
   if(!groups.length)add(cards,'p','Chưa có môn nào được lưu. Thêm tài liệu hoặc khôi phục bản sao lưu để bắt đầu.','muted');refreshButtons();
  }
  const originalExport=document.getElementById('exportBank').onclick,originalImport=document.getElementById('bankFile').onchange;
