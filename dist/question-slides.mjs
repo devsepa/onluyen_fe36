@@ -23,6 +23,7 @@ export async function selectQuestionSlides(p,{startSlide=1,endSlide=Infinity,max
   let q={id:crypto.randomUUID(),stem:`Câu hỏi slide ${page.slide}`,content:'',options,answer:notes.answer,explanation:notes.explanation,verified:!!notes.answer,answerSource:notes.answer?'speaker-notes':null,slide:page.slide,url:`https://docs.google.com/presentation/d/${encodeURIComponent(p.presentationId)}/edit#slide=id.${encodeURIComponent(slide.objectId)}`,extraction:'ocr',slideKind:'question'};
   let accepted=kind==='question',reason=kind;
   if(accepted&&known?.options.every(o=>o.text?.trim()))q={...known,extraction:'ocr',slideKind:'question'};
+  else if(accepted&&known?.options.length>q.options.length)q={...q,options:known.options};
   if(kind==='inspect'&&inspect&&deferInspection)deferred.push({...q,slideKind:'pending'});
   if(kind==='inspect'&&inspect&&!deferInspection&&!unavailable){
    try{

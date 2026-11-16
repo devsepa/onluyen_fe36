@@ -5,7 +5,7 @@ import {selectQuestionSlides,inspectedQuestion} from './question-slides.mjs?v=20
 import {createGoogleReadQueue,abortableResult} from './google-read-queue.mjs?v=2026.11.16.26';
 import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.26';
 import {directSlideImage} from './direct-slide-image.mjs?v=2026.11.16.26';
-import {detailsFromNotes,speakerNotesText} from './core.mjs?v=2026.11.16.26';
+import {detailsFromNotes,speakerNotesText,cleanQuestion} from './core.mjs?v=2026.11.16.26';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,onDeferredQuestion=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -184,7 +184,7 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
   if(!active())throw Error('Đăng nhập Google ở ảnh đại diện để đọc ghi chú từ slide.');
   if(busy)throw Error('Hãy đợi nhập tài liệu xong rồi lấy đáp án.');
   const updates=[],failures=[],unresolved={missingSlide:[],empty:[],unmatched:[]},run=epoch;
-  const needsNotes=q=>!q.verified||!q.explanation;
+  const needsNotes=q=>!q.verified||!q.explanation||q.answerSource==='speaker-notes'&&q.options.every(o=>!o.text?.trim());
   const ids=[...new Set(questions.filter(needsNotes).map(q=>q.sourceId||presentationIdFromLink(q.url)).filter(Boolean))];
   for(const id of ids){
    try{
@@ -195,9 +195,10 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,ha
      const objectId=q.url?.match(/#slide=id\.(.+)$/)?.[1];
      const slide=p.slides?.find(s=>s.objectId===objectId);
      if(!slide){unresolved.missingSlide.push(q.slide);continue;}
-     const {answer,explanation}=detailsFromNotes(slide,q.options);
+     const labels=q.options.every(o=>!o.text?.trim())?'ABCDEFGH'.split('').map(id=>({id,text:''})):q.options;
+     const {answer,explanation}=detailsFromNotes(slide,labels);
      if(answer){
-      if(!q.verified||q.answer===answer&&explanation&&!q.explanation)updates.push({id:q.id,answer,explanation});
+      if(!q.verified||q.answerSource==='speaker-notes'||q.answer===answer&&explanation&&!q.explanation)updates.push({id:q.id,answer,explanation,options:cleanQuestion({...q,answer}).options});
       else if(q.answer!==answer)unresolved.unmatched.push(q.slide);
      }else if(!q.verified)unresolved[speakerNotesText(slide)?'unmatched':'empty'].push(q.slide);
     }

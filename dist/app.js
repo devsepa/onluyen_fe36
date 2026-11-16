@@ -1,4 +1,6 @@
 import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.26';
+import {labelsFromImageText,resizeQuestionChoices} from './question-choices.mjs';
+import {createBrowserRecognizer} from './ocr-browser.js';
 import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.26';
 import {setupStudyTools} from './study-tools.mjs?v=2026.11.16.26';
 import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.16.26';
@@ -58,6 +60,28 @@ import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.26";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
+const choiceReadAttempts=new Set();let choiceReadQueue=Promise.resolve();
+function setQuestionChoiceCount(question,count,source='manual'){
+ const updated=resizeQuestionChoices(question,count,{source}),key=bankQuestionKey(question);
+ if(session&&!session.done){const selected=(session.answers?.[question.id]||'')+(session.drafts?.[question.id]||'');if([...selected].some(id=>!updated.options.some(o=>o.id===id)))throw Error('Bỏ chọn đáp án ngoài phạm vi trước khi giảm số lựa chọn.');}
+ const nextBank=bank.map(q=>bankQuestionKey(q)===key?{...q,options:updated.options,choiceCountSource:source}:q);
+ const nextSession=session&&!session.done?{...session,questions:session.questions.map(q=>bankQuestionKey(q)===key?{...q,options:updated.options,choiceCountSource:source}:q)}:session;
+ if(!write('sot-bank',nextBank))return false;
+ if(nextSession&&!write('sot-session',nextSession)){write('sot-bank',bank);return false}
+ bank=nextBank;session=nextSession;
+ if(view==='practice'&&session&&!session.done)renderQuiz();return true;
+}
+function readImageChoiceLabels(q,url){
+ if(view!=='practice'||!session||session.done||session.questions[session.current]?.id!==q.id||q.choiceCountSource||q.options.some(o=>o.text?.trim()))return;
+ const key=JSON.stringify([bankQuestionKey(q),q.options]);if(choiceReadAttempts.has(key))return;choiceReadAttempts.add(key);
+ choiceReadQueue=choiceReadQueue.catch(()=>{}).then(async()=>{
+  if(view!=='practice'||session?.questions[session.current]?.id!==q.id||document.hidden||!navigator.onLine)return;
+  const reader=createBrowserRecognizer({language:'eng'}); // Latin label detection only; original slide text is never replaced.
+  try{const result=await reader.recognize(url);const labels=labelsFromImageText(result.text),current=session?.questions.find(item=>item.id===q.id);
+   if(current&&!current.choiceCountSource&&labels.length>current.options.length&&result.confidence>=45)setQuestionChoiceCount(current,labels.length,'image-labels');
+  }catch{/* The visible count selector remains usable when OCR is unavailable. */}finally{await reader.terminate().catch(()=>{})}
+ });
+}
 const quizAccountControl=document.querySelector('.account-control'),accountHome=document.querySelector('.top-actions');
 const quizSound = createQuizSound();
 const ytAudio = createYouTubeStudyAudio();
@@ -514,6 +538,7 @@ async function showQuestionImage(container, q) {
         if(container.firstElementChild!==image)container.replaceChildren(image);
         fitSlideImage(container,image);
         text?.classList.add("collapsed-text");
+        if(container.classList.contains('slide-media-container'))readImageChoiceLabels(q,url);
       }
     };
     image.onload = displayImage;
@@ -850,6 +875,7 @@ async function runAi({ automatic = false } = {}) {
             original &&
             questionAutoKey(q) === questionAutoKey(original)
           ) {
+            if(update.options)q.options=update.options;
             q.answer = update.answer;
             q.explanation = update.explanation;
             q.explanationSource = 'speaker-notes';
@@ -970,7 +996,8 @@ notesButton.onclick = async () => {
       return message("Ngân hàng hoặc bài làm đã thay đổi. Hãy lấy lại đáp án.");
     for (const update of updates) {
       const q = bank.find((q) => q.id === update.id);
-      if (q && (!q.verified || q.answer === update.answer)) {
+      if (q && (!q.verified || q.answerSource==='speaker-notes' || q.answer === update.answer)) {
+        if(update.options)q.options=update.options;
         q.answer = update.answer;
         q.explanation = update.explanation;
         q.explanationSource = 'speaker-notes';
@@ -1010,6 +1037,10 @@ function editQuestion(q) {
   editing = q.id;
   $("editFields").innerHTML =
     `<label>Nội dung câu hỏi (nguyên cụm)<textarea name="stem" rows="7" required>${esc(displayContent(q))}</textarea></label><label>Đáp án đúng<input name="answer" value="${esc(q.answer)}" placeholder="A, AD, ACE…" maxlength="24" autocomplete="off"></label><label>Giải thích (tùy chọn)<textarea name="explanation" rows="3">${esc(q.explanation || "")}</textarea></label>`;
+  if(q.options.every(o=>!o.text?.trim())){
+   const label=document.createElement('label');label.textContent='Số lựa chọn trong ảnh gốc';const count=document.createElement('select');count.name='choiceCount';
+   for(let n=2;n<=8;n++){const o=document.createElement('option');o.value=n;o.textContent=`${n} (A–${String.fromCharCode(64+n)})`;o.selected=n===q.options.length;count.append(o)}label.append(count);$('editFields').prepend(label);
+  }
   $("editQuestion").showModal();
 }
 for (const id of ["closeEdit", "cancelEdit"])
@@ -1024,7 +1055,9 @@ $("editForm").onsubmit = (e) => {
   if (!stem) return message("Nội dung câu hỏi không được để trống.");
   let updated;
   try {
-    updated = updateQuestionContent(q, stem);
+    const count=Number(fields.get('choiceCount'));
+    const base=fields.has('choiceCount')?resizeQuestionChoices({...q,answer:''},count):q;
+    updated = updateQuestionContent(base, stem);
   } catch (error) {
     return message(error.message);
   }
@@ -1621,6 +1654,14 @@ function renderQuiz() {
       </div>
     </div><div class="quiz-layout"><div><article class="card quiz-question"><div class="quiz-progress-track" title="Tiến độ: ${answeredCount}/${qs.length} (${pct}%)"><div class="quiz-progress-bar" style="width:${pct}%"></div><span class="quiz-progress-pct" style="opacity:${pct>5?1:0}">${pct}%</span></div><div class="question-top"><div class="question-top-left"><button type="button" class="secondary nav-btn" data-index="${session.current - 1}" ${!session.current ? "disabled" : ""}>← Trước</button><span class="question-counter">CÂU ${session.current + 1} / ${qs.length}</span>${multiple ? `<span class="badge-multi-select" title="Câu hỏi này có nhiều đáp án đúng">⚡ Chọn nhiều đáp án</span>` : ""}${slide ? `<span class="slide-num-tag">Slide ${slide}</span>` : ""}${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="slide-open-link" title="Mở slide trong tab mới"><span class="slide-link-full">Mở slide ↗</span><span class="slide-link-short">↗</span></a>` : ""}${aiBadge(q)}</div><div class="question-top-right">${zoomBtn}<label class="check-label"><input type="checkbox" id="flagCurrent" ${session.flags.includes(q.id) ? "checked" : ""}><span class="flag-text-full"> Đánh dấu xem lại</span><span class="flag-text-short"> Xem lại</span></label></div></div>${multiple ? '<p class="multi-hint"><span class="multi-hint-icon">⚡</span><span><strong>Chọn tất cả đáp án đúng:</strong> ' + (study ? "Tích chọn các ô đáp án rồi bấm Kiểm tra đáp án (Enter)." : "Có thể thay đổi lựa chọn trước khi nộp bài.") + "</span></p>" : ""}<div class="slide-media-container" data-slide-q="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="quiz-answer-row"><div class="choice-pills">${q.options.map((o, i) => `<button class="choice-pill ${optionState(session, q, o.id)}" data-q="${esc(q.id)}" data-o="${o.id}" aria-pressed="${(answered || session.drafts?.[q.id] || "").includes(o.id)}" ${study && answered ? "disabled" : ""}>${esc(o.id)}</button>`).join("")}</div><button type="button" class="nav-btn next-btn quiz-answer-next" data-index="${session.current + 1}" ${session.current === qs.length - 1 ? "disabled" : ""} aria-label="Câu tiếp theo"><span class="next-label-full">Câu tiếp theo →</span><span class="next-label-short">Tiếp →</span></button></div>${study && multiple && !answered ? `<button id="checkMultiple" class="multi-check" ${!session.drafts?.[q.id] ? "disabled" : ""}>Kiểm tra đáp án (Enter)</button>` : ""}<div class="quiz-shortcuts-hint"><span class="shortcut-pill">1-4 / A-D: Chọn</span><span class="shortcut-pill">Enter: Tiếp tục</span><span class="shortcut-pill">← / →: Đổi câu</span><span class="shortcut-pill">Z: Phóng to</span></div><div class="mobile-swipe-guide" aria-hidden="true"><span class="swipe-arrow">‹</span><span>Vuốt để chuyển câu</span><span class="swipe-arrow">›</span></div>${study && answered ? `<div class="feedback ${isCorrect(q, answered) ? "right" : "incorrect"}" role="status">${isCorrect(q, answered) ? "✓ Chính xác. Bạn đã nắm được câu này!" : "✕ Chưa đúng. Cùng ghi nhớ đáp án nhé."}<br>Đáp án đúng: <strong>${esc(q.answer)}</strong>${noteExplanation(q)}</div>` : ""}</article></div><aside class="card"><h3>Danh sách câu hỏi</h3><p>${study ? "Câu một đáp án chấm ngay; câu nhiều đáp án chấm khi bấm Kiểm tra." : "Bạn có thể quay lại và thay đổi đáp án."}</p><div class="quiz-navigation">${qs.map((item, i) => `<button data-index="${i}" class="${navItemClass(session, item, i, study)}" aria-label="Đến câu ${i + 1}" ${session.current === i ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div><div class="quiz-legend-custom">${legendContent}</div></aside></div>`;
   $('practice').dataset.questionId=q.id;
+  if((q.url||q.sharedDeck||q.mediaId)&&q.options.every(o=>!o.text?.trim())){
+   const label=document.createElement('label');label.className='quiz-choice-count';label.textContent='Lựa chọn';
+   const select=document.createElement('select');select.setAttribute('aria-label','Số lựa chọn trong ảnh gốc');
+   for(let count=2;count<=8;count++){const option=document.createElement('option');option.value=count;option.textContent=`${count} (A–${String.fromCharCode(64+count)})`;option.selected=count===q.options.length;select.append(option)}
+   select.onchange=()=>{try{setQuestionChoiceCount(q,Number(select.value))}catch(error){select.value=q.options.length;message(error.message)}};
+   label.title='Đối chiếu ảnh gốc và chọn đủ số lựa chọn. Thay đổi này giữ nguyên đáp án và được lưu cho lần ôn sau.';
+   label.append(select);$('practice').querySelector('.question-top-right').prepend(label);
+  }
   $("submit").onclick = () => completionGate.request();
   fitQuizScreen({
     root: $("practice"),

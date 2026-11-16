@@ -55,7 +55,14 @@ export function updateQuestionContent(question,value){
  return {...question,...(parts||{stem:content}),content};
 }
 export function cleanQuestion(q){
- const options=normalizeChoices(q.options);
+ let options=normalizeChoices(q.options);
+ if(['manual','image-labels'].includes(q.choiceCountSource)&&Array.isArray(q.options)&&q.options.length>=2&&q.options.length<=8&&q.options.every((o,i)=>o.id===String.fromCharCode(65+i)))options=q.options.map(o=>({...o}));
+ // Image-only placeholders must not erase an E-H answer read from notes.
+ if(options.every(o=>!o.text?.trim())&&typeof q.answer==='string'&&/^[A-H\s,;/&+]+$/i.test(q.answer.normalize('NFKC'))){
+  const labels=q.answer.normalize('NFKC').toUpperCase().match(/[A-H]/g)||[];
+  const count=Math.max(options.length,...labels.map(id=>id.charCodeAt(0)-64));
+  options=Array.from({length:count},(_,i)=>options.find(o=>o.id===String.fromCharCode(65+i))||{id:String.fromCharCode(65+i),text:''});
+ }
  const answer=normalizeAnswer(q.answer,options);
  return {...q,answer,verified:!!answer&&q.verified===true,explanation:typeof q.explanation==='string'?cleanSlideContent(q.explanation):'',stem:cleanSlideContent(q.stem),content:typeof q.content==='string'?cleanSlideContent(q.content):(q.content||''),options:options.sort((a,b)=>a.id.localeCompare(b.id)).map(o=>({...o,text:cleanSlideContent(o.text||'')}))};
 }
@@ -115,7 +122,7 @@ export function parsePresentation(p){
   const images=imageCount(s.pageElements)+(s.pageProperties?.pageBackgroundFill?.stretchedPictureFill?1:0);
   let resolvedParts=parts;
   if(!resolvedParts&&text.length>10){
-   const detectedChoices=[...new Set([...text.matchAll(/(?:^|\n|\s)[(［\[]?([A-F])[)］\]:.]/gi)].map(m=>m[1].toUpperCase()))].sort();
+   const detectedChoices=[...new Set([...text.matchAll(/(?:^|\n|\s)[(［\[]?([A-H])[)］\]:.]/gi)].map(m=>m[1].toUpperCase()))].sort();
    if(detectedChoices.length>=2){
     resolvedParts={stem:text,options:detectedChoices.map(id=>({id,text:''}))};
    }
