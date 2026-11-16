@@ -1,0 +1,8 @@
+# Continuing and reviewing practice
+
+- The existing `sot-session` stores answers, drafts, flags and the current question. Paused sessions show a Continue button with the answered count; active sessions restore directly. Exam deadlines continue to use wall-clock time.
+- `sot-review-queue-v1` stores missed and skipped questions on this device. Submitted result IDs prevent reopening history from re-adding questions already mastered. Correct exact-set answers in a review session remove questions immediately. Failed storage writes do not mutate the in-memory queue.
+- Submitted results show the original explanation, with an expandable preview for long notes. AI explanations retain their disclosure. Same-type practice uses existing questions in the same subject, preferring explicit topic/skill metadata and otherwise classifying SQL stems. Distractor choices do not determine the topic. Unknown types show a disabled button rather than unrelated questions or invented explanations.
+- Previous/next controls share the answer area. The question map offers all, unanswered and flagged filters, keeps original question numbers and paginates at 40 entries. Exam answers and explanations remain hidden until submission.
+
+Validation: 256 Node tests and static asset checks passed. An isolated Chrome context with synthetic data covered 1440px desktop, 390px/320px phones and landscape, system light/dark with legacy light storage, resume/reload, queue mastery, related practice, graded study and multi-answer exams. Existing browser regression scripts passed question-choice recovery, mode colors, import review, exam warnings, result reports and source actions. Screenshots and one-off QA output are under ignored `outputs/learning-loop/`.

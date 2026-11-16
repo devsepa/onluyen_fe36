@@ -57,6 +57,7 @@ import {
   sharedImagePath,
 } from "./shared-decks.mjs?v=2026.11.16.26";
 import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.16.26";
+import {createReviewQueue,mountResultPractice} from './learning-loop.mjs?v=2026.11.17.1';
 import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.16.26";
 import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.16.26";
 import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.26";
@@ -118,6 +119,14 @@ let bank = read("sot-bank", []),
   sourceSummary = read("sot-source", "");
 let libraryManager=null,libraryProfile=null,libraryGeneration=0;
 let quality=null;
+const reviewQueue=createReviewQueue(localStorage);
+function startFocusedPractice(questions,review=true){
+ if(!questions.length)return;
+ if(session&&!session.done)return message('Hãy tiếp tục hoặc kết thúc bài đang làm trước khi mở lượt ôn mới.');
+ const next={mode:'study',reviewQueue:review,wrongAttemptLimit:2,questions:structuredClone(questions),answers:{},flags:[],current:0,started:Date.now(),deadline:null,done:false};
+ if(!write('sot-session',next))return;
+ session=next;switchView('practice');startSessionPreload(session.questions);
+}
 const resourcePolicy=createResourcePolicy({storage:localStorage});
 let quizClockTimer=null;
 const telemetry=createTelemetry({base:AI_API_BASE});
@@ -1613,6 +1622,7 @@ function primeStudyExplanations(){if(document.hidden||!session||session.done||se
 
 function refreshQuizState(){
  if(!session||session.done||view!=='practice')return;
+ if(session.reviewQueue){const q=session.questions[session.current];if(isCorrect(q,session.answers[q.id])){try{reviewQueue.mastered(q)}catch{message('Chưa lưu được tiến độ ôn lại. Hãy kiểm tra dung lượng thiết bị.')}}}
  const root=$('practice'),q=session.questions[session.current],study=session.mode==='study',answer=session.answers[q.id];
  if(root.dataset.questionId!==q.id)return;
  for(const button of root.querySelectorAll('.choice-pill[data-o]')){button.className='choice-pill '+optionState(session,q,button.dataset.o);button.setAttribute('aria-pressed',String((answer||session.drafts?.[q.id]||'').includes(button.dataset.o)));button.disabled=study&&!!answer}
@@ -2061,6 +2071,7 @@ function finish() {
     finished: Date.now(),
     correct: grade(session.questions, session.answers),
   };
+  try{reviewQueue.record(lastResult)}catch{message('Không lưu được danh sách câu cần ôn. Kết quả bài làm vẫn được giữ.')}
   history.unshift(lastResult);
   history = history.slice(0, 50);
   write("sot-history", history);
@@ -2105,6 +2116,7 @@ function renderResult(r) {
         "",
       )}</div>${visible.length ? visible.map((q) => `<article class="card question-card"><div class="question-top"><span>CÂU ${r.questions.indexOf(q) + 1}</span><span class="tag ${isCorrect(q, r.answers[q.id]) ? "ok" : ""}">${isCorrect(q, r.answers[q.id]) ? "✓ Đúng" : r.answers[q.id] ? "Sai" : "Chưa trả lời"}</span></div>${sourceReference(q)}${aiBadge(q)}<div class="library-slide-media" data-lib-slide="${esc(q.id)}"></div><div class="question-title ${q.url || q.sharedDeck ? "collapsed-text" : ""}">${esc(displayContent(q))}</div><div class="choice-pills choice-pills-result">${q.options.map((o, i) => `<div class="choice-pill ${q.answer.includes(o.id) ? "correct" : (r.answers[q.id] || "").includes(o.id) ? "wrong" : ""}">${esc(o.id)}</div>`).join("")}</div><div class="result-answer-row"><span>Đáp án đúng: <strong class="badge-answer ok">${esc(q.answer)}</strong></span><span>Bạn chọn: <strong class="badge-answer ${isCorrect(q, r.answers[q.id]) ? "ok" : r.answers[q.id] ? "danger" : "muted"}">${esc(r.answers[q.id] || "Chưa trả lời")}</strong></span></div>${noteExplanation(q)}${r.wrongAttempts?.[q.id]?.length?`<p class="muted">Số lần thử sai: ${r.wrongAttempts[q.id].length}</p>`:""}<button class="secondary" data-report-question="${esc(q.id)}">Báo lỗi câu hỏi</button></article>`).join("") : empty("Không có câu hỏi trong nhóm này", "Thử chọn Tất cả để xem toàn bộ bài làm.", "history", "Về lịch sử →")}`;
   setTimeout(() => loadLibrarySlideImages(visible), 0);
+  mountResultPractice({root:$('result'),result:r,bank:bank.filter(readyForPractice),start:startFocusedPractice});
   if (scorePercent >= 80) setTimeout(triggerConfetti, 150);
   $("again").onclick = () => {
     lastResult = null;
@@ -2126,20 +2138,7 @@ function renderResult(r) {
     retryBtn.onclick = () => {
       const qs = r.questions.filter((q) => !isCorrect(q, r.answers[q.id]));
       if (!qs.length) return;
-      session = {
-        mode: "study",
-        wrongAttemptLimit,
-        questions: shuffle(qs),
-        answers: {},
-        flags: [],
-        current: 0,
-        started: Date.now(),
-        deadline: null,
-        done: false,
-      };
-      write("sot-session", session);
-      switchView("practice");
-      startSessionPreload(session.questions);
+      startFocusedPractice(qs,true);
     };
   }
   document.querySelectorAll("[data-result-filter]").forEach(
@@ -2234,7 +2233,8 @@ setTimeout(scheduleAutoAi, 0);
 document.addEventListener('visibilitychange',()=>{clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;explanationQueue.setPaused(document.hidden);updateTimer();if(!document.hidden)resumeLibraryImages();if(!document.hidden&&session&&!session.done&&view==='practice'){refreshQuizState();primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy);setTimeout(()=>publicSlideBlobs.prune().catch(()=>{}),1000);resourcePolicy.subscribe(()=>{publicSlideBlobs.prune().catch(()=>{});clearTimeout(imagePrefetchTimer);imagePrefetchEpoch++;if(session&&!session.done&&view==='practice'){primeStudyExplanations();scheduleNeighborImages(session.questions,session.current)}});
 
-studyTools=setupStudyTools({getBank:()=>bank,getSession:()=>session,getHistory:()=>history,saveBank:(q,details)=>{if(details?.reviewed)explanationQueue.adoptReviewed(q,details);return write('sot-bank',bank)},getBlob:questionBlob,media:libraryMedia,base:AI_API_BASE,
+try{for(const result of [...history].reverse())reviewQueue.record(result)}catch{/* Existing results remain available in history. */}
+studyTools=setupStudyTools({getReview:()=>reviewQueue.questions(),startReview:()=>startFocusedPractice(reviewQueue.questions(),true),getBank:()=>bank,getSession:()=>session,getHistory:()=>history,saveBank:(q,details)=>{if(details?.reviewed)explanationQueue.adoptReviewed(q,details);return write('sot-bank',bank)},getBlob:questionBlob,media:libraryMedia,base:AI_API_BASE,
  resume:()=>{if(!session||session.done)return;const active={...session,paused:false};if(!write('sot-session',active))return;session=active;switchView('practice')},
  practice:key=>{if(session&&!session.done){message('Hãy học tiếp hoặc hoàn thành bài đang dở trước khi mở bộ khác.');return}preferredSubject=key;write('sot-practice-subject',key);switchView('practice')}
 });

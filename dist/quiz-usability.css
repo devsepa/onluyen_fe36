@@ -1,4 +1,23 @@
 :root{--app-visible-height:100dvh;--app-visible-top:0px}
+.study-review-queue,.study-resume{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+.study-review-queue p{margin:6px 0;color:var(--muted)}
+.result-practice-type{border-top:1px solid var(--line);padding-top:12px;margin-top:12px;overflow-wrap:anywhere}
+.result-practice-type p{white-space:pre-wrap}.result-practice-type button{min-height:44px}
+.quiz-map-filters{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.quiz-map-filters button{flex:1;min-height:40px;padding:5px;font-size:11px;white-space:nowrap}
+.quiz-map-filters button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+body.quiz-active .quiz-answer-row{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;margin-top:auto;flex-shrink:0}
+body.quiz-active .quiz-answer-prev{min-height:44px;padding:6px 10px;white-space:nowrap}
+body.quiz-active .quiz-answer-row .choice-pills{width:100%;min-width:0;justify-content:center}
+@media(max-width:640px){
+ .study-review-queue,.study-resume{align-items:stretch;flex-direction:column;gap:8px}.study-review-queue button,.study-resume button{width:100%;min-height:44px}
+ body.quiz-active .quiz-answer-row{grid-template-columns:1fr 1fr;gap:6px!important}
+ body.quiz-active .quiz-answer-row .choice-pills{grid-column:1/-1;grid-row:1;display:flex;gap:6px}
+ body.quiz-active .quiz-answer-prev{grid-column:1;grid-row:2}
+ body.quiz-active .quiz-answer-next{grid-column:2;grid-row:2;width:100%;min-height:44px}
+ .quiz-map-dialog .quiz-map-filters{position:sticky;top:0;background:var(--panel);z-index:1}
+}
+@media(min-width:560px) and (max-height:480px){body.quiz-active .quiz-answer-row{grid-template-columns:auto minmax(0,1fr) auto!important}body.quiz-active .quiz-answer-row .choice-pills{grid-row:auto;grid-column:auto}body.quiz-active .quiz-answer-prev,body.quiz-active .quiz-answer-next{grid-row:auto;grid-column:auto}}
 body.quiz-active{height:var(--app-visible-height);min-height:0;overflow:hidden}
 body.quiz-active main,body.quiz-active .page-content{height:var(--app-visible-height);min-height:0;overflow:hidden}
 body.quiz-active .page-content{padding-bottom:max(8px,env(safe-area-inset-bottom))!important}

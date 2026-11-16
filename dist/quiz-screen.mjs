@@ -1,9 +1,12 @@
+import {mapQuestions} from './learning-loop.mjs?v=2026.11.17.1';
 export function fitQuizScreen({root,session,question,isCorrect,navItemClass,sound,prefetchEnabled,onPrefetchChange}){
  document.body.classList.add('quiz-active');
  const study=session.mode==='study',head=root.querySelector('.quiz-head'),card=root.querySelector('.quiz-question'),layout=root.querySelector('.quiz-layout'),aside=layout?.querySelector('aside');
  head.querySelector('.overline').textContent=study?'ÔN LUYỆN':'THI THỬ';
  head.querySelector('#submit').textContent=study?'Kết thúc':'Nộp bài';
  head.querySelector('.quiz-leave')?.remove();
+ const previous=card.querySelector('.question-top-left [data-index]');
+ if(previous){previous.classList.add('quiz-answer-prev');previous.setAttribute('aria-label','Câu trước');card.querySelector('.quiz-answer-row')?.prepend(previous)}
 
  const multi=card.querySelector('.multi-hint');
  if(multi)multi.textContent=study?'Chọn các đáp án, rồi bấm Kiểm tra.':'Chọn tất cả đáp án đúng.';
@@ -11,7 +14,10 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
  function paginateMap(container,onSelect){
   const grid=container.querySelector('.quiz-navigation');
   if(!grid)return;
-  const size=100,total=session.questions.length,pages=Math.ceil(total/size);let page=Math.floor(session.current/size);
+  const size=40,total=session.questions.length;let page=Math.floor(session.current/size),filter='all';
+  const filters=document.createElement('div');filters.className='quiz-map-filters';
+  for(const [value,text] of [['all','Tất cả'],['unanswered','Chưa làm'],['flagged','Đã đánh dấu']]){const button=document.createElement('button');button.type='button';button.className='secondary';button.textContent=text;button.dataset.mapFilter=value;button.onclick=()=>{filter=value;page=0;render()};filters.append(button)}
+  grid.before(filters);
   if(total>20){grid.classList.add('quiz-navigation-dense');}
   const pager=document.createElement('div');pager.className='quiz-map-pager';
   const prev=document.createElement('button'),next=document.createElement('button'),label=document.createElement('span');
@@ -20,15 +26,17 @@ export function fitQuizScreen({root,session,question,isCorrect,navItemClass,soun
   pager.append(prev,label,next);grid.after(pager);
 
   function render(){
-   grid.replaceChildren(...session.questions.slice(page*size,(page+1)*size).map((q,j)=>{
-    const index=page*size+j,button=document.createElement('button');
+   const entries=mapQuestions(session,filter),pages=Math.max(1,Math.ceil(entries.length/size));page=Math.min(page,pages-1);
+   for(const button of filters.children)button.setAttribute('aria-pressed',String(button.dataset.mapFilter===filter));
+   grid.replaceChildren(...entries.slice(page*size,(page+1)*size).map(({q,index})=>{
+    const button=document.createElement('button');
     button.type='button';button.dataset.index=index;button.className=navItemClass(session,q,index,study);
     button.textContent=index+1;button.setAttribute('aria-label','Đến câu '+(index+1));
     if(index===session.current)button.setAttribute('aria-current','step');
     if(onSelect)button.addEventListener('click',()=>onSelect(index));
     return button;
    }));
-   label.textContent=`${page*size+1}–${Math.min(total,(page+1)*size)} / ${total}`;
+   label.textContent=entries.length?`${page*size+1}–${Math.min(entries.length,(page+1)*size)} / ${entries.length}`:'Không có câu trong nhóm này';
    prev.disabled=page===0;next.disabled=page===pages-1;
   }
   prev.onclick=()=>{page--;render()};next.onclick=()=>{page++;render()};render();

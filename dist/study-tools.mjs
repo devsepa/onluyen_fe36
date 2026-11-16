@@ -2,13 +2,15 @@ import {practiceSubjects,subjectKey} from './subjects.mjs?v=2026.11.16.26';
 import {sessionSummary,learningStats} from './study-progress.mjs?v=2026.11.16.26';
 import {explanationKey} from './explanation-data.mjs?v=2026.11.16.26';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
-export function setupStudyTools({getBank,getSession,getHistory,saveBank,getBlob,media,resume,practice,base}){
+export function setupStudyTools({getReview=()=>[],startReview,getBank,getSession,getHistory,saveBank,getBlob,media,resume,practice,base}){
  const root=el('section',undefined,'study-tools'),resumeBox=el('div'),offlineBox=el('details',undefined,'card study-downloads');root.append(resumeBox);(document.getElementById('sharedMain')||document.getElementById('shared')).prepend(root);
  let downloading=false;
  const read=()=>{try{return JSON.parse(localStorage.getItem('sot-offline-packs')||'{}')}catch{return {}}};
  function render(){
   resumeBox.replaceChildren();const summary=sessionSummary(getSession());root.hidden=!summary;
-  if(summary){const card=el('article',undefined,'card study-resume'),body=el('div');body.append(el('h2','Bài đang dở'),el('p',`${summary.title} · ${summary.answered}/${summary.total} câu đã trả lời · đang ở câu ${summary.current}${summary.expired?' · Đã hết giờ':''}`));const button=el('button',summary.expired?'Xem bài đã hết giờ':'Học tiếp');button.onclick=resume;card.append(body,button);resumeBox.append(card)}
+  if(summary){const card=el('article',undefined,'card study-resume'),body=el('div');body.append(el('h2','Bài đang dở'),el('p',`${summary.title} · ${summary.answered}/${summary.total} câu đã trả lời · đang ở câu ${summary.current}${summary.expired?' · Đã hết giờ':''}`));const button=el('button',summary.expired?'Xem bài đã hết giờ':`Tiếp tục · ${summary.answered}/${summary.total} câu`);button.onclick=resume;card.append(body,button);resumeBox.append(card)}
+  const pending=getReview();root.hidden=!summary&&!pending.length;
+  if(pending.length){const card=el('article',undefined,'card study-review-queue'),body=el('div'),button=el('button',`Làm lại ${pending.length} câu cần ôn`);body.append(el('h2','Câu sai & bỏ trống'),el('p','Làm đúng trong lượt ôn lại sẽ tự bỏ câu khỏi danh sách. Danh sách lưu trên thiết bị này.'));button.disabled=!!summary;button.onclick=startReview;if(summary)button.title='Tiếp tục hoặc kết thúc bài đang làm trước.';card.append(body,button);resumeBox.append(card)}
   if(downloading)return;
   offlineBox.replaceChildren(el('summary','Bộ đề trên thiết bị · Offline & giải thích đã duyệt'));
   const groups=practiceSubjects(getBank()),packs=read();
