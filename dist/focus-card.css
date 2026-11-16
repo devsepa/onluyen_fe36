@@ -22,10 +22,10 @@
 .time-reel-wrap{display:inline-flex;align-items:center;justify-content:center;gap:1px;}
 .digit-flip-slot{perspective:180px;perspective-origin:50% 50%;display:inline-flex;align-items:center;justify-content:center;position:relative;width:0.68em;height:1.25em;overflow:hidden;vertical-align:middle;}
 .digit-val{backface-visibility:hidden;transform-origin:50% 55%;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;line-height:1;color:inherit;font-weight:800;will-change:transform,opacity;}
-.digit-exit{animation:digitFlipFadeExit .42s cubic-bezier(.22,1,.36,1) both;}
-.digit-enter{animation:digitFlipFadeEnter .42s cubic-bezier(.22,1,.36,1) both;}
-@keyframes digitFlipFadeExit{0%{transform:rotateX(0deg);opacity:1;}100%{transform:rotateX(-72deg);opacity:0;}}
-@keyframes digitFlipFadeEnter{0%{transform:rotateX(72deg);opacity:0;}100%{transform:rotateX(0deg);opacity:1;}}
+.digit-exit{animation:digitFlipFadeExit .62s cubic-bezier(.4,0,.2,1) both;}
+.digit-enter{animation:digitFlipFadeEnter .62s cubic-bezier(.4,0,.2,1) both;}
+@keyframes digitFlipFadeExit{0%{transform:rotateX(0deg) translateY(0);opacity:1;}35%{transform:rotateX(-8deg) translateY(-1px);opacity:.85;}100%{transform:rotateX(-32deg) translateY(-3px);opacity:0;}}
+@keyframes digitFlipFadeEnter{0%{transform:rotateX(32deg) translateY(3px);opacity:0;}65%{transform:rotateX(8deg) translateY(1px);opacity:.85;}100%{transform:rotateX(0deg) translateY(0);opacity:1;}}
 .reel-colon{display:inline-flex;align-items:center;justify-content:center;width:0.35em;height:1.25em;opacity:.85;color:#c084fc;font-weight:700;animation:reelColonBreath 1.5s infinite ease-in-out;}
 @keyframes reelColonBreath{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(0.9);}}
 @media(max-width:760px){
@@ -60,3 +60,15 @@ html .focus-card.is-playing .focus-eq i:nth-child(2){animation-delay:-.3s!import
 @media(max-width:760px){.study-workspace-tools{justify-items:center}.study-workspace-tools .card.focus-card{display:block;width:100%;max-width:340px;}}
 @media(prefers-reduced-motion:reduce){.focus-stars{animation:none!important;}}
 html.economy-mode .focus-stars{animation:none!important;}
+
+/* Keep the requested clock transition smooth independently of global decorative effects. */
+html #focusTime .digit-exit{animation:digitFlipFadeExit .62s cubic-bezier(.4,0,.2,1) both!important;}
+html #focusTime .digit-enter{animation:digitFlipFadeEnter .62s cubic-bezier(.4,0,.2,1) both!important;}
+html.economy-mode #focusTime .digit-exit,html.economy-mode #focusTime .digit-enter{animation-duration:.42s!important;}
+@keyframes digitSoftFadeExit{from{opacity:1}to{opacity:0}}
+@keyframes digitSoftFadeEnter{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ html #focusTime .digit-exit{animation:digitSoftFadeExit .18s ease-in-out both!important;}
+ html #focusTime .digit-enter{animation:digitSoftFadeEnter .18s ease-in-out both!important;}
+}
+@media(prefers-reduced-motion:reduce){html.economy-mode #focusTime .digit-exit,html.economy-mode #focusTime .digit-enter{animation-duration:.18s!important;}}

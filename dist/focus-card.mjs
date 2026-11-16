@@ -42,7 +42,8 @@ export function setupFocusCard({now=()=>new Date()}={}){
        const oldVal=slot.querySelector('.digit-val:not(.digit-exit)');
        if(oldVal){
          oldVal.className='digit-val digit-exit';
-         setTimeout(()=>oldVal.remove(),420);
+         oldVal.addEventListener('animationend',()=>oldVal.remove(),{once:true});
+         setTimeout(()=>oldVal.remove(),800);
        }
        const newVal=document.createElement('span');
        newVal.className='digit-val digit-enter';
