@@ -1,6 +1,7 @@
 import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.26';
 import { readyForPractice } from './ai.mjs?v=2026.11.16.26';
 import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.26';
+import {describeUserError} from './user-errors.mjs';
 
 function esc(value){return String(value??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)})}
@@ -183,7 +184,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  async function load(){
   if(loading)return;loading=true;$('deckStatus').textContent='Đang tải kho đề…';
   try{const nextItems=await(await deckRequest(base,'/v1/decks')).json();if(!Array.isArray(nextItems))throw Error('Không đọc được danh sách bộ đề.');items=nextItems;loadError=false;cards();$('deckStatus').textContent=''}
-  catch(error){loadError=true;cards();$('deckStatus').textContent=navigator.onLine?'Chưa kết nối được kho đề cộng đồng. Tải lại trang để thử lại.':'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
+  catch(error){loadError=true;cards();$('deckStatus').textContent=navigator.onLine?describeUserError(error,{service:'Kho cộng đồng',operation:'Tải danh sách bộ đề'}).text:'Đang offline. Bạn có thể ôn các bộ đã tải trong Bộ đề trên thiết bị.'}
   finally{loading=false;loadPreparation()}
  }
  if($('deckSearch'))$('deckSearch').oninput=cards;

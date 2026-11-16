@@ -1,5 +1,6 @@
 import {buildSlideReview,needsSlideReview,reviewLabels,manualReviewQuestion} from './import-review-data.mjs';
 import {createBrowserRecognizer} from './ocr-browser.js';
+import {contextualError} from './user-errors.mjs';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n};
 export function setupImportReview({mount,getImage,reloadSource,onApprove,canApprove}){
  const root=el('section',undefined,'card import-review');root.id='slideImportReview';root.hidden=true;mount.after(root);
@@ -37,7 +38,7 @@ export function setupImportReview({mount,getImage,reloadSource,onApprove,canAppr
  }
  async function checkImage(row,signal){
   try{const blob=await getImage(row.question,{signal,onWait:info=>{notice.textContent=`Slide ${row.slide}: Google đang điều tiết tải ảnh, chờ ${Math.ceil(info.ms/1000)} giây. Có thể dừng kiểm tra.`}});signal?.throwIfAborted();const url=URL.createObjectURL(blob);try{const image=new Image();image.src=url;await image.decode();signal?.throwIfAborted()}finally{URL.revokeObjectURL(url)}row.imageStatus='ok';if(row.imageError){row.reason='Ảnh đã tải lại thành công.';delete row.imageError}save();return blob}
-  catch(error){if(error.name!=='AbortError'){row.imageStatus='error';row.imageError=error.message;row.reason=error.message;save()}throw error}
+  catch(error){if(error.name==='AbortError')throw error;const detail=contextualError(error,{service:'Google',operation:'Kiểm tra ảnh',sourceName:row.question.sourceName,slide:row.slide});row.imageStatus='error';row.imageError=detail.message;row.reason=detail.message;save();throw detail}
  }
  async function scanImages(){
   const report=reports.find(r=>r.id===selected);if(!report?.slides)return;controller=new AbortController();const signal=controller.signal,epoch=generation;render();let count=0,errors=0;

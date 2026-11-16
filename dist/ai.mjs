@@ -1,5 +1,6 @@
 import {validateOptionReasons} from './explanation-data.mjs?v=2026.11.16.26';
 import {aiRateLimitError} from './ai-rate-limit.mjs?v=2026.11.16.26';
+import {contextualError} from './user-errors.mjs';
 const validSet=(answer,q)=>typeof answer==='string'&&/^[A-H]{1,8}$/.test(answer)&&new Set(answer).size===answer.length&&[...answer].every(label=>q.image||q.options.some(o=>o.id===label));
 export function questionFingerprint(q){return JSON.stringify([q.sourceId,q.url,q.stem,q.options.map(o=>[o.id,o.text])])}
 export function readyForPractice(q){return !!q.answer&&(q.verified===true||q.answerSource==='gemini')}
@@ -30,7 +31,10 @@ export async function blobToBase64(blob){
   reader.readAsDataURL(blob);
  });
 }
-export async function solveBatch(base,questions,token,{signal,fetcher=fetch,purpose}={}){
+export async function solveBatch(base,questions,token,options={}){
+ try{return await requestBatch(base,questions,token,options)}catch(error){if(!error.code&&/^AI (?:trả|chưa)/.test(error.message||''))error.code='AI_RESPONSE_INVALID';throw contextualError(error,{service:'AI',operation:options.purpose==='explanation'?'Tạo giải thích':'Bổ sung đáp án',...(questions.length===1?{sourceName:questions[0].sourceName,slide:questions[0].slide}:{})})}
+}
+async function requestBatch(base,questions,token,{signal,fetcher=fetch,purpose}={}){
  const url=new URL(base);if(url.protocol!=='https:'&&!(url.protocol==='http:'&&['127.0.0.1','localhost'].includes(url.hostname)))throw Error('Dịch vụ AI chưa sẵn sàng.');
  const headers={'Content-Type':'application/json'};
  if(token)headers['Authorization']=`Bearer ${token}`;

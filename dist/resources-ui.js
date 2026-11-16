@@ -7,6 +7,7 @@ import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.26';
 import {directSlideImage} from './direct-slide-image.mjs?v=2026.11.16.26';
 import {detailsFromNotes,speakerNotesText,cleanQuestion} from './core.mjs?v=2026.11.16.26';
 import {setupImportReview} from './import-review.mjs';
+import {contextualError} from './user-errors.mjs';
 
 const $=id=>document.getElementById(id);
 export function setupResources({message,onImport,onDeferredQuestion=()=>false,onManualApprove=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
@@ -53,12 +54,13 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
   const signal=externalSignal||(controller?.signal.aborted?undefined:controller?.signal),thumbnail=url.includes('/thumbnail?');
   for(let attempt=0;attempt<5;attempt++){
   if(thumbnail)await thumbnailQueue.reserve(signal,onWait);
-  if(!active())throw Object.assign(Error('Phiên Google đã hết hạn. Bấm Kết nối Google để tiếp tục.'),{ocrFatal:true});
-  const r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal});
+  const context={service:'Google',operation:thumbnail?'Tải ảnh slide':url.includes('/drive/')?'Tìm tài liệu':'Đọc tài liệu'};
+  if(!active())throw contextualError({status:401,ocrFatal:true},context);
+  let r;try{r=await fetch(url,{headers:{Authorization:`Bearer ${token}`},signal})}catch(error){throw contextualError(error,context)}
   if((r.status===429||r.status>=500)&&attempt<4){const header=r.headers.get('Retry-After'),after=header?(Number.isFinite(Number(header))?Number(header)*1000:Math.max(0,Date.parse(header)-Date.now())):0,ms=Math.max(after||0,r.status===429?60000:2**attempt*1000+Math.random()*500);if(thumbnail&&r.status===429)thumbnailQueue.pause(ms);onWait({ms,reason:r.status===429?'quota':'network'});await delay(ms,signal);continue;}
   if(!r.ok){
-   if(r.status===401){expireConnection();throw Object.assign(Error('Quyền đọc Google đã hết hạn. Kết nối lại ở ảnh đại diện khi cần đọc slide; câu đã lưu vẫn ôn bình thường.'),{ocrFatal:true});}
-   if(r.status===403||r.status===404)throw Error('Chưa truy cập được tài liệu. Hãy dùng đúng tài khoản Google có quyền xem tài liệu rồi thử lại.');
+   if(r.status===401){expireConnection();const error=contextualError({status:401,ocrFatal:true},context);onAccountError(error.message);throw error;}
+   if(r.status===403||r.status===404)throw contextualError({status:r.status},context);
    throw Object.assign(Error(r.status===429?'Google đang giới hạn lượt tải ảnh (429). Phần tải lên đã có được giữ lại; hãy tiếp tục sau.':`Google trả lỗi ${r.status}. Hãy thử lại.`),{status:r.status});
   }
   return r.json();
@@ -242,8 +244,8 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
   const url=await slideImage(q,options);
   let response;try{response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}catch(error){if(error.name==='AbortError')throw error}
   if(!response||[401,403,404].includes(response.status)){thumbnailCache.delete(q.url);response=await fetch(await slideImage(q,{...options,forceThumbnail:true}),{credentials:'omit',referrerPolicy:'no-referrer',signal:options.signal})}
-  if(!response.ok)throw Error('Chưa tải được ảnh gốc.');
-  const blob=await response.blob();if(!blob.type.startsWith('image/'))throw Error('Google chưa trả nội dung ảnh hợp lệ.');
+  if(!response.ok)throw contextualError({status:response.status},{service:'Google',operation:'Tải ảnh gốc',sourceName:q.sourceName,slide:q.slide});
+  const blob=await response.blob();if(!blob.type.startsWith('image/'))throw contextualError({code:'IMAGE_INVALID'},{service:'Google',operation:'Tải ảnh gốc',sourceName:q.sourceName,slide:q.slide});
   if(!['image/png','image/jpeg','image/webp'].includes(blob.type)&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   if(options.maxBytes&&blob.size>options.maxBytes&&!options.forceThumbnail)return loadSlideBlob(q,{...options,forceThumbnail:true});
   return blob;

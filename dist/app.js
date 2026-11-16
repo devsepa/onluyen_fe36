@@ -1,4 +1,5 @@
 import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.26';
+import {describeUserError,contextualError} from './user-errors.mjs';
 import {labelsFromImageText,resizeQuestionChoices} from './question-choices.mjs';
 import {createBrowserRecognizer} from './ocr-browser.js';
 import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.26';
@@ -198,9 +199,9 @@ function write(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
     if(key==='sot-bank'){libraryGeneration++;libraryManager?.changed()}
     return true;
-  } catch {
+  } catch (error) {
     message(
-      "Không thể lưu dữ liệu. Hãy kiểm tra dung lượng lưu trữ trên trình duyệt.",
+      describeUserError(error,{operation:key==='sot-bank'?'Lưu ngân hàng câu hỏi':key==='sot-session'?'Lưu bài đang làm':key==='sot-history'?'Lưu kết quả':'Lưu dữ liệu trên thiết bị'}).text,
     );
     return false;
   }
@@ -553,7 +554,7 @@ async function showQuestionImage(container, q) {
       slideImages.invalidate(
         q.mediaId?`local:${q.mediaId}`:q.sharedDeck ? `shared:${q.sharedDeck}:${q.sharedIndex}` : q.url,
       );
-      showSlideError(container, q);
+      showSlideError(container, q, {code:'IMAGE_DECODE_FAILED'});
     };
     image.src = url;
     if (image.complete && image.naturalWidth > 0) {
@@ -566,13 +567,12 @@ async function showQuestionImage(container, q) {
     }
   } catch(error) {
     if(error.name!=='AbortError'&&!error.imageReported)telemetry.record('image_error');
-    if (container.isConnected) showSlideError(container, q);
+    if (container.isConnected) showSlideError(container, q, error);
   }
 }
-function showSlideError(container, q) {
-  container.innerHTML = q.sharedDeck
-    ? "<p>Chưa tải được ảnh từ kho chung. Kiểm tra kết nối rồi thử lại; bộ đề có thể đã được người đăng gỡ.</p>"
-    : "<p>Chưa tải được ảnh slide gốc. Bạn cần đăng nhập tài khoản Google để tải ảnh từ tài liệu này (phiên đăng nhập có thể đã hết hạn).</p>";
+function showSlideError(container, q, error={}) {
+  const detail=describeUserError(error,{service:q.sharedDeck?'Kho cộng đồng':'Google',operation:'Tải ảnh câu hỏi',sourceName:q.sourceName,slide:q.slide});
+  const text=document.createElement('p');text.className='actionable-error';text.textContent=detail.text;container.replaceChildren(text);
   container.classList.add("slide-load-error");
   const retry = document.createElement("button");
   retry.className = "secondary";
@@ -584,14 +584,7 @@ function showSlideError(container, q) {
   };
   container.append(retry);
   const report=document.createElement('button');report.type='button';report.className='secondary';report.textContent='Báo lỗi ảnh';report.dataset.reportQuestion=q.id;container.append(report);
-  if (!q.sharedDeck) {
-    const loginBtn = document.createElement("button");
-    loginBtn.className = "primary";
-    loginBtn.type = "button";
-    loginBtn.textContent = "Đăng nhập Google";
-    loginBtn.onclick = () => $("accountButton")?.click();
-    container.append(loginBtn);
-  }
+  const copy=document.createElement('button');copy.type='button';copy.className='secondary';copy.textContent='Sao chép thông tin lỗi';copy.onclick=async()=>{try{await navigator.clipboard.writeText(detail.text);copy.textContent='Đã sao chép'}catch{copy.textContent='Hãy chụp ảnh mã lỗi để gửi'}};container.append(copy);
   const link = document.createElement("a");
   link.href = q.url;
   link.target = "_blank";
@@ -1584,7 +1577,7 @@ const explanationQueue=createExplanationQueue({storage:{getItem:key=>localStorag
   const result=await solveBatch(AI_API_BASE,[submitted],token,{signal:requestSignal,purpose:'explanation'});
   telemetry.record('ai_ms',performance.now()-started);telemetry.record(result.answers[0].reused?'shared_hit':'shared_miss');
   return normalizeExplanation(q,result.answers[0]);
- }catch(error){if(error.name!=='AbortError')telemetry.record('ai_error');if(error.name==='TimeoutError')throw Error('AI phản hồi chậm. Bạn có thể tiếp tục làm bài hoặc bấm Thử lại.');throw error}
+ }catch(error){if(error.name!=='AbortError')telemetry.record('ai_error');if(!error.code&&/^AI (?:trả|chưa)/.test(error.message||''))error.code='AI_RESPONSE_INVALID';throw contextualError(error,{service:error.service||'AI',operation:'Giải thích câu hỏi',sourceName:q.sourceName,slide:q.slide})}
 },onChange:(question,state)=>{
  if(state.status==='ready'){
   const key=explanationKey(question),apply=q=>{if(explanationKey(q)!==key)return false;if(hasSpeakerNoteExplanation(q))return false;const details={...state.details,key};if(q.explanation===state.details.reason&&q.explanationSource==='gemini'&&JSON.stringify(q.explanationDetails)===JSON.stringify(details))return false;q.explanation=state.details.reason;q.explanationSource='gemini';q.explanationDetails=details;return true};
