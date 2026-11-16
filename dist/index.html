@@ -10,20 +10,20 @@
  </script>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
- <meta name="app-version" content="2026.11.16.23">
+ <meta name="app-version" content="2026.11.16.24">
  <link rel="icon" type="image/jpeg" href="logo.jpg">
  <link rel="apple-touch-icon" href="logo.jpg"><link rel="manifest" href="./manifest.json">
- <link rel="stylesheet" href="app.css?v=2026.11.16.23"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.16.23"><link rel="stylesheet" href="library-manager.css?v=2026.11.16.23"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.16.23"></script>
- <link rel="stylesheet" href="quality.css?v=2026.11.16.23">
- <link rel="stylesheet" href="resource-saving.css?v=2026.11.16.23"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.16.23">
- <link rel="stylesheet" href="navigation-polish.css?v=2026.11.16.23">
- <link rel="stylesheet" href="interactions.css?v=2026.11.16.23">
- <link rel="stylesheet" href="workspace-layout.css?v=2026.11.16.23">
- <link rel="stylesheet" href="focus-card.css?v=2026.11.16.23">
- <link rel="stylesheet" href="compact-player.css?v=2026.11.16.23">
- <link rel="stylesheet" href="mobile-header.css?v=2026.11.16.23">
- <link rel="stylesheet" href="mobile-focus-pin.css?v=2026.11.16.23">
- <link rel="stylesheet" href="focus-video.css?v=2026.11.16.23">
+ <link rel="stylesheet" href="app.css?v=2026.11.16.24"><link rel="stylesheet" href="study-enhancements.css?v=2026.11.16.24"><link rel="stylesheet" href="library-manager.css?v=2026.11.16.24"><script src="https://accounts.google.com/gsi/client" async defer></script><script type="module" src="ambient-background.mjs?v=2026.11.14.34"></script><script type="module" src="app.js?v=2026.11.16.24"></script>
+ <link rel="stylesheet" href="quality.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="resource-saving.css?v=2026.11.16.24"><link rel="stylesheet" href="quiz-usability.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="navigation-polish.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="interactions.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="workspace-layout.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="focus-card.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="compact-player.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="mobile-header.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="mobile-focus-pin.css?v=2026.11.16.24">
+ <link rel="stylesheet" href="focus-video.css?v=2026.11.16.24">
 </head>
 <body>
  <div class="app-ambient-bg" aria-hidden="true" id="appAmbientBg">
@@ -134,7 +134,7 @@
        <div class="yt-timeline-box"><div class="yt-timeline-row"><span id="ytCurrentTime" class="yt-time-text">00:00</span><input type="range" id="ytSeekBar" disabled class="yt-seek-slider" min="0" max="100" value="0" step="0.1" aria-label="Tua thời gian bài hát"><span id="ytTotalTime" class="yt-time-text">--:--</span></div></div>
        <div class="compact-transport"><button type="button" class="yt-quick-btn compact-restart" id="ytSeekRestartBtn" disabled title="Bắt đầu lại từ đầu" aria-label="Bắt đầu lại từ đầu">↺</button><button type="button" class="yt-quick-btn" id="ytSeekBackBtn" disabled title="Tua lùi 30 giây">⏮ −30s</button><button type="button" id="ytPlayBtn" class="yt-main-play-btn" aria-label="Phát nhạc" title="Phát nhạc"><span id="ytPlayIcon" aria-hidden="true">▶</span><span id="ytPlayText" class="compact-sr-only">Phát nhạc</span></button><button type="button" class="yt-quick-btn" id="ytSeekFwdBtn" disabled title="Tua tới 30 giây">+30s ⏭</button></div>
        <div class="compact-volume"><span aria-hidden="true">◖))</span><input type="range" id="ambienceVolSlider" min="0" max="100" value="50" aria-label="Âm lượng nhạc"><span id="ambienceVolPercent">50%</span></div>
-       <details class="yt-custom-box" id="ytCustomOptions"><summary>Tùy chọn âm thanh</summary><label class="sound-toggle-row"><span>Âm chuông khi trả lời</span><input type="checkbox" id="celestaSoundCheck" checked></label><label class="compact-link-label" for="ytUrlInput">Đổi video YouTube</label><div class="yt-input-row"><input type="url" id="ytUrlInput" placeholder="Dán link YouTube…" aria-label="Link YouTube"><button type="button" id="ytLoadBtn" class="secondary">Nạp</button></div><div id="ytInputMsg" class="yt-input-msg" hidden></div><button type="button" id="ytResetBtn" class="yt-sec-btn" hidden>↺ Video mặc định</button></details>
+       <details class="yt-custom-box" id="ytCustomOptions"><summary>Tùy chọn âm thanh</summary><label class="sound-toggle-row"><span>Âm chuông khi trả lời</span><input type="checkbox" id="celestaSoundCheck" checked></label><label class="sound-toggle-row"><span>Lời chào giọng nói khi vào</span><input type="checkbox" id="welcomeVoiceCheck" checked></label><button type="button" id="btnTestVoice" class="text-button" style="display:inline-flex;padding:4px 0;font-size:11px;color:var(--accent)">▶ Nghe thử lời chào</button><label class="compact-link-label" for="ytUrlInput">Đổi video YouTube</label><div class="yt-input-row"><input type="url" id="ytUrlInput" placeholder="Dán link YouTube…" aria-label="Link YouTube"><button type="button" id="ytLoadBtn" class="secondary">Nạp</button></div><div id="ytInputMsg" class="yt-input-msg" hidden></div><button type="button" id="ytResetBtn" class="yt-sec-btn" hidden>↺ Video mặc định</button></details>
       </div>
     </div>
     <button id="themeToggle" class="icon-button theme-toggle-btn" type="button" aria-label="Đổi giao diện Sáng / Tối" title="Đổi giao diện Sáng / Tối"><span id="themeIcon">🌓</span></button>
@@ -144,7 +144,7 @@
   <div class="page-content">
    <section class="page-heading" id="pageHeading">
       <div class="heading-left-block">
-        <div class="streak-badge"><span class="streak-icon">🔥</span><span class="streak-text">Chuỗi ôn thi: 1 ngày liên tục</span></div>
+        <div class="heading-badges-row"><div class="streak-badge"><span class="streak-icon">🔥</span><span class="streak-text">Chuỗi ôn thi: 1 ngày liên tục</span></div><button id="btnWelcomeVoicePill" class="voice-welcome-pill" type="button" title="Bấm để nghe lời chào"><span class="voice-icon">🔊</span><span id="voiceGreetingSummary">Lời chào</span></button></div>
         <h1 id="pageTitle">Kho đề & Ôn luyện</h1>
         <p id="pageDescription" class="page-description" hidden></p>
       </div>

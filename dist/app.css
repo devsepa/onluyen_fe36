@@ -298,6 +298,47 @@ body.sidebar-collapsed .topbar {
   font-size: 13px;
   filter: drop-shadow(0 0 4px #f59e0b);
 }
+.heading-badges-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: fit-content;
+}
+.voice-welcome-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(139, 92, 246, 0.16);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  padding: 3.5px 12px;
+  border-radius: 9999px;
+  color: #c4b5fd;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.15);
+}
+.voice-welcome-pill:hover {
+  background: rgba(139, 92, 246, 0.32);
+  border-color: rgba(167, 139, 250, 0.7);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 0 16px rgba(167, 139, 250, 0.35);
+}
+.voice-welcome-pill:active {
+  transform: translateY(0);
+}
+.voice-welcome-pill.is-speaking {
+  animation: voicePulseGlow 1.2s infinite alternate ease-in-out;
+  border-color: #c084fc;
+  color: #ffffff;
+}
+@keyframes voicePulseGlow {
+  from { box-shadow: 0 0 6px rgba(167, 139, 250, 0.4); }
+  to { box-shadow: 0 0 18px rgba(192, 132, 252, 0.85); transform: scale(1.03); }
+}
 .page-heading h1 {
   font-size: 26px;
   font-weight: 800;

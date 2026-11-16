@@ -1,4 +1,4 @@
-import {parsePresentation,detailsFromNotes} from './core.mjs?v=2026.11.16.23';
+import {parsePresentation,detailsFromNotes} from './core.mjs?v=2026.11.16.24';
 export function fastSlideKind(page,native,notes){
  if(native?.options?.length>=2&&native.options.every(o=>o.text?.trim()))return 'question';
  const text=(page.preview||'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
