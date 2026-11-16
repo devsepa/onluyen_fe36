@@ -1,27 +1,23 @@
-﻿{
-  "name": "Slide Ôn Thi",
-  "short_name": "ÔnThi",
-  "description": "Biến slide bài giảng thành ngân hàng tri thức - Vùng vẫy làm chủ mọi kỳ thi",
-  "start_url": "/onluyen_fe36/",
-  "scope": "/onluyen_fe36/",
-  "display": "standalone",
-  "orientation": "portrait-primary",
-  "background_color": "#1a1b2e",
-  "theme_color": "#6366f1",
-  "icons": [
-    {
-      "src": "logo.jpg",
-      "sizes": "192x192",
-      "type": "image/jpeg",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "logo.jpg",
-      "sizes": "512x512",
-      "type": "image/jpeg",
-      "purpose": "any"
-    }
-  ],
-  "categories": ["education"],
-  "lang": "vi"
+{
+    "name":  "FE36",
+    "short_name":  "FE36",
+    "description":  "Biến slide bài giảng thành ngân hàng tri thức - Vùng vẫy làm chủ mọi kỳ thi",
+    "start_url":  "/onluyen_fe36/",
+    "scope":  "/onluyen_fe36/",
+    "display":  "standalone",
+    "orientation":  "portrait-primary",
+    "background_color":  "#1a1b2e",
+    "theme_color":  "#102c38",
+    "icons":  [
+                  {
+                      "purpose":  "any",
+                      "type":  "image/svg+xml",
+                      "sizes":  "any",
+                      "src":  "fe36-orbit.svg"
+                  }
+              ],
+    "categories":  [
+                       "education"
+                   ],
+    "lang":  "vi"
 }
