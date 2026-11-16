@@ -1,7 +1,7 @@
 // Universal Document / Image Exam Parser
 // Supports: PDF, Images (PNG, JPG, WebP), Word (.docx text), Plain text (.txt)
 // Extracts and splits exam questions with options (A, B, C, D) and auto-detects answers
-import {normalizeAnswer} from './core.mjs?v=2026.11.16.15';
+import {normalizeAnswer} from './core.mjs?v=2026.11.16.17';
 
 export async function parseExamFile(file, { onProgress = () => {}, aiBase = '' } = {}) {
   const ext = file.name.split('.').pop().toLowerCase();

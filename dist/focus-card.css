@@ -1,4 +1,4 @@
-﻿.focus-card{--sky-top:#0b1738;--sky-bottom:#514d9e;--ridge-far:#6663b4;--ridge-mid:#323e78;--ridge-near:#172c50;--forest:#07182b;--focus-ink:#f2f3ff;}
+.focus-card{--sky-top:#0b1738;--sky-bottom:#514d9e;--ridge-far:#6663b4;--ridge-mid:#323e78;--ridge-near:#172c50;--forest:#07182b;--focus-ink:#f2f3ff;}
 .study-workspace-tools .card.focus-card{position:relative;isolation:isolate;overflow:hidden;border-radius:19px;padding:18px 10px 11px;min-height:340px;background:var(--sky-top);color:var(--focus-ink);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));}
 .focus-card[data-period=dawn]{--sky-top:#5e638c;--sky-bottom:#f6b6a1;--ridge-far:#ad8caa;--ridge-mid:#6a6488;--ridge-near:#404f73;--forest:#26354e;}
 .focus-card[data-period=morning]{--sky-top:#74afd0;--sky-bottom:#e3e5bb;--ridge-far:#92b1b0;--ridge-mid:#5e8c96;--ridge-near:#376675;--forest:#1c4457;--focus-ink:#102c44;}

@@ -1,0 +1,31 @@
+﻿/* On phones, keep the existing clock/player above the catalog and within reach. */
+@media(max-width:760px){
+ .study-workspace:not([hidden]){row-gap:18px;}
+ .study-workspace>.study-workspace-tools{grid-row:1;position:sticky;top:8px;z-index:12;align-self:start;justify-items:stretch;}
+ .study-workspace>.study-workspace-main{grid-row:2;}
+ .study-workspace-tools .card.focus-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);align-items:center;gap:8px;width:100%;max-width:none;min-height:0;padding:10px;border-radius:15px;box-shadow:0 8px 24px #07112644;}
+ .focus-card .focus-landscape{width:46%;height:100%;}
+ .focus-card .focus-mountains{height:140px;}
+ .focus-card .focus-orb{width:20px;height:20px;right:14px;top:auto;bottom:12px;}
+ .focus-card[data-period=dawn] .focus-orb,.focus-card[data-period=sunset] .focus-orb{top:auto;bottom:12px;}
+ .study-workspace-tools .focus-clock{min-width:0;min-height:0;padding:4px 0;align-self:center;}
+ .study-workspace-tools .focus-clock h2{font-size:11px;line-height:1.5;}
+ .focus-card .focus-period-label{font-size:9px;margin-top:2px;}
+ .focus-card .focus-clock #topbarClock{margin-top:12px;}
+ .focus-card .focus-time{font-size:20px;gap:0;letter-spacing:0;}
+ .focus-card .time-reel-wrap{gap:1px;}
+ .focus-card .time-reel-group{gap:0;}
+ .focus-card .reel-digit-col,.focus-card .reel-digit-num{width:12px;height:28px;}
+ .focus-card .reel-colon{width:7px;height:28px;}
+ .focus-card .focus-player{min-width:0;padding:8px;border-radius:12px;}
+ .focus-card .focus-settings{min-height:24px;font-size:10px;gap:3px;}
+ .focus-card .focus-settings span{font-size:10px;}
+ .focus-card .focus-track-row{margin:2px 0 5px;min-height:24px;gap:5px;}
+ .focus-card .focus-track-row #studyMusicTitle{font-size:10px;}
+ .focus-card .focus-eq{height:14px;gap:2px;}
+ .focus-card .focus-eq i{width:3px;}
+ .focus-card .focus-transport{gap:0;padding:3px 0;border-radius:9px;}
+ .focus-card .focus-transport button{min-width:44px;min-height:44px;width:44px;padding:0;font-size:15px;}
+ .focus-card .focus-transport .focus-play{min-width:36px;width:36px;min-height:36px;height:36px;font-size:17px;}
+}
+@media(max-width:760px){.focus-card .focus-transport .focus-play{min-width:44px;width:44px;min-height:44px;height:44px;}}

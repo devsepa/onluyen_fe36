@@ -1,4 +1,4 @@
-﻿export function focusPeriod(hour){
+export function focusPeriod(hour){
  if(hour>=5&&hour<7)return 'dawn';
  if(hour>=7&&hour<11)return 'morning';
  if(hour>=11&&hour<16)return 'day';
@@ -26,8 +26,8 @@ export function setupFocusCard({now=()=>new Date()}={}){
    const digits=(h+m+s).split('');
    digits.forEach((d,idx)=>{
      if(idx>=cols.length)return;
-     const col=cols[idx],strip=strips[idx],h=col.clientHeight||38;
-     strip.style.transform=`translateY(-${parseInt(d,10)*h}px)`;
+     const col=cols[idx],strip=strips[idx];
+     strip.style.transform=`translateY(-${parseInt(d,10)*10}%)`;
      if(lastDigits[idx]!==''&&lastDigits[idx]!==d){
        col.classList.remove('is-springing');
        void col.offsetWidth;

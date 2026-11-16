@@ -1,26 +1,26 @@
-import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.15';
-import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.15';
-import {setupStudyTools} from './study-tools.mjs?v=2026.11.16.15';
-import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.16.15';
-import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.16.15';
-import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.16.15';
-import { parseExamFile } from './universal-parser.mjs?v=2026.11.16.15';
-import {setupLibraryManager} from './library-manager.mjs?v=2026.11.16.15';
-import {createLibraryMedia} from './library-media.mjs?v=2026.11.16.15';
-import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.15';
-import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.16.15';
-import {createStudySelection} from './study-selection.mjs?v=2026.11.16.15';
-import {createTelemetry} from './telemetry.mjs?v=2026.11.16.15';
-import {setupQuality} from './quality-ui.mjs?v=2026.11.16.15';
-import {createBankTracker} from './library-data.mjs?v=2026.11.16.15';
-import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.16.15';
-import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.16.15';
-import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.16.15';
-import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.16.15';
-import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.16.15';
-import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.16.15";
-import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.16.15";
-import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.16.15";
+import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.17';
+import {createCompletionGate} from './completion-gate.mjs?v=2026.11.16.17';
+import {setupStudyTools} from './study-tools.mjs?v=2026.11.16.17';
+import {renderClockPillHtml, setupClockWidget} from './clock-widget.mjs?v=2026.11.16.17';
+import {setupAmbientBackground} from './ambient-background.mjs?v=2026.11.16.17';
+import {installViewportSizing} from './viewport-sizing.mjs?v=2026.11.16.17';
+import { parseExamFile } from './universal-parser.mjs?v=2026.11.16.17';
+import {setupLibraryManager} from './library-manager.mjs?v=2026.11.16.17';
+import {createLibraryMedia} from './library-media.mjs?v=2026.11.16.17';
+import {createSlideBlobCache} from './slide-blob-cache.mjs?v=2026.11.16.17';
+import {createResourcePolicy,mountResourceControl} from './resource-policy.mjs?v=2026.11.16.17';
+import {createStudySelection} from './study-selection.mjs?v=2026.11.16.17';
+import {createTelemetry} from './telemetry.mjs?v=2026.11.16.17';
+import {setupQuality} from './quality-ui.mjs?v=2026.11.16.17';
+import {createBankTracker} from './library-data.mjs?v=2026.11.16.17';
+import {fitSlideImage,disposeSlideFitting} from './slide-fit.mjs?v=2026.11.16.17';
+import {createExplanationQueue} from './explanation-queue.mjs?v=2026.11.16.17';
+import {explanationKey,normalizeExplanation,hasNoteExplanation,hasSpeakerNoteExplanation,upcomingExplanationQuestions} from './explanation-data.mjs?v=2026.11.16.17';
+import {renderQuizFeedback} from './quiz-feedback.mjs?v=2026.11.16.17';
+import {setupVersionUpdates} from './version-updates.mjs?v=2026.11.16.17';
+import { askConfirm } from "./confirm-dialog.mjs?v=2026.11.16.17";
+import { practiceSubjects, subjectKey } from "./subjects.mjs?v=2026.11.16.17";
+import { nextUnanswered, explanationFromResult } from "./study-flow.mjs?v=2026.11.16.17";
 import {
   shuffle,
   grade,
@@ -31,30 +31,30 @@ import {
   isCorrect,
   confirmQuestion,
   updateQuestionContent,
-} from "./core.mjs?v=2026.11.16.15";
-import { setupResources } from "./resources-ui.js?v=2026.11.16.15";
-import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.15';
-import { presentationIdFromLink } from "./resources.mjs?v=2026.11.16.15";
-import { validateBank } from "./banks.mjs?v=2026.11.16.15";
-import { setupAccount } from "./account-ui.js?v=2026.11.16.15";
-import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.16.15";
+} from "./core.mjs?v=2026.11.16.17";
+import { setupResources } from "./resources-ui.js?v=2026.11.16.17";
+import {mergeQuestionBanks,bankQuestionKey} from './bank-merge.mjs?v=2026.11.16.17';
+import { presentationIdFromLink } from "./resources.mjs?v=2026.11.16.17";
+import { validateBank } from "./banks.mjs?v=2026.11.16.17";
+import { setupAccount } from "./account-ui.js?v=2026.11.16.17";
+import { AI_API_BASE, DATA_API_BASE } from "./site-config.mjs?v=2026.11.16.17";
 import {
   solveBatch,
   applyAiResults,
   readyForPractice,
   blobToBase64,
-} from "./ai.mjs?v=2026.11.16.15";
-import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.16.15";
-import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.16.15";
+} from "./ai.mjs?v=2026.11.16.17";
+import { createSlideImageStore } from "./slide-images.mjs?v=2026.11.16.17";
+import { setupSlidePreview } from "./slide-preview.mjs?v=2026.11.16.17";
 import {
   setupSharedDecks,
   deckRequest,
   sharedImagePath,
-} from "./shared-decks.mjs?v=2026.11.16.15";
-import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.16.15";
-import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.16.15";
-import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.16.15";
-import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.15";
+} from "./shared-decks.mjs?v=2026.11.16.17";
+import { fitQuizScreen } from "./quiz-screen.mjs?v=2026.11.16.17";
+import { createQuizSound } from "./quiz-sound.mjs?v=2026.11.16.17";
+import { createYouTubeStudyAudio, DEFAULT_YOUTUBE_VIDEO_ID } from "./study-youtube.mjs?v=2026.11.16.17";
+import { setupSidebar } from "./sidebar.mjs?v=2026.11.16.17";
 
 const $ = (id) => document.getElementById(id);
 let studyTools;
