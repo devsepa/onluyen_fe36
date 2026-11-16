@@ -14,7 +14,7 @@ export function playCompletionGame({mode:gameMode='study',theme='light',soundEna
   try{
 
  const $=id=>id==='game'?dialog:root.getElementById(id),canvas=$('board'),ctx=canvas.getContext('2d'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
- let mode=gameMode,phase='closed',w=0,h=0,dpr=1,origin,target,box,velocity,gravity=500,maxPull=100,factor=5,defaultAngle=50,angle=50,power=.76,drag=null,shots=0,rotation=0,frame=0,lastTime=0,phaseTime=0,flightTime=0,trail=[],particles=[],sound=soundEnabled,audio=null,misses=0,dodged=alreadyDodged,dodge=null,evadedThisShot=false,targetFraction=.77,impact=null;
+ let mode=gameMode,phase='closed',w=0,h=0,dpr=1,origin,target,box,velocity,gravity=500,maxPull=100,factor=5,defaultAngle=50,angle=50,power=.76,drag=null,shots=0,rotation=0,frame=0,lastTime=0,phaseTime=0,flightTime=0,trail=[],particles=[],sound=soundEnabled,audio=null,misses=0,targetDodgesRequired=(alreadyDodged?0:(Math.random()<0.5?0:1)),dodged=alreadyDodged||(targetDodgesRequired===0),dodge=null,evadedThisShot=false,targetFraction=.68,impact=null;
  const dark=theme==='dark';
  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v)),mix=(a,b,t)=>a+(b-a)*t;
  function round(x,y,width,height,r=8){ctx.beginPath();ctx.roundRect(x,y,width,height,r)}
@@ -27,8 +27,8 @@ export function playCompletionGame({mode:gameMode='study',theme='light',soundEna
  }
  function currentVelocity(){if(drag)return{x:(origin.x-box.x)*factor,y:(origin.y-box.y)*factor};const speed=maxPull*factor*power,r=angle*Math.PI/180;return{x:Math.cos(r)*speed,y:-Math.sin(r)*speed}}
  function updateControls(){canvas.classList.toggle('dragging',!!drag);canvas.dataset.phase=phase;$('attempts').textContent=shots?'Lượt bắn '+shots:'Kéo và thả để bắt đầu'}
- function reset(count=false){if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;if(count){shots=0;misses=0;dodged=false;targetFraction=.77}phase='ready';$('success').hidden=true;drag=null;trail=[];particles=[];impact=null;rotation=0;resize(true);box={x:origin.x,y:origin.y,side:box.side};angle=defaultAngle;power=.76;updateControls();setStatus(dodged&&shots?'Thùng đứng yên rồi. Bắn lần nữa nhé!':'Kéo hộp về sau rồi thả');draw()}
- function open(){dialog.showModal();phase='ready';shots=0;misses=0;dodged=alreadyDodged;targetFraction=.77;dodge=null;$('success').hidden=true;$('modeLabel').textContent=(mode==='study'?'Ôn luyện':'Thi thử')+' · '+answered+'/'+total+' câu đã trả lời';resize(true);canvas.focus({preventScroll:true})}
+ function reset(count=false){if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;if(count){shots=0;misses=0;targetDodgesRequired=Math.random()<0.5?0:1;dodged=(targetDodgesRequired===0);targetFraction=.68}phase='ready';$('success').hidden=true;drag=null;trail=[];particles=[];impact=null;rotation=0;resize(true);box={x:origin.x,y:origin.y,side:box.side};angle=defaultAngle;power=.76;updateControls();setStatus(dodged&&shots?'Thùng đứng yên rồi. Bắn lần nữa nhé!':'Kéo hộp về sau rồi thả');draw()}
+ function open(){dialog.showModal();phase='ready';shots=0;misses=0;targetDodgesRequired=(alreadyDodged?0:(Math.random()<0.5?0:1));dodged=alreadyDodged||(targetDodgesRequired===0);targetFraction=.68;dodge=null;$('success').hidden=true;$('modeLabel').textContent=(mode==='study'?'Ôn luyện':'Thi thử')+' · '+answered+'/'+total+' câu đã trả lời';resize(true);canvas.focus({preventScroll:true})}
  function close(){phase='closed';drag=null;if(frame)cancelAnimationFrame(frame);frame=0;lastTime=0;settle(false)}
  $('closeGame').onclick=close;$('back').onclick=close;dialog.addEventListener('cancel',e=>{e.preventDefault();close()});$('again').onclick=()=>{reset(true);canvas.focus({preventScroll:true})};
  function ensureAudio(){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();audio.resume().catch(()=>{})}catch{}}
@@ -41,10 +41,23 @@ export function playCompletionGame({mode:gameMode='study',theme='light',soundEna
  canvas.addEventListener('pointercancel',()=>{if(drag&&phase==='ready')reset()});canvas.addEventListener('lostpointercapture',()=>{if(drag&&phase==='ready')reset()});
  function fire(v=currentVelocity()){if(phase!=='ready')return;ensureAudio();velocity=v;drag=null;phase='flying';evadedThisShot=false;phaseTime=0;flightTime=0;shots++;trail=[];setStatus('Chiếc hộp đang bay…');updateControls();lastTime=0;animate()}
  function beginDodge(){
-  const distance=Math.max(target.width*.98,box.side*1.2+target.width*.5),minTargetX=Math.max(target.width/2+12,origin.x+box.side*1.5+target.width/2+16),maximum=w-target.width/2-12;
-  const candidates=[target.x-distance,target.x+distance].filter(x=>x>=minTargetX&&x<=maximum),to=candidates.length?candidates[Math.floor(Math.random()*candidates.length)]:clamp(target.x+distance,minTargetX,maximum);
+  const minTargetX=Math.max(target.width/2+12,origin.x+box.side*1.5+target.width/2+16),maximum=w-target.width/2-12;
+  const distance=Math.max(target.width*.98,box.side*1.2+target.width*.5);
+  const leftRoom=target.x-minTargetX,rightRoom=maximum-target.x;
+  const minShift=Math.max(target.width*.65,box.side+10);
+  let dir;
+  if(leftRoom>=minShift&&rightRoom>=minShift){
+    dir=Math.random()<0.5?-1:1;
+  }else if(rightRoom>=minShift){
+    dir=1;
+  }else if(leftRoom>=minShift){
+    dir=-1;
+  }else{
+    dir=rightRoom>leftRoom?1:-1;
+  }
+  const to=dir<0?clamp(target.x-Math.min(distance,leftRoom),minTargetX,maximum):clamp(target.x+Math.min(distance,rightRoom),minTargetX,maximum);
   dodged=true;evadedThisShot=true;dodge={from:target.x,to,elapsed:0,duration:reduced.matches ? 0.01 : 0.2};
-  setStatus('Ơ kìa, thùng né mất rồi! 😏');onDodge?.();
+  setStatus(dir<0?'Ơ kìa, thùng né sang trái rồi! 😏':'Ơ kìa, thùng né sang phải rồi! 😏');onDodge?.();
  }
  function animate(){if(frame||document.hidden||!dialog.open)return;frame=requestAnimationFrame(tick)}
  function tick(time){frame=0;const dt=lastTime?Math.min((time-lastTime)/1000,.025):0;lastTime=time;phaseTime+=dt;

@@ -1,7 +1,7 @@
 ﻿/* On phones, keep the existing clock/player above the catalog and within reach. */
 @media(max-width:760px){
  .study-workspace:not([hidden]){row-gap:18px;}
- .study-workspace>.study-workspace-tools{grid-row:1;position:sticky;top:8px;z-index:12;align-self:start;justify-items:stretch;}
+ .study-workspace>.study-workspace-tools{grid-row:1;position:static;top:auto;z-index:auto;align-self:start;justify-items:stretch;}
  .study-workspace>.study-workspace-main{grid-row:2;}
  .study-workspace-tools .card.focus-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr);align-items:center;gap:8px;width:100%;max-width:none;min-height:0;padding:10px;border-radius:15px;box-shadow:0 8px 24px #07112644;}
  .focus-card .focus-landscape{width:46%;height:100%;}

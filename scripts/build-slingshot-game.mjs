@@ -6,14 +6,14 @@ css+='\n:host{display:flex;flex-direction:column;height:100%;min-height:0;backgr
 let markup=html.match(/<dialog id="game"[^>]*>([\s\S]*?)<\/dialog>/)[1];
 let core=html.match(/<script>\s*\(\(\)=>\{'use strict';([\s\S]*?)\}\)\(\);\s*<\/script>/)[1];
 core=core.replace("const $=id=>document.getElementById(id),dialog=$('game'),", "const $=id=>id==='game'?dialog:root.getElementById(id),");
-core=core.replace("mode='study'",'mode=gameMode').replace('sound=false,audio=null','sound=soundEnabled,audio=null').replace('dodged=false,dodge=null','dodged=alreadyDodged,dodge=null');
+core=core.replace("mode='study'",'mode=gameMode').replace('sound=false,audio=null','sound=soundEnabled,audio=null').replace('targetDodgesRequired=Math.random()<0.5?0:1,dodged=false,dodge=null','targetDodgesRequired=(alreadyDodged?0:(Math.random()<0.5?0:1)),dodged=alreadyDodged||(targetDodgesRequired===0),dodge=null');
 const start=core.indexOf(' let dark='),end=core.indexOf(' const clamp=',start);if(start<0||end<0)throw Error('Missing theme boundaries');core=core.slice(0,start)+" const dark=theme==='dark';\n"+core.slice(end);
 const a=core.indexOf(' function setMode('),b=core.indexOf(' function resize(',a);if(a<0||b<0)throw Error('Missing mode boundaries');core=core.slice(0,a)+core.slice(b);
-core=core.replace("dodged=false;targetFraction=.77;dodge=null;", "dodged=alreadyDodged;targetFraction=.77;dodge=null;");
+core=core.replace("targetDodgesRequired=Math.random()<0.5?0:1;dodged=(targetDodgesRequired===0);targetFraction=.68;dodge=null;", "targetDodgesRequired=(alreadyDodged?0:(Math.random()<0.5?0:1));dodged=alreadyDodged||(targetDodgesRequired===0);targetFraction=.68;dodge=null;");
 core=core.replace("$('openGame').onclick=open;",'');
 core=core.replace("dialog.close();$('openGame').focus()",'settle(false)');
 core=core.replace("dialog.addEventListener('keydown'", "canvas.addEventListener('keydown'");
-core=core.replace("setStatus('Ơ kìa, thùng né mất rồi! 😏');", "setStatus('Ơ kìa, thùng né mất rồi! 😏');onDodge?.();");
+core=core.replace("setStatus(dir<0?'Ơ kìa, thùng né sang trái rồi! 😏':'Ơ kìa, thùng né sang phải rồi! 😏');", "setStatus(dir<0?'Ơ kìa, thùng né sang trái rồi! 😏':'Ơ kìa, thùng né sang phải rồi! 😏');onDodge?.();");
 core=core.replace("$('sound').style.color=sound?'var(--purple)':'';ensureAudio()", "$('sound').style.color=sound?'var(--purple)':'';onSoundChange?.(sound);ensureAudio()");
 core=core.replace("setStatus('Hoàn thành lượt chơi thử.');updateControls()", "setStatus('Hoàn thành!');updateControls();settle(true)");
 core=core.replace("$('again').focus({preventScroll:true});",'');
