@@ -6,6 +6,9 @@ const q={id:'dns',stem:'Choose two.',extraction:'ocr',answer:'CD',verified:true,
 test('reads five through eight explicit image labels without guessing missing letters',()=>{
  for(let n=5;n<=8;n++){const labels='ABCDEFGH'.slice(0,n).split('');assert.deepEqual(labelsFromImageText('Choose two.\n'+labels.map(l=>l+'. original choice').join('\n')),labels)}
  assert.deepEqual(labelsFromImageText('A. One\nC. Three\nE. Five'),[]);assert.deepEqual(labelsFromImageText('Choose five options'),[]);
+ assert.deepEqual(labelsFromImageText('A. authentication\nB. repudiation\nC. availability\nD. accounting\nE. authorization\nf access'),'ABCDEF'.split(''));
+ assert.deepEqual(labelsFromImageText('A. One\nB. Two\nC. Three\nD. Four\nF. Six'),'ABCDEF'.split(''));
+ assert.deepEqual(labelsFromImageText('[a] one\n[b] two\n[c] three'),['A','B','C']);
 });
 test('expanding image choices preserves source answer and exact-set multi scoring',()=>{
  const repaired=resizeQuestionChoices(q,5);assert.equal(repaired.answer,'CD');assert.equal(repaired.verified,true);assert.equal(repaired.answerSource,'speaker-notes');

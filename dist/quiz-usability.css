@@ -76,3 +76,4 @@ body.quiz-active .choice-pills:has(.choice-pill:nth-child(5)) .choice-pill{width
  body.quiz-active .quiz-question:has(.feedback) .comparison-pair h3{font-size:11px}
 }
 @media(max-width:900px){body.quiz-active .page-content{padding-left:max(8px,env(safe-area-inset-left))!important;padding-right:max(8px,env(safe-area-inset-right))!important}dialog input,dialog textarea,dialog select{font-size:16px!important}}
+.quiz-choice-count select{width:88px!important;max-width:88px}
