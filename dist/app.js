@@ -176,8 +176,8 @@ const pageInfo = {
   ],
   practice: [
     "Kho đề & Ôn luyện",
-    "Thiết lập buổi học",
-    "Lựa chọn chế độ, số lượng câu hỏi và bắt đầu phiên học.",
+    "",
+    "",
   ],
   history: [
     "Lịch sử & Kết quả",
@@ -352,7 +352,7 @@ function switchView(next, mode) {
   $("pageTitle").textContent = title;
   $("pageDescription").textContent = description;
   $("pageDescription").hidden = !description;
-  $("pageHeading").hidden = view === "practice" && !!session && !session.done;
+  $("pageHeading").hidden = view === "practice";
   document.body.classList.toggle(
     "exam-active",
     !!session && !session.done && session.mode !== "study",
