@@ -1,3 +1,4 @@
+import {resultSummary} from './review-issues.mjs';
 import {setupExamSimulation} from './exam-simulation.mjs';
 import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.26';
 import {describeUserError,contextualError} from './user-errors.mjs';
@@ -2078,26 +2079,21 @@ function renderResult(r) {
     ).length,
     unanswered = r.questions.filter((q) => !r.answers[q.id]).length;
   const needRetry = wrong + unanswered;
+  const summary=resultSummary(r,isCorrect);
+  const duration=Math.floor(summary.seconds/60)+' phút '+summary.seconds%60+' giây';
   const scorePercent = Math.round((r.correct / total) * 100);
   const ringColor = scorePercent >= 80 ? '#10b981' : (scorePercent >= 50 ? '#f59e0b' : '#ef4444');
-  const elapsed = Math.max(
-    0,
-    Math.ceil(
-      ((r.mode === "study" ? r.finished : Math.min(r.finished, r.deadline)) -
-        r.started) /
-        60000,
-    ),
-  );
   const visible = r.questions.filter(
     (q) =>
       resultFilter === "all" ||
-      (resultFilter === "wrong"
+      (resultFilter === "incorrect" ? !!r.answers[q.id] && !isCorrect(q,r.answers[q.id]) : resultFilter === "wrong"
         ? !isCorrect(q, r.answers[q.id])
         : !r.answers[q.id]),
   );
   $("result").innerHTML =
-    `<div class="card result-overview"><div class="score-ring ${scorePercent >= 80 ? 'score-high' : scorePercent >= 50 ? 'score-mid' : 'score-low'}" style="--score:${scorePercent}%;--ring-color:${ringColor}"><div><strong class="score-number">${((r.correct / total) * 10).toFixed(1)}</strong><small class="score-pct-badge">${scorePercent}% ĐẠT</small></div></div><div class="result-details"><span class="overline">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"} · ĐÃ HOÀN THÀNH</span><h2>${r.correct}/${total} câu trả lời đúng</h2><p>${elapsed} phút học tập · ${new Date(r.finished).toLocaleString("vi-VN")}</p><div class="result-breakdown"><div class="correct-stat">Trả lời đúng<strong>${r.correct}</strong></div><div class="wrong-stat">Trả lời sai<strong>${wrong}</strong></div><div>Chưa trả lời<strong>${unanswered}</strong></div></div><div class="row result-actions-row">${needRetry > 0 ? `<button id="retry" class="btn-retry-wrong-hero">⚡ Luyện lại ${needRetry} câu sai ngay</button>` : ''}<button id="again" class="${needRetry > 0 ? 'secondary' : ''}">Tạo đề mới →</button><button data-view="history" class="text-button">Xem lịch sử ↗</button><button id="deleteSingleResult" class="text-button danger" style="margin-left:auto">Xóa bài này</button></div></div></div><div class="section-heading"><div><span class="overline">HIỂU LẠI TỪNG CÂU</span><h2>Xem lại bài làm</h2></div></div><div class="result-filters">${[
+    `<div class="card result-overview"><div class="score-ring ${scorePercent >= 80 ? 'score-high' : scorePercent >= 50 ? 'score-mid' : 'score-low'}" style="--score:${scorePercent}%;--ring-color:${ringColor}"><div><strong class="score-number">${((r.correct / total) * 10).toFixed(1)}</strong><small class="score-pct-badge">${scorePercent}% ĐẠT</small></div></div><div class="result-details"><span class="overline">${r.mode === "study" ? "ÔN LUYỆN" : "THI THỬ"} · ĐÃ HOÀN THÀNH</span><h2>${r.correct}/${total} câu trả lời đúng</h2><p>${duration} · Trung bình ${summary.averageSeconds} giây/câu · ${new Date(r.finished).toLocaleString("vi-VN")}</p><div class="result-breakdown"><div class="correct-stat">Trả lời đúng<strong>${r.correct}</strong></div><div class="wrong-stat">Trả lời sai<strong>${wrong}</strong></div><div>Chưa trả lời<strong>${unanswered}</strong></div></div><div class="row result-actions-row">${needRetry > 0 ? `<button id="retry" class="btn-retry-wrong-hero">⚡ Ôn ${needRetry} câu sai / bỏ trống</button>` : ''}<button id="again" class="${needRetry > 0 ? 'secondary' : ''}">Tạo đề mới →</button><button data-view="history" class="text-button">Xem lịch sử ↗</button><button id="deleteSingleResult" class="text-button danger" style="margin-left:auto">Xóa bài này</button></div></div></div><div class="section-heading"><div><span class="overline">HIỂU LẠI TỪNG CÂU</span><h2>Xem lại bài làm</h2></div></div><div class="result-filters">${[
       ["all", "Tất cả (" + total + ")"],
+      ["incorrect", "Chỉ câu sai (" + wrong + ")"],
       ["wrong", "Cần ôn lại (" + (wrong + unanswered) + ")"],
       ["unanswered", "Chưa trả lời (" + unanswered + ")"],
     ]

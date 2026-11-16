@@ -134,3 +134,5 @@ body.quiz-active .choice-pills:has(.choice-pill:nth-child(5)) .choice-pill{width
  body.quiz-active .quiz-answer-row{margin-top:6px;margin-bottom:0}
  body.quiz-active .quiz-shortcuts-hint,body.quiz-active .mobile-swipe-guide{display:none}
 }
+
+.review-audit{flex-wrap:wrap;gap:8px;margin:12px 0}.review-audit button{white-space:normal;font-size:12px}.review-issue-list{padding-left:20px;color:#fbbf24;font-size:12px;line-height:1.8}.result-filters{flex-wrap:wrap}
