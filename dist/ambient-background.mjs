@@ -41,11 +41,7 @@ export function setupAmbientBackground() {
   let height = 0;
   let particles = [];
 
-  function isDarkTheme() {
-    const attr = document.documentElement.getAttribute('data-theme');
-    if (attr) return attr === 'dark';
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
+  function isDarkTheme() { return true; }
 
   function resize() {
     const w = window.innerWidth || document.documentElement.clientWidth || 1280;

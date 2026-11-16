@@ -366,13 +366,13 @@ function switchView(next, mode) {
 }
 document.addEventListener("click", (event) => {
   const target = event.target;
-  const clickable = target.closest("button, .nav, a, .choice-pill, input[type='checkbox'], input[type='radio'], #themeToggle");
+  const clickable = target.closest("button, .nav, a, .choice-pill, input[type='checkbox'], input[type='radio']");
   if (clickable) {
     if (clickable.classList.contains("choice-pill")) {
       quizSound.select();
     } else if (clickable.closest(".quiz-navigation, .nav-btn, .quiz-answer-next") || clickable.dataset.index !== undefined) {
       quizSound.nav();
-    } else if (clickable.type === "checkbox" || clickable.type === "radio" || clickable.id === "themeToggle") {
+    } else if (clickable.type === "checkbox" || clickable.type === "radio") {
       quizSound.toggle();
     } else {
       quizSound.click();
@@ -2240,20 +2240,9 @@ studyTools=setupStudyTools({getBank:()=>bank,getSession:()=>session,getHistory:(
 refreshStats();
 switchView(session && !session.done && !session.paused ? "practice" : session?.paused?'shared':view);
 if (session && !session.done) startSessionPreload(session.questions);
-// Theme toggle
-const themeToggle = document.getElementById('themeToggle');
-function applyThemeMode(mode){
- document.documentElement.setAttribute('data-theme',mode);
- localStorage.setItem('sot-theme',mode);
- const icon=document.getElementById('themeIcon');
- if(icon)icon.textContent=mode==='dark'?'☀️':'🌙';
-}
-const initialTheme=localStorage.getItem('sot-theme')||(window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
-applyThemeMode(initialTheme);
-themeToggle?.addEventListener('click',()=>{
- const current=document.documentElement.getAttribute('data-theme')||'light';
- applyThemeMode(current==='dark'?'light':'dark');
-});
+// Dark is the only supported appearance.
+document.documentElement.dataset.theme='dark';
+try{localStorage.setItem('sot-theme','dark')}catch{}
 // Sound toggle & YouTube Study Audio (Combined 5 & 1 with Autoplay)
 (function(){
  const btn=$('soundToggle');

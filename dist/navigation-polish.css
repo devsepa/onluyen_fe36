@@ -26,7 +26,6 @@ body:not(.quiz-active):not(.exam-active) .page-heading p{margin:6px 0 0;}
 }
 /* Maintain legibility when the theme's decorative heading gradient is disabled. */
 body:not(.quiz-active):not(.exam-active) .page-heading h1{-webkit-text-fill-color:var(--text);background:none;}
-[data-theme="light"] .sidebar .brand strong{color:var(--text);}
 @media(max-width:760px){.topbar .top-actions{margin-left:auto!important;}}
 /* Reserve the same width for the sidebar and page, including hover/keyboard expansion. */
 @media(min-width:761px){

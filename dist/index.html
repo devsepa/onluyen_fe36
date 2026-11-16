@@ -1,14 +1,13 @@
 <!doctype html>
-<html lang="vi">
+<html lang="vi" data-theme="dark">
 <head>
  <script>
   (function(){
-   var t=localStorage.getItem('sot-theme');
-   if(!t)t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
-   document.documentElement.setAttribute('data-theme',t);
+   document.documentElement.setAttribute('data-theme','dark');
+   try{localStorage.setItem('sot-theme','dark')}catch{}
   })();
  </script>
- <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="light">
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="color-scheme" content="dark">
  <meta name="description" content="Biến tài liệu Google Slides của bạn thành ngân hàng câu hỏi, ôn luyện và thi thử."><title>Slide Ôn Thi · Không gian học tập</title>
  <meta name="app-version" content="2026.11.16.26">
  <link rel="icon" type="image/jpeg" href="logo.jpg">
@@ -137,7 +136,6 @@
        <details class="yt-custom-box" id="ytCustomOptions"><summary>Tùy chọn âm thanh</summary><label class="sound-toggle-row"><span>Âm chuông khi trả lời</span><input type="checkbox" id="celestaSoundCheck" checked></label><label class="compact-link-label" for="ytUrlInput">Đổi video YouTube</label><div class="yt-input-row"><input type="url" id="ytUrlInput" placeholder="Dán link YouTube…" aria-label="Link YouTube"><button type="button" id="ytLoadBtn" class="secondary">Nạp</button></div><div id="ytInputMsg" class="yt-input-msg" hidden></div><button type="button" id="ytResetBtn" class="yt-sec-btn" hidden>↺ Video mặc định</button></details>
       </div>
     </div>
-    <button id="themeToggle" class="icon-button theme-toggle-btn" type="button" aria-label="Đổi giao diện Sáng / Tối" title="Đổi giao diện Sáng / Tối"><span id="themeIcon">🌓</span></button>
     <div class="account-control"><button id="accountButton" class="avatar" type="button" aria-label="Tài khoản: đăng nhập Google" aria-haspopup="true" aria-expanded="false" aria-controls="accountMenu"></button><div id="accountMenu" class="account-menu" hidden><div class="account-info"><strong id="accountName">Khách</strong><span id="accountEmail">Đăng nhập để kết nối tài liệu của bạn.</span></div><div class="account-manage-group" id="accountManageGroup" hidden><div class="account-divider"></div><div class="account-section-title">QUẢN TRỊ & TẢI ĐỀ</div><button type="button" class="account-menu-item" data-view="sources"><span class="menu-icon">▱</span><span>Tài liệu của tôi</span><span class="menu-arrow">↗</span></button><button type="button" class="account-menu-item" data-view="library"><span class="menu-icon">▦</span><span>Ngân hàng câu hỏi</span><span id="accountQuestionCount" class="account-menu-count">0</span></button></div><div class="account-divider"></div><button id="accountLogin" type="button">Đăng nhập với Google</button><button id="accountSwitch" class="secondary" type="button" hidden>Đổi tài khoản Google</button><button id="accountLogout" class="text-button danger" type="button" hidden>Đăng xuất</button></div></div>
   </div>
 </header>

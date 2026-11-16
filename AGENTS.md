@@ -1,7 +1,7 @@
 # Project preferences
 
 - For every UI change, compare and verify the PC and mobile layouts before finishing. Do not validate only one viewport.
-- Maintain both light and dark themes. Check readable text, form controls, selected/correct/incorrect states, dialogs, navigation and empty states in both themes.
+- Dark mode is the only supported appearance, per user request. Remove light mode and theme switches. Verify dark mode with both system preferences and legacy light settings, including controls, dialogs and empty states.
 - Use a desktop viewport around 1440 px and mobile viewport around 390 px; also check narrow mobile widths for horizontal overflow. Keep primary actions usable by touch.
 - Preserve Google OAuth configuration, source restrictions, local question banks and study/exam behavior when changing presentation.
 - Keep tabs focused on their own tasks: sources for source selection/import, library for question review/editing, practice for study/exams, history/results for submitted work. Do not repeat promotional headers, global statistic cards or unrelated actions across tabs. Scope asynchronous import messages to the sources tab and do not navigate users away from another task when import finishes.
