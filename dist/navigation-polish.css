@@ -5,9 +5,6 @@ body:not(.quiz-active):not(.exam-active) .page-heading p{margin:6px 0 0;}
 .community-heading{font-size:18px;margin:20px 0 8px;}
 #shared .study-tools{margin-bottom:16px;}
 #shared .study-tools + .community-heading{margin-top:16px;}
-.app-update-notice{padding:8px 12px!important;margin:16px 0!important;gap:12px;align-items:center;justify-content:space-between;flex-wrap:nowrap!important;font-size:12px;}
-.app-update-notice:not([hidden]){display:flex;}
-.app-update-notice .app-update-control{flex:none;min-height:44px;}
 .history-top-actions{position:relative;align-items:center;}
 .history-options{position:relative;flex:none;}
 .history-options>summary{list-style:none;display:grid;place-items:center;width:44px;height:44px;cursor:pointer;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);font-weight:700;}
@@ -42,3 +39,5 @@ body:not(.quiz-active):not(.exam-active) .page-heading h1{-webkit-text-fill-colo
  body.sidebar-collapsed .sidebar:focus-within nav{align-items:stretch;}
  body.sidebar-collapsed .sidebar:focus-within .nav{width:auto;height:auto;min-height:48px;padding:11px 14px;}
 }
+.top-actions .app-update-control,body.quiz-active .quiz-head .app-update-control{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;width:36px;height:36px;min-height:36px;padding:0!important;border-radius:50%;font-size:19px!important;line-height:1;background:var(--soft);color:var(--accent);border:1px solid var(--line);box-shadow:none}.top-actions .app-update-control::after,body.quiz-active .quiz-head .app-update-control::after{content:'';position:absolute;right:5px;top:5px;width:5px;height:5px;border-radius:50%;background:var(--success)}body.quiz-active .quiz-head .app-update-control::before{content:none!important}.top-actions .app-update-control[hidden],body.quiz-active .quiz-head .app-update-control[hidden]{display:none!important}
+.top-actions #accountMenu .app-update-control{width:100%;height:44px;min-height:44px;justify-content:flex-start;padding:8px 12px!important;font-size:12px!important;border-radius:9px;margin-top:10px}.top-actions #accountMenu .app-update-control::after{display:none}.avatar.has-app-update::after{content:'';position:absolute;z-index:2;right:4px;top:4px;width:6px;height:6px;border-radius:50%;background:var(--success);border:1px solid var(--panel)}
