@@ -118,3 +118,19 @@ body.quiz-active .choice-pills:has(.choice-pill:nth-child(5)) .choice-pill{width
  body.quiz-active .quiz-head .quiz-head-actions>.app-update-control{display:none!important}
  body.quiz-active .quiz-head-center{order:0!important}body.quiz-active .quiz-head-actions{order:1!important}
 }
+
+/* Use the available desktop viewport instead of the dashboard's reading width. */
+@media(min-width:901px){
+ body.quiz-active main{width:100%;max-width:none;margin-left:0!important}
+ body.quiz-active .page-content{width:100%!important;max-width:none!important;margin:0!important;padding:12px clamp(16px,2vw,40px)!important}
+ body.quiz-active .quiz-layout{grid-template-columns:minmax(0,1fr) clamp(240px,18vw,320px);gap:18px}
+ body.quiz-active .quiz-layout.quiz-map-collapsed{grid-template-columns:minmax(0,1fr)}
+ body.quiz-active .quiz-head-left .quiz-deck-name{display:none!important}
+ body.quiz-active .quiz-question{padding:16px 20px;gap:10px}
+ body.quiz-active .quiz-head .timer{font-size:28px!important}
+ body.quiz-active .question-counter{font-size:15px}
+ body.quiz-active .quiz-question .choice-pill{min-width:70px;min-height:48px;font-size:19px}
+ body.quiz-active .quiz-answer-next{min-height:48px;font-size:14px;padding:10px 20px}
+ body.quiz-active .quiz-answer-row{margin-top:6px;margin-bottom:0}
+ body.quiz-active .quiz-shortcuts-hint,body.quiz-active .mobile-swipe-guide{display:none}
+}
