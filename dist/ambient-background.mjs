@@ -40,6 +40,10 @@ export function setupAmbientBackground() {
   let width = 0;
   let height = 0;
   let particles = [];
+  let lastFrame = 0;
+  const smallScreen=window.matchMedia?.('(max-width: 860px), (pointer: coarse)');
+  const reducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)');
+  const motionAllowed=()=>!document.hidden&&!smallScreen?.matches&&!reducedMotion?.matches&&!document.documentElement.classList?.contains('economy-mode')&&!document.body?.classList?.contains('quiz-active');
 
   function isDarkTheme() { return true; }
 
@@ -109,14 +113,14 @@ export function setupAmbientBackground() {
     }
   }
 
-  function loop() {
-    if (document.hidden) { animId = null; return; }
-    renderFrame();
+  function loop(time=0) {
+    if (!motionAllowed()) { animId = null; return; }
+    if(!lastFrame||time-lastFrame>=1000/24){renderFrame();lastFrame=time;}
     animId = window.requestAnimationFrame(loop);
   }
 
   function start() {
-    if (animId || document.hidden) return;
+    if (animId || !motionAllowed()) return;
     animId = window.requestAnimationFrame(loop);
   }
 
@@ -128,21 +132,17 @@ export function setupAmbientBackground() {
   }
 
   function syncMotion() {
-    document.documentElement.setAttribute?.('data-background-motion', 'on');
+    document.documentElement.setAttribute?.('data-background-motion', motionAllowed()?'on':'off');
     stop();
-    start();
+    if(motionAllowed())start();
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stop();
-    } else {
-      start();
-    }
+    syncMotion();
   });
 
   window.addEventListener('resize', () => {
     resize();
-    renderFrame();
+    syncMotion();
   }, { passive: true });
 
   const observer = new MutationObserver(records => {
@@ -150,6 +150,9 @@ export function setupAmbientBackground() {
     syncMotion();
   });
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] });
+  if(document.body)observer.observe(document.body,{attributes:true,attributeFilter:['class']});
+  smallScreen?.addEventListener?.('change',syncMotion);
+  reducedMotion?.addEventListener?.('change',syncMotion);
 
 
   // Initial render

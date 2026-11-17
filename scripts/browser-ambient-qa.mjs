@@ -8,17 +8,19 @@ await run(`localStorage.removeItem('sot-background-motion');localStorage.setItem
 for(const theme of ['light','dark'])for(const [width,height]of [[1440,900],[390,844],[320,568]]){
  await call('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<500});await run(`document.documentElement.dataset.theme='${theme}'`);await new Promise(r=>setTimeout(r,150));
  const state=await run(`(()=>{const c=document.querySelector('#stardustCanvas'),a=document.querySelector('.aurora-stream'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let pixels=0;for(let i=3;i<d.length;i+=4)if(d[i])pixels++;return {controls:!!c.ambientControls,pixels,animation:getComputedStyle(a).animationName,transform:getComputedStyle(a).transform,count:document.querySelectorAll('#appAmbientBg').length,overflow:document.documentElement.scrollWidth>innerWidth}})()`);
- assert.ok(state.controls&&state.pixels>0&&!state.overflow,JSON.stringify(state));assert.equal(state.count,1);assert.equal(state.animation,'auroraMorph');await new Promise(r=>setTimeout(r,150));assert.notEqual(await run(`getComputedStyle(document.querySelector('.aurora-stream')).transform`),state.transform);
+ assert.ok(state.controls&&!state.overflow,JSON.stringify(state));assert.equal(state.count,1);assert.equal(state.animation,width>860?'auroraMorph':'none');await new Promise(r=>setTimeout(r,150));if(width>860){assert.ok(state.pixels>0);assert.notEqual(await run(`getComputedStyle(document.querySelector('.aurora-stream')).transform`),state.transform)}
  const shot=await call('Page.captureScreenshot',{format:'png'});await writeFile(`outputs/ambient-${theme}-${width}.png`,Buffer.from(shot.data,'base64'));
 }
+await call('Emulation.setDeviceMetricsOverride',{width:1440,height:900,deviceScaleFactor:1,mobile:false});
 for(const reduced of ['reduce','no-preference'])for(const economy of [true,false]){
  await call('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:reduced}]});
  await run(`localStorage.setItem('sot-background-motion','off');location.reload()`);await new Promise(r=>setTimeout(r,500));
  await run(`document.documentElement.classList.toggle('economy-mode',${economy})`);await new Promise(r=>setTimeout(r,100));
- assert.equal(await run(`document.documentElement.dataset.backgroundMotion`),'on');
+ const moving=reduced==='no-preference'&&!economy;
+ assert.equal(await run(`document.documentElement.dataset.backgroundMotion`),moving?'on':'off');
  assert.equal(await run(`!!document.querySelector('#backgroundMotionToggle')`),false);
  const before=await run(`({transform:getComputedStyle(document.querySelector('.aurora-stream')).transform,pixels:document.querySelector('#stardustCanvas').toDataURL()})`);await new Promise(r=>setTimeout(r,250));
  const after=await run(`({transform:getComputedStyle(document.querySelector('.aurora-stream')).transform,pixels:document.querySelector('#stardustCanvas').toDataURL()})`);
- assert.notEqual(before.transform,after.transform,`${reduced}/${economy}: aurora must move automatically`);assert.notEqual(before.pixels,after.pixels,`${reduced}/${economy}: particles must move automatically`);
+ if(moving){assert.notEqual(before.transform,after.transform);assert.notEqual(before.pixels,after.pixels)}else{assert.equal(before.transform,after.transform);assert.equal(before.pixels,after.pixels)}
 }
-console.log('PC/mobile light/dark verified; background auto-animates in reduced-motion/economy modes with no visible toggle, ignoring legacy off preference.');ws.close();
+console.log('PC/mobile light/dark verified; mobile, reduced-motion and economy use static backgrounds; desktop motion stays available.');ws.close();

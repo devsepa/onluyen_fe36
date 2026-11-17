@@ -24,6 +24,7 @@ export function setupFocusCard({now=()=>new Date()}={}){
  const slots=time.querySelectorAll('.digit-flip-slot');
  let currentDigits=['','','','','',''];
  function tick(){
+   if(document.hidden||!card.getClientRects().length)return;
    const date=now(),period=focusPeriod(date.getHours());
    card.dataset.period=period;
    const h=String(date.getHours()).padStart(2,'0'),m=String(date.getMinutes()).padStart(2,'0'),s=String(date.getSeconds()).padStart(2,'0');

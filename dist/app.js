@@ -2278,6 +2278,7 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
  let autoplayAttempted = false;
  let timelineTimer = null;
  let isUserScrubbing = false;
+ const allowAutoMedia=()=>!resourcePolicy.economy&&!matchMedia('(max-width: 860px), (pointer: coarse), (prefers-reduced-motion: reduce)').matches;
 
  function formatTime(sec){
    if(isNaN(sec) || sec < 0) return '00:00';
@@ -2312,8 +2313,10 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
  updateSeekAvailability(0);
  function startTimelineTracker(){
    clearInterval(timelineTimer);
+   if(document.hidden||!ytAudio.isPlaying)return;
    timelineTimer = setInterval(()=>{
-     if(!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function' || isUserScrubbing) return;
+     if(document.hidden||!ytAudio.isPlaying){stopTimelineTracker();return;}
+     if(menu?.hidden||!ytPlayer || typeof ytPlayer.getCurrentTime !== 'function' || isUserScrubbing) return;
      try {
        const cur = ytPlayer.getCurrentTime() || 0;
        const dur = videoDuration();
@@ -2326,7 +2329,7 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
          ytSeekBar.style.setProperty('--range-progress',ytSeekBar.value+'%');
        }
      } catch(e){}
-   }, 500);
+   }, 1000);
  }
 
  function stopTimelineTracker(){
@@ -2402,6 +2405,9 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
 
  // Seamless Autoplay on First Interaction Fallback
  function triggerAutoplayGesture(){
+   if(!allowAutoMedia()){
+     document.removeEventListener('pointerdown',triggerAutoplayGesture);document.removeEventListener('keydown',triggerAutoplayGesture);return;
+   }
    if(!autoplayAttempted){
      autoplayAttempted = true;
      if(ytPlayer && typeof ytPlayer.unMute === 'function'){
@@ -2613,7 +2619,7 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
      menu?.removeAttribute('hidden');
      btn.setAttribute('aria-expanded', 'true');
      btn.classList.add('is-active');
-     if(!ytPlayer) initPlayer(true);
+     if(!ytPlayer&&allowAutoMedia()) initPlayer(true);
    } else {
      menu?.setAttribute('hidden', '');
      btn.setAttribute('aria-expanded', 'false');
@@ -2642,8 +2648,9 @@ try{localStorage.setItem('sot-theme','dark')}catch{}
  });
 
  updateSoundButtonState();
- // Start player immediately on page load
- setTimeout(()=>initPlayer(true), 300);
+ // Mobile/economy users load the video player only through an explicit play action.
+ setTimeout(()=>{if(allowAutoMedia())initPlayer(true)}, 300);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTimelineTracker();else if(ytAudio.isPlaying)startTimelineTracker()});
 })();
 
 // Tumadam Clock & Greeting Widget

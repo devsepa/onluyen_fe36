@@ -3,9 +3,17 @@
 html.economy-mode *,html.economy-mode *::before,html.economy-mode *::after{animation:none!important;transition:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 html.economy-mode .quiz-progress-bar,html.economy-mode .choice-pill,html.economy-mode .card{box-shadow:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
-/* Background motion is automatic; other resource-saving rules still apply. */
+/* Ambient motion is enabled only on desktop outside active quizzes and economy/reduced-motion modes. */
 html[data-background-motion="on"] #appAmbientBg .aurora-stream{animation:auroraMorph 12s ease-in-out infinite alternate!important}
 html[data-background-motion="on"] #appAmbientBg .aurora-1{animation-duration:9s!important}
 html[data-background-motion="on"] #appAmbientBg .aurora-2{animation-duration:12s!important;animation-delay:-4s!important}
 html[data-background-motion="on"] #appAmbientBg .aurora-3{animation-duration:15s!important;animation-delay:-7s!important}
 html[data-background-motion="off"] #appAmbientBg .aurora-stream{animation:none!important}
+html[data-background-motion="off"] #appAmbientBg{background:radial-gradient(ellipse at 20% 15%,#171635 0%,#080d19 55%,#060912 100%)}
+html[data-background-motion="off"] #appAmbientBg .aurora-stream,html[data-background-motion="off"] #stardustCanvas{display:none!important;filter:none!important;will-change:auto}
+html.economy-mode .sidebar .sidebar-heading .brand-logo-s.brand-orbit,html.economy-mode .sidebar .sidebar-heading .brand-text strong,html.economy-mode .sidebar .sidebar-heading .brand-text strong:after,html.economy-mode #soundToggle.is-playing .capsule-disc,html.economy-mode #soundToggle.is-playing .capsule-eq span{animation:none!important}
+html[data-background-motion="off"] body .sidebar .sidebar-heading .brand-logo-s.brand-orbit,html[data-background-motion="off"] body .sidebar .sidebar-heading .brand-text strong,html[data-background-motion="off"] body .sidebar .sidebar-heading .brand-text strong:after{animation:none!important}
+@media(max-width:860px),(pointer:coarse){
+ html body *,html body *::before,html body *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+ html body .aurora-stream,html body .focus-stars,html body .reel-colon,html body .brand-orbit,html body .brand-text strong,html body .brand-text strong:after,html body #soundToggle.is-playing .capsule-disc,html body #soundToggle.is-playing .capsule-eq span{animation:none!important;will-change:auto!important}
+}
