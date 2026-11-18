@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {scopePracticeQuestions} from '../dist/practice-scope.mjs';
+test('opening a shared deck excludes local copies and other shared decks of the same subject',()=>{const bank=[{id:'local',sourceName:'MAS291'},{id:'a',sourceName:'MAS291',sharedDeck:'chosen'},{id:'b',sourceName:'MAS291',sharedDeck:'other'}];assert.deepEqual(scopePracticeQuestions(bank,'chosen').map(q=>q.id),['a']);assert.equal(scopePracticeQuestions(bank,null).length,3);assert.deepEqual(scopePracticeQuestions(bank,'missing'),[])});

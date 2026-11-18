@@ -1,3 +1,4 @@
+import {scopePracticeQuestions} from './practice-scope.mjs';
 import {resultSummary} from './review-issues.mjs';
 import {setupExamSimulation} from './exam-simulation.mjs';
 import {setupFocusCard} from './focus-card.mjs?v=2026.11.16.26';
@@ -492,12 +493,13 @@ const shared = setupSharedDecks({
     }
     return true;
   },
-  onUseLocal: () => switchView("practice"),
+  onUseLocal: () => {practiceDeckId=null;switchView("practice")},
   onUse: (deck) => {
     const questions = deck.questions.map(cleanQuestion);
     const merged=mergeQuestionBanks(bank,questions);
     if (!write("sot-bank", merged)) return;
     bank = merged;
+    practiceDeckId=deck.id||null;
     sourceSummary = sources().map(([,name])=>name).join(" · ");
     write("sot-source", sourceSummary);
     page = 1;
@@ -1168,6 +1170,7 @@ $("bankFile").onchange = async (e) => {
     const merged=mergeQuestionBanks(bank,imported),added=merged.length-bank.length;
     if (!write("sot-bank", merged)) return;
     bank = merged;
+    practiceDeckId=null;
     sourceSummary = sources()
       .map(([, name]) => name)
       .join(" · ");
@@ -1189,9 +1192,10 @@ $("bankFile").onchange = async (e) => {
   }
 };
 
+let practiceDeckId=null;
 function renderPractice() {
   if (session && !session.done) return renderQuiz();
-  const eligible = bank.filter(readyForPractice),
+  const eligible = scopePracticeQuestions(bank,practiceDeckId).filter(readyForPractice),
     n = eligible.length;
   const subjects = practiceSubjects(eligible);
 
@@ -2226,7 +2230,7 @@ libraryManager=setupLibraryManager({base:DATA_API_BASE,getBank:()=>bank,getGener
  getRecoveryQuestions:()=>[...(session?.questions||[]),...history.flatMap(result=>result.questions||[])],
  getSharedRecovery:async()=>{const decks=await(await deckRequest(DATA_API_BASE,'/v1/decks',{signal:AbortSignal.timeout(30000)})).json();if(!Array.isArray(decks))throw Error('Chưa đọc được kho chung. Hãy thử lại.');return decks.map(deck=>({label:deck.title,count:deck.count,load:async()=>{const saved=await(await deckRequest(DATA_API_BASE,'/v1/decks/'+encodeURIComponent(deck.id),{signal:AbortSignal.timeout(30000)})).json();if(!Array.isArray(saved.questions))throw Error('Chưa đọc được câu hỏi.');return saved.questions.map(cleanQuestion)}}))},
  canChange:()=>{if(aiRunning||resources.isBusy()||session&&!session.done){message('Hoàn thành bài đang làm và đợi nhập tài liệu hoặc AI xong trước khi thay đổi thư viện.','library');return false}return true},
- onPractice:key=>{if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
+ onPractice:key=>{practiceDeckId=null;if(key){preferredSubject=key;write('sot-practice-subject',key)}switchView('practice');if($('practiceSource')&&key){$('practiceSource').value=key;$('practiceSource').dispatchEvent(new Event('change'))}}
 });libraryManager.account(libraryProfile);
 quality=setupQuality({base:AI_API_BASE,getToken:()=>resources.apiToken(),getQuestion:id=>{const q=(view==='result'?lastResult?.questions:view==='practice'?session?.questions:bank)?.find(q=>q.id===id);return q&&view==='practice'&&session&&!session.done&&(session.mode==='exam'||!session.answers[q.id])?{...q,answer:'',explanation:'',explanationDetails:undefined}:q},getDetails:q=>{const state=explanationQueue.state(q);return state.details||state.comparison||q.explanationDetails},onRead:readExplanation});quality.setProfile(libraryProfile);
 window.addEventListener('focus',()=>{if(view==='practice'&&session?.mode==='study')refreshQuizState()});
@@ -2238,7 +2242,7 @@ explanationQueue.setPaused(document.hidden);mountResourceControl(resourcePolicy)
 try{for(const result of [...history].reverse())reviewQueue.record(result)}catch{/* Existing results remain available in history. */}
 studyTools=setupStudyTools({getReview:()=>reviewQueue.questions(),startReview:()=>startFocusedPractice(reviewQueue.questions(),true),getBank:()=>bank,getSession:()=>session,getHistory:()=>history,saveBank:(q,details)=>{if(details?.reviewed)explanationQueue.adoptReviewed(q,details);return write('sot-bank',bank)},getBlob:questionBlob,media:libraryMedia,base:AI_API_BASE,
  resume:()=>{if(!session||session.done)return;const active={...session,paused:false};if(!write('sot-session',active))return;session=active;switchView('practice')},
- practice:key=>{if(session&&!session.done){message('Hãy học tiếp hoặc hoàn thành bài đang dở trước khi mở bộ khác.');return}preferredSubject=key;write('sot-practice-subject',key);switchView('practice')}
+ practice:key=>{practiceDeckId=null;if(session&&!session.done){message('Hãy học tiếp hoặc hoàn thành bài đang dở trước khi mở bộ khác.');return}preferredSubject=key;write('sot-practice-subject',key);switchView('practice')}
 });
 refreshStats();
 switchView(session && !session.done && !session.paused ? "practice" : session?.paused?'shared':view);
