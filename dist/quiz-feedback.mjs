@@ -122,7 +122,8 @@ export function renderQuizFeedback({root,session,question,isCorrect,state={statu
  }
  if(state.status==='error'&&state.comparison){renderAnswerComparison(feedback,question,state.comparison,scroll);return feedback}
  if(state.status==='error'){
-  const status=add(feedback,'div','study-explanation-status'),where=[question.sourceName,question.slide?'Slide '+question.slide:''].filter(Boolean).join(' · ');add(status,'span','',state.error?.includes('Slide '+question.slide)?state.error:where+'\n'+state.error);
+  const status=add(feedback,'div','study-explanation-status'),where=[question.sourceName,question.slide?'Slide '+question.slide:''].filter(Boolean).join(' · ');
+  if(state.statusCode===429){add(status,'span','','Giải thích AI đang tạm giới hạn. Bạn vẫn có thể làm câu tiếp theo.');const details=add(status,'details','explanation-error-details');add(details,'summary','','Chi tiết lỗi');add(details,'p','',where+'\n'+state.error)}else add(status,'span','',state.error?.includes('Slide '+question.slide)?state.error:where+'\n'+state.error);
   const retry=add(status,'button','secondary explanation-retry','Thử lại');retry.type='button';retry.onclick=()=>{onRead();onRetry?.(question)};
   if(state.statusCode===429&&state.retryAt>Date.now()){
    const wait=Math.ceil((state.retryAt-Date.now())/1000);retry.disabled=true;retry.textContent='Thử lại sau '+(wait>=60?Math.ceil(wait/60)+' phút':wait+' giây');

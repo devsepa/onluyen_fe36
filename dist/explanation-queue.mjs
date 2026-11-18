@@ -27,6 +27,7 @@ export function createExplanationQueue({load,onChange=()=>{},storage,limit=160,n
  function request(q,{retry=false,priority=false}={}){
   const embedded=state(q);if(embedded.status==='ready')return Promise.resolve(embedded.details);
   const key=explanationKey(q);if(cache.has(key))return Promise.resolve(cache.get(key));
+  if(blocked?.statusCode===429&&blocked.retryAt<=now()){blocked=null;for(const [id,value]of states)if(value.statusCode===429&&value.retryAt<=now())states.delete(id)}
   if(blocked?.statusCode===429&&blocked.retryAt>now()){emit({key,q},{status:'error',...blocked});return Promise.resolve(null)}
   if(retry){blocked=null;states.delete(key)}
   if(jobs.has(key)){const job=jobs.get(key);if(job.controller?.signal.aborted){jobs.delete(key);states.delete(key)}else{const index=queue.indexOf(job);if(priority&&index>0){queue.splice(index,1);queue.unshift(job)}return job.promise}}

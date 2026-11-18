@@ -5,6 +5,7 @@ import {aiRateLimitError} from '../dist/ai-rate-limit.mjs';
 import {createExplanationQueue} from '../dist/explanation-queue.mjs';
 const q=id=>({id,sourceId:'qa',url:'',stem:'Question '+id,options:[{id:'A',text:'First'},{id:'B',text:'Second'}],answer:'A'});
 const details={answer:'A',reason:'Specific explanation',options:[{id:'A',text:'First',reason:'Correct condition'},{id:'B',text:'Second',reason:'Wrong condition'}]};
+test('expired rate limit unlocks ordinary requests without manual retry or login',async()=>{let clock=0,calls=0;const queue=createExplanationQueue({now:()=>clock,load:async()=>{if(++calls===1)throw Object.assign(Error('Limited'),{status:429,retryAfterSeconds:10});return details}});await queue.request(q('recover'));clock=9000;await queue.request(q('recover'));assert.equal(calls,1);clock=10001;await queue.request(q('recover'));assert.equal(calls,2);assert.equal(queue.state(q('recover')).status,'ready');queue.dispose()});
 test('busy transport does not persist a global quota lock or block a different question',async()=>{
  let calls=0;const values=new Map(),storage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
  const queue=createExplanationQueue({storage,load:async()=>{if(++calls===1)return solveBatch('https://ai.test',[q('busy')],null,{fetcher:async()=>Response.json({code:'AI_QUEUE_BUSY',error:'AI đang xếp hàng.',retryAfterSeconds:15},{status:503})});return details}});
