@@ -413,6 +413,8 @@ const account = setupAccount({
   },
 });
 const resources = setupResources({
+  getSourceState:id=>{const qs=bank.filter(q=>q.sourceId===id);return {count:qs.length,ready:qs.filter(readyForPractice).length}},
+  onSourceAction:(action,resource)=>{if(action==='publish'){shared.openPublish(resource.id);return}if(action==='library'){switchView('library');$('sourceFilter').value=resource.id;$('sourceFilter').dispatchEvent(new Event('change'));$('library').scrollIntoView({block:'start'})}},
   onManualApprove: (question) => {
     if(aiRunning||session&&!session.done){message('Hoàn thành bài đang làm và dừng AI trước khi duyệt câu hỏi.','sources');return false}
     const key=bankQuestionKey(question),existing=bank.find(q=>bankQuestionKey(q)===key),approved=cleanQuestion({...question,id:existing?.id||question.id});

@@ -2943,3 +2943,5 @@ html .sidebar .sidebar-heading .brand-text strong:after{background:linear-gradie
 #practice .mode-segment:focus-within{outline:2px solid var(--segment-color);outline-offset:3px}
 #practice #start{background:linear-gradient(110deg,var(--mode-button),rgba(var(--mode-rgb),.7));border-color:rgba(var(--mode-rgb),.5);box-shadow:0 5px 18px rgba(var(--mode-rgb),.15);color:#fff}
 #practice .controller-card input[type=range]{accent-color:var(--mode-color)}
+
+.review-source-actions{padding:16px;margin:14px 0;border:1px solid #3b5574;border-radius:12px;background:#102332}.review-source-actions p{font-size:12px;line-height:1.7}.review-source-actions .row{flex-wrap:wrap;gap:8px}.review-source-actions strong{overflow-wrap:anywhere}@media(max-width:640px){.review-source-actions .row button{width:100%}}

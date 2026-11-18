@@ -267,5 +267,5 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
   updateProgress({status:'Có bản tải lên dở dang được giữ tạm (24h). Bấm Tiếp tục tải để đăng nốt.',isRunning:false,error:false});
  }
 
- return {load,isPublishing:()=>!!controller,pause:()=>controller?.abort()};
+ return {load,openPublish(sourceId){publishDeck.click();if(dialog.open&&!controller){publishSource.value=sourceId;publishSource.dispatchEvent(new Event('change'))}},isPublishing:()=>!!controller,pause:()=>controller?.abort()};
 }

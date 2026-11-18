@@ -10,7 +10,7 @@ import {setupImportReview} from './import-review.mjs';
 import {contextualError} from './user-errors.mjs';
 
 const $=id=>document.getElementById(id);
-export function setupResources({message,onImport,onDeferredQuestion=()=>false,onManualApprove=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message}){
+export function setupResources({message,onImport,onDeferredQuestion=()=>false,onManualApprove=()=>false,hasActiveSession,onAccountChange=()=>{},onAccountError=message,getSourceState=()=>({count:0,ready:0}),onSourceAction=()=>{}}){
  let token=null,expires=0,files=[],suggestions=[],selected=new Map(),controller=null,busy=false,epoch=0;
  let expiryTimer,profileController;
  let accountProfile=null,classifying=false,backgroundId=0,slideReview;
@@ -25,7 +25,8 @@ export function setupResources({message,onImport,onDeferredQuestion=()=>false,on
  const sourceNote=document.querySelector('.source-note');if(sourceNote)sourceNote.textContent='Thêm môn mới vẫn giữ các môn đã lưu; nhập lại cùng slide không nhân đôi câu. Chỉ nhập slide có câu hỏi và lựa chọn, giữ nguyên ảnh, ngôn ngữ, thứ tự đáp án và số slide gốc.';
  const diagnosticsPanel=document.createElement('details');
  diagnosticsPanel.id='importDiagnostics';diagnosticsPanel.hidden=true;$('resourceStatus').after(diagnosticsPanel);
- slideReview=setupImportReview({mount:diagnosticsPanel,getImage:slideBlob,onApprove:onManualApprove,
+ slideReview=setupImportReview({mount:diagnosticsPanel,getImage:slideBlob,onApprove:onManualApprove,getSourceState,
+  onSourceAction:(action,resource)=>{if(action==='import'){if(busy||classifying||hasActiveSession())return message('Hoàn thành bài đang làm và dừng tác vụ hiện tại trước khi nhập.');selected=new Map([[resource.id,resource]]);renderSelected();useResources.click()}else onSourceAction(action,resource)},
   canApprove:()=>{if(!active()||busy||classifying||hasActiveSession()){message('Kết nối Google và hoàn thành bài đang làm, đợi nhập tài liệu xong trước khi duyệt.');return false}return true},
   reloadSource:async id=>{const p=await request(`https://slides.googleapis.com/v1/presentations/${encodeURIComponent(id)}`);if(p.presentationId!==id)throw Error('Tài liệu trả về không khớp.');rememberPresentation(p);return {presentation:p,parsed:await selectQuestionSlides(p),resource:files.find(r=>r.id===id)||{id,name:p.title}}}
  });
