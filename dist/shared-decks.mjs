@@ -1,3 +1,4 @@
+import {publishSources,questionsForPublish} from './publish-sources.mjs';
 import { presentationIdFromLink } from './resources.mjs?v=2026.11.16.26';
 import { readyForPractice } from './ai.mjs?v=2026.11.16.26';
 import { askConfirm } from './confirm-dialog.mjs?v=2026.11.16.26';
@@ -15,7 +16,7 @@ export async function deckRequest(base,path,{method='GET',token,uploadToken,body
 }
 export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,canChange,onUse,onUseLocal}){
  const $=id=>document.getElementById(id),section=$('shared'),dialog=document.createElement('dialog'),publishButton=document.createElement('button');publishButton.id='publishDeck';publishButton.className='secondary';publishButton.textContent='↑ Đăng vào kho chung';$('library').querySelector('.section-heading .row').prepend(publishButton);dialog.className='publish-dialog';dialog.setAttribute('aria-labelledby','publishTitle');
- dialog.innerHTML='<form id="publishForm"><div class="modal-heading"><h2 id="publishTitle">Đăng bộ đề vào kho chung</h2><button type="button" class="secondary" id="closePublish">Đóng</button></div><label>Tên bộ đề<input id="deckTitle" required maxlength="160" placeholder="Ví dụ: DBI202 · Học kỳ 3"></label><p id="publishCount"></p><p>Ảnh slide, đáp án và giải thích sẽ công khai cho mọi người. Link Google riêng vẫn giữ quyền truy cập của Google. Lịch sử và thông tin tài khoản không được chia sẻ.</p><label class="check-label"><input id="publishRights" type="checkbox" required> Tôi có quyền chia sẻ các ảnh slide và nội dung này.</label><p id="publishStatus" role="status" aria-live="polite"></p><progress id="publishBar" value="0" max="1" hidden></progress><div class="modal-actions"><button type="submit" id="publishSubmit">Đăng bộ đề</button><button type="button" id="stopPublish" class="secondary" hidden>Dừng tải lên</button></div></form>';
+ dialog.innerHTML='<form id="publishForm"><div class="modal-heading"><h2 id="publishTitle">Đăng bộ đề vào kho chung</h2><button type="button" class="secondary" id="closePublish">Đóng</button></div><label>Bộ tài liệu muốn đăng<select id="publishSource" required aria-label="Bộ tài liệu muốn đăng"></select></label><label>Tên bộ đề<input id="deckTitle" required maxlength="160" placeholder="Ví dụ: DBI202 · Học kỳ 3"></label><p id="publishCount"></p><p>Ảnh slide, đáp án và giải thích sẽ công khai cho mọi người. Link Google riêng vẫn giữ quyền truy cập của Google. Lịch sử và thông tin tài khoản không được chia sẻ.</p><label class="check-label"><input id="publishRights" type="checkbox" required> Tôi có quyền chia sẻ các ảnh slide và nội dung này.</label><p id="publishStatus" role="status" aria-live="polite"></p><progress id="publishBar" value="0" max="1" hidden></progress><div class="modal-actions"><button type="submit" id="publishSubmit">Đăng bộ đề</button><button type="button" id="stopPublish" class="secondary" hidden>Dừng tải lên</button></div></form>';
  dialog.querySelector('p:not([id])').textContent='Ảnh slide, đáp án và giải thích sẽ công khai; tài khoản và lịch sử vẫn riêng. Link Google giữ nguyên quyền xem. Có thể đóng hộp thoại để ôn tiếp, nhưng cần giữ tab này mở đến khi tải xong.';
  document.body.append(dialog);let controller=null,items=[],loading=false,loadError=false;
  let preparations=new Map(),preparationLoading=false,lastPreparation=0;
@@ -77,14 +78,15 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  $('publishDeck').onclick=()=>{
   if(controller){updateProgress({isRunning:true});return}
   if(!canChange())return;
-  const ready=getBank().filter(readyForPractice);
-  $('publishCount').textContent=`Đăng ${ready.length} câu có đáp án / ${getBank().length} câu. Câu thiếu đáp án không được đăng.`;
-  $('publishStatus').textContent='';$('publishBar').hidden=true;$('publishRights').checked=false;
-  $('publishSubmit').disabled=!ready.length||ready.length>500;
-  $('deckTitle').value=readDraft()?.title||getBank()[0]?.sourceName||'';
+  const groups=publishSources(getBank()),source=$('publishSource'),saved=readDraft();source.replaceChildren();
+  const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Chọn bộ tài liệu muốn đăng';source.append(placeholder);
+  for(const group of groups){const option=document.createElement('option');option.value=group.id;option.textContent=group.name+' · '+group.count+' câu';source.append(option)}
+  source.value=groups.some(g=>g.id===saved?.sourceId)?saved.sourceId:groups.length===1?groups[0].id:'';
+  source.onchange=()=>{const group=groups.find(g=>g.id===source.value),all=questionsForPublish(getBank(),source.value),ready=all.filter(readyForPractice);$('deckTitle').value=group?.name||'';$('publishCount').textContent=group?'Chỉ đăng bộ này: '+ready.length+'/'+all.length+' câu có đáp án. '+(all.length-ready.length)+' câu thiếu đáp án sẽ không đăng.':'Chọn một bộ tài liệu. Các bộ khác sẽ không được đăng.';$('publishSubmit').disabled=!ready.length||ready.length>500;$('publishRights').checked=false;$('publishSubmit').textContent=saved?.sourceId===source.value?'Tiếp tục tải lên':'Đăng bộ đề'};
+  source.onchange();if(saved?.sourceId===source.value&&saved?.title)$('deckTitle').value=saved.title;
+  $('publishStatus').textContent='';$('publishBar').hidden=true;
   dialog.showModal();
  };
- $('publishDeck').addEventListener('click',()=>{if(dialog.open)$('publishSubmit').textContent=readDraft()?'Tiếp tục tải lên':'Đăng bộ đề'});
 
  function cards(){
   const searchEl=$('deckSearch'),term=searchEl?searchEl.value.trim().toLocaleLowerCase():'',filtered=term?items.filter(d=>d.title.toLocaleLowerCase().includes(term)):items;
@@ -209,11 +211,11 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
  $('publishForm').onsubmit=async e=>{
   e.preventDefault();if(controller||!canChange()||!$('publishRights').checked)return;
   let token;try{token=getToken()}catch(error){setStatus(error.message);return}
-  const questions=structuredClone(getBank().filter(readyForPractice));if(!questions.length||questions.length>500)return;
+  const questions=structuredClone(questionsForPublish(getBank(),$('publishSource').value).filter(readyForPractice));if(!questions.length||questions.length>500)return;
   controller=new AbortController();const signal=controller.signal;let draft=null,published=false;
   const fingerprint=JSON.stringify([$('deckTitle').value.trim(),questions.map(q=>[q.sourceId,q.url,q.sharedDeck,q.sharedIndex,q.stem,q.options,q.answer,q.explanation,q.verified,q.answerSource])]);
   const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(fingerprint)),signature=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
-  $('deckTitle').disabled=true;$('publishRights').disabled=true;$('publishSubmit').disabled=true;$('stopPublish').hidden=false;$('publishBar').hidden=false;$('publishBar').max=questions.length;$('publishBar').value=0;
+  $('publishSource').disabled=true;$('deckTitle').disabled=true;$('publishRights').disabled=true;$('publishSubmit').disabled=true;$('stopPublish').hidden=false;$('publishBar').hidden=false;$('publishBar').max=questions.length;$('publishBar').value=0;
   dialog.close();
   updateProgress({status:'Đang chuẩn bị đăng đề ở nền. Bạn có thể tiếp tục thao tác.',current:0,total:questions.length,isRunning:true});
   try{
@@ -224,7 +226,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
    }
    if(!draft){
     draft=await(await deckRequest(base,'/v1/decks',{method:'POST',token,body:{title:$('deckTitle').value.trim(),count:questions.length,rights:true},signal})).json();
-    saveDraft({id:draft.id,signature,title:$('deckTitle').value.trim()});
+    saveDraft({id:draft.id,signature,sourceId:$('publishSource').value,title:$('deckTitle').value.trim()});
    }
    let done=completed.length,cursor=0;const remaining=questions.map((q,index)=>({q,index})).filter(item=>!completed.includes(item.index));
    updateProgress({current:done,total:questions.length,isRunning:true});
@@ -254,7 +256,7 @@ export function setupSharedDecks({base,preparationBase,getBank,getToken,getBlob,
    controller.abort();
    updateProgress({status:(error.name==='AbortError'?'Đã tạm dừng tải lên.':error.message)+' Các ảnh đã tải được giữ tạm tối đa 24 giờ.',isRunning:false,error:true});
   }finally{
-   controller=null;$('deckTitle').disabled=false;$('publishRights').disabled=false;$('publishSubmit').disabled=published;
+   controller=null;$('publishSource').disabled=false;$('deckTitle').disabled=false;$('publishRights').disabled=false;$('publishSubmit').disabled=published;
    if(!published&&readDraft())$('publishSubmit').textContent='Tiếp tục tải lên';
    $('closePublish').disabled=false;$('stopPublish').hidden=true;
   }
